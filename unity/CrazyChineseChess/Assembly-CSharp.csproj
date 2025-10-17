@@ -60,6 +60,8 @@
     <Analyzer Include="D:\projects\chinese-chess\unity\CrazyChineseChess\Assets\FishNet\Runtime\Plugins\CodeAnalysis\FishNet.CodeAnalysis.Analyzers.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\_Scripts\Core\PieceData.cs" />
+    <Compile Include="Assets\_Scripts\Core\BoardState.cs" />
     <Compile Include="Assets\FishNet\Upgrading\UpgradeFromMirrorMenu.cs" />
     <Compile Include="Assets\FishNet\Upgrading\MirrorUpgrade.cs" />
   </ItemGroup>
