@@ -104,8 +104,8 @@
     <Compile Include="Assets\FishNet\CodeGenerating\Helpers\Extension\ILProcessorExtensions.cs" />
     <Compile Include="Assets\FishNet\CodeGenerating\Processing\CustomSerializerProcessor.cs" />
     <Compile Include="Assets\FishNet\CodeGenerating\Helpers\Extension\ModuleDefinitionExtensions.cs" />
-    <Compile Include="Assets\FishNet\CodeGenerating\Helpers\NetworkBehaviourHelper.cs" />
     <Compile Include="Assets\FishNet\CodeGenerating\Helpers\CreatedSyncVarGenerator.cs" />
+    <Compile Include="Assets\FishNet\CodeGenerating\Helpers\NetworkBehaviourHelper.cs" />
     <Compile Include="Assets\FishNet\CodeGenerating\ILCore\PostProcessorReflectionImporter.cs" />
     <Compile Include="Assets\FishNet\CodeGenerating\ILCore\PostProcessorAssemblyResolver.cs" />
     <Compile Include="Assets\FishNet\CodeGenerating\Helpers\Extension\InstructionExtensions.cs" />
