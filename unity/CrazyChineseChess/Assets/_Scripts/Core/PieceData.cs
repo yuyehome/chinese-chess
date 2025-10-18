@@ -1,3 +1,4 @@
+// File: _Scripts/Core/PieceData.cs
 
 // 使用枚举，代码清晰且不易出错
 public enum PlayerColor { None, Red, Black }

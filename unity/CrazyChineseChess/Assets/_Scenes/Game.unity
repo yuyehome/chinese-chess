@@ -154,6 +154,7 @@ MonoBehaviour:
   gamePiecePrefab: {fileID: 6122554271908802643, guid: ed2a715acdacd86429a92f9ba21a17ac, type: 3}
   redPieceMaterial: {fileID: 2100000, guid: 1b2d3148b694804409460c956cf53811, type: 2}
   blackPieceMaterial: {fileID: 2100000, guid: 45530da568bc7be45be191fb79bb2ce4, type: 2}
+  moveMarkerPrefab: {fileID: 8197689558856028575, guid: 84b50c92684b41b4784ffa19d05ebc8c, type: 3}
 --- !u!4 &226577798
 Transform:
   m_ObjectHideFlags: 0
@@ -273,6 +274,7 @@ GameObject:
   - component: {fileID: 767852735}
   - component: {fileID: 767852734}
   - component: {fileID: 767852733}
+  - component: {fileID: 767852736}
   m_Layer: 0
   m_Name: BoardPlane
   m_TagString: Untagged
@@ -367,6 +369,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 767852731}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!65 &767852736
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 767852731}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 10, y: 2.220446e-16, z: 9.999999}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &798728823
 GameObject:
   m_ObjectHideFlags: 0
@@ -400,7 +423,7 @@ Light:
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
-  m_CookieSize: 10
+  m_CookieSize: 100
   m_Shadows:
     m_Type: 2
     m_Resolution: -1
@@ -503,6 +526,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2073551038}
   - component: {fileID: 2073551037}
+  - component: {fileID: 2073551039}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -537,6 +561,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2073551039
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2073551036}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 138c8f05b7db7394b8cfc0edd4057b19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

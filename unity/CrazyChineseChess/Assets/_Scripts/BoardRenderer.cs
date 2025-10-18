@@ -9,6 +9,31 @@ public class BoardRenderer : MonoBehaviour
     public GameObject gamePiecePrefab; // 新的棋子Prefab
     public Material redPieceMaterial;  // 红棋材质
     public Material blackPieceMaterial;// 黑棋材质
+    
+    [Header("UI & Effects")]
+    public GameObject moveMarkerPrefab; // 高亮提示的Prefab
+    private List<GameObject> activeMarkers = new List<GameObject>();
+    
+    public void ShowValidMoves(List<Vector2Int> moves)
+    {
+        ClearValidMoves(); // 先清除旧的
+        foreach (var move in moves)
+        {
+            Vector3 markerPos = GetLocalPosition(move.x, move.y);
+            GameObject marker = Instantiate(moveMarkerPrefab, this.transform);
+            marker.transform.localPosition = markerPos;
+            activeMarkers.Add(marker);
+        }
+    }
+
+    public void ClearValidMoves()
+    {
+        foreach (var marker in activeMarkers)
+        {
+            Destroy(marker);
+        }
+        activeMarkers.Clear();
+    }
 
     // --- UV坐标映射 ---
     // 这个字典定义了每种棋子的文字在贴图集(Atlas)上的UV偏移量
@@ -46,7 +71,13 @@ public class BoardRenderer : MonoBehaviour
                     pieceGO.transform.localPosition = localPosition;
                     pieceGO.name = $"{piece.Color}_{piece.Type}_{x}_{y}";
                     
-                    
+                    // 给棋子游戏对象赋予其在棋盘上的坐标身份
+                    PieceComponent pc = pieceGO.GetComponent<PieceComponent>();
+                    if (pc != null)
+                    {
+                        pc.BoardPosition = new Vector2Int(x, y);
+                    }
+
                     // 1. 先设置位置，再应用旋转
                     pieceGO.transform.localPosition = localPosition;
 
