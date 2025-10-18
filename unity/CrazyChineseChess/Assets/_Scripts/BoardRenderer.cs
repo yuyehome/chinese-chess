@@ -46,6 +46,22 @@ public class BoardRenderer : MonoBehaviour
                     pieceGO.transform.localPosition = localPosition;
                     pieceGO.name = $"{piece.Color}_{piece.Type}_{x}_{y}";
                     
+                    
+                    // 1. 先设置位置，再应用旋转
+                    pieceGO.transform.localPosition = localPosition;
+
+                    // 2. 使用 Rotate() 在当前旋转基础上追加旋转
+                    if (piece.Color == PlayerColor.Red)
+                    {
+                        // 红色棋子，在当前基础上，绕世界Y轴旋转90度
+                        pieceGO.transform.Rotate(0, 95, 0, Space.World);
+                    }
+                    else if (piece.Color == PlayerColor.Black)
+                    {
+                        // 黑色棋子，在当前基础上，绕世界Y轴旋转-90度
+                        pieceGO.transform.Rotate(0, -85, 0, Space.World);
+                    }
+
                     // 1. 获取渲染器组件
                     MeshRenderer renderer = pieceGO.GetComponent<MeshRenderer>();
                     if (renderer == null) continue;
@@ -74,23 +90,38 @@ public class BoardRenderer : MonoBehaviour
             }
         }
     }
-
-    // GetLocalPosition 方法保持不变
+    
+    /// <summary>
+    /// 将棋盘格子坐标 (x,y) 转换为相对于此对象(BoardVisual)的本地坐标。
+    /// 这个版本是基于设计尺寸，与模型本身大小解耦，最稳定。
+    /// 棋盘固定尺寸45X45cm，棋子固定尺寸35mm
+    /// </summary>
     private Vector3 GetLocalPosition(int x, int y)
     {
-        const float TOTAL_BOARD_WIDTH = 0.45f;
-        const float TOTAL_BOARD_HEIGHT = TOTAL_BOARD_WIDTH * (10f / 9f); 
-        const float MARGIN_X = 0.025f; 
-        const float MARGIN_Y = 0.025f; 
-        float playingAreaWidth = TOTAL_BOARD_WIDTH - 2 * MARGIN_X;
-        float playingAreaHeight = TOTAL_BOARD_HEIGHT - 2 * MARGIN_Y;
-        float cellWidth = playingAreaWidth / (BoardState.BOARD_WIDTH - 1);
-        float cellHeight = playingAreaHeight / (BoardState.BOARD_HEIGHT - 1);
-        float startX = -playingAreaWidth / 2f;
-        float startZ = -playingAreaHeight / 2f;
-        float xPos = startX + x * cellWidth;
-        float zPos = startZ + y * cellHeight;
-        float pieceHeight = 0.0175f; 
+        // --- 设计常量 ---
+        // 我们在代码中定义棋盘的逻辑尺寸，而不是依赖模型。
+        // 棋盘总宽度 (X轴, 8个间隔)
+        const float boardLogicalWidth = 0.45f; 
+        // 棋盘总高度 (Z轴, 9个间隔)
+        const float boardLogicalHeight = 0.45f * (10f / 9f); // 按比例计算，中国象棋棋盘是长方形的
+        
+        // --- 计算 ---
+        // 计算每个格子的间距
+        float cellWidth = boardLogicalWidth / (BoardState.BOARD_WIDTH - 1);
+        float cellHeight = boardLogicalHeight / (BoardState.BOARD_HEIGHT - 1);
+        
+        // 计算偏移量，使得棋盘中心在 (0,0)
+        float xOffset = boardLogicalWidth / 2f;
+        float zOffset = boardLogicalHeight / 2f;
+        
+        // 计算最终本地坐标
+        float xPos = x * cellWidth - xOffset;
+        float zPos = y * cellHeight - zOffset;
+
+        // 获取棋子的高度，使其刚好浮在棋盘上
+        float pieceHeight = 0.0175f; // 对应棋子世界高度
+
         return new Vector3(xPos, pieceHeight / 2f, zPos);
     }
+
 }
