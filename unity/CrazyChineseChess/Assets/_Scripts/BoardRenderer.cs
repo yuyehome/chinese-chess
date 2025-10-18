@@ -53,41 +53,38 @@ public class BoardRenderer : MonoBehaviour
             }
         }
     }
-
     
     /// <summary>
     /// 将棋盘格子坐标 (x,y) 转换为相对于此对象(BoardVisual)的本地坐标。
+    /// 这个版本是基于设计尺寸，与模型本身大小解耦，最稳定。
+    /// 棋盘固定尺寸45X45cm，棋子固定尺寸35mm
     /// </summary>
     private Vector3 GetLocalPosition(int x, int y)
     {
-        // 这个计算逻辑本身是正确的，它计算的是以(0,0,0)为中心的偏移量，
-        // 这正是本地坐标所需要的。
-        float boardWidthUnits = 9.0f;
-        float boardHeightUnits = 10.0f;
+        // --- 设计常量 ---
+        // 我们在代码中定义棋盘的逻辑尺寸，而不是依赖模型。
+        // 棋盘总宽度 (X轴, 8个间隔)
+        const float boardLogicalWidth = 0.45f; 
+        // 棋盘总高度 (Z轴, 9个间隔)
+        const float boardLogicalHeight = 0.45f * (10f / 9f); // 按比例计算，中国象棋棋盘是长方形的
         
-        // 假设棋盘模型的尺寸与我们的单位尺寸匹配。
-        // Plane的默认大小是10x10，我们之前把它Scale成了(1, 1, 1.2)。
-        // 所以它的实际宽度是10个单位，高度是12个单位。
-        // 为了精确匹配，我们需要根据实际模型尺寸调整。
-        // 让我们用一个更健壮的方法：
-        Renderer boardRenderer = GetComponentInChildren<Renderer>(); // 获取子对象(BoardPlane)的渲染器
-        if (boardRenderer == null) {
-             Debug.LogError("BoardVisual 下找不到带Renderer的棋盘平面！");
-             return Vector3.zero;
-        }
-
-        Vector3 boardSize = boardRenderer.bounds.size;
-
-        // X轴：从 -boardSize.x / 2 到 +boardSize.x / 2
-        float xPos = (float)x / (BoardState.BOARD_WIDTH - 1) * boardSize.x - (boardSize.x / 2f);
+        // --- 计算 ---
+        // 计算每个格子的间距
+        float cellWidth = boardLogicalWidth / (BoardState.BOARD_WIDTH - 1);
+        float cellHeight = boardLogicalHeight / (BoardState.BOARD_HEIGHT - 1);
         
-        // Z轴：从 -boardSize.z / 2 到 +boardSize.z / 2
-        // 注意：Unity Plane的"高度"是在Z轴上
-        float zPos = (float)y / (BoardState.BOARD_HEIGHT - 1) * boardSize.z - (boardSize.z / 2f);
+        // 计算偏移量，使得棋盘中心在 (0,0)
+        float xOffset = boardLogicalWidth / 2f;
+        float zOffset = boardLogicalHeight / 2f;
+        
+        // 计算最终本地坐标
+        float xPos = x * cellWidth - xOffset;
+        float zPos = y * cellHeight - zOffset;
 
-        // 返回本地坐标。Y值是棋子的高度。
-        return new Vector3(xPos, 0.1f, zPos);
+        // 获取棋子的高度，使其刚好浮在棋盘上
+        float pieceHeight = 0.0175f; // 对应棋子世界高度
+
+        return new Vector3(xPos, pieceHeight / 2f, zPos);
     }
-
 
 }

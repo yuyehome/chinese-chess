@@ -36,7 +36,7 @@
               "RelativeDocumentMoniker": "Assets\\_Scripts\\BoardRenderer.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\BoardRenderer.cs",
               "RelativeToolTip": "Assets\\_Scripts\\BoardRenderer.cs",
-              "ViewState": "AgIAACcAAAAAAAAAAAAAADMAAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAAEAAAAAAAAAAAAAAAFQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-17T16:12:38.008Z",
               "EditorCaption": ""
@@ -51,8 +51,7 @@
               "RelativeToolTip": "Assets\\_Scripts\\GameManager.cs",
               "ViewState": "AgIAAAoAAAAAAAAAAAAAACkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-17T16:12:24.996Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-17T16:12:24.996Z"
             },
             {
               "$type": "Document",
@@ -64,8 +63,7 @@
               "RelativeToolTip": "Assets\\_Scripts\\Core\\BoardState.cs",
               "ViewState": "AgIAAEcAAAAAAAAAAAAAAFsAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-17T15:53:27.204Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-17T15:53:27.204Z"
             },
             {
               "$type": "Document",
@@ -77,8 +75,7 @@
               "RelativeToolTip": "Assets\\_Scripts\\Core\\PieceData.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-17T15:51:07.855Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-17T15:51:07.855Z"
             }
           ]
         }
