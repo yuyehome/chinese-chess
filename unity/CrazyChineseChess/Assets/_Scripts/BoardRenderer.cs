@@ -1,6 +1,7 @@
 // File: _Scripts/BoardRenderer.cs
 using UnityEngine;
 using System.Collections.Generic; // 需要使用字典
+using System.Linq; // 需要使用Linq
 
 public class BoardRenderer : MonoBehaviour
 {
@@ -13,6 +14,80 @@ public class BoardRenderer : MonoBehaviour
     [Header("UI & Effects")]
     public GameObject moveMarkerPrefab; // 高亮提示的Prefab
     private List<GameObject> activeMarkers = new List<GameObject>();
+    
+    private List<PieceComponent> highlightedPieces = new List<PieceComponent>(); // 用于追踪被高亮的棋子
+
+    
+    public void ShowValidMoves(List<Vector2Int> moves, BoardState boardState)
+    {
+        ClearAllHighlights(); // 先清除旧的
+
+        foreach (var move in moves)
+        {
+            Piece targetPiece = boardState.GetPieceAt(move);
+            if (targetPiece.Type != PieceType.None)
+            {
+                // 如果是敌方棋子，高亮它
+                PieceComponent pc = GetPieceComponentAt(move);
+                if (pc != null)
+                {
+                    HighlightPiece(pc, Color.green); // 用绿色高光表示可攻击
+                }
+            }
+            else
+            {
+                // 如果是空格，显示移动标记
+                Vector3 markerPos = GetLocalPosition(move.x, move.y);
+                GameObject marker = Instantiate(moveMarkerPrefab, this.transform);
+                marker.transform.localPosition = markerPos;
+                activeMarkers.Add(marker);
+            }
+        }
+    }
+
+    // 清除所有高亮和标记
+    public void ClearAllHighlights()
+    {
+        // 清除移动标记
+        foreach (var marker in activeMarkers) Destroy(marker);
+        activeMarkers.Clear();
+        
+        // 清除棋子高光
+        foreach (var pc in highlightedPieces)
+        {
+            if (pc != null) // 棋子可能已经被吃掉
+            {
+                // 重置自发光颜色
+                var renderer = pc.GetComponent<MeshRenderer>();
+                var propBlock = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(propBlock);
+                propBlock.SetColor("_EmissionColor", Color.black);
+                renderer.SetPropertyBlock(propBlock);
+            }
+        }
+        highlightedPieces.Clear();
+    }
+    
+    // 高亮单个棋子
+    private void HighlightPiece(PieceComponent piece, Color color)
+    {
+        var renderer = piece.GetComponent<MeshRenderer>();
+        var propBlock = new MaterialPropertyBlock();
+        renderer.GetPropertyBlock(propBlock);
+        
+        // 设置自发光颜色。乘以一个系数让它更亮
+        propBlock.SetColor("_EmissionColor", color * 2.0f); 
+        renderer.SetPropertyBlock(propBlock);
+
+        highlightedPieces.Add(piece);
+    }
+    
+    // 辅助方法：通过坐标获取棋子的Component
+    public PieceComponent GetPieceComponentAt(Vector2Int position)
+    {
+        // 注意：这个查找效率不高，但对于目前够用。未来可优化。
+        return FindObjectsOfType<PieceComponent>().FirstOrDefault(p => p.BoardPosition == position);
+    }
     
     public void ShowValidMoves(List<Vector2Int> moves)
     {

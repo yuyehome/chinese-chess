@@ -54,7 +54,7 @@ public class PlayerInput : MonoBehaviour
         Piece pieceData = GameManager.Instance.CurrentBoardState.GetPieceAt(piece.BoardPosition);
         currentValidMoves = RuleEngine.GetValidMoves(pieceData, piece.BoardPosition, GameManager.Instance.CurrentBoardState);
         
-        boardRenderer.ShowValidMoves(currentValidMoves);
+        boardRenderer.ShowValidMoves(currentValidMoves, GameManager.Instance.CurrentBoardState);
     }
 
     private void HandleBoardClick(Vector3 hitPoint)
@@ -70,6 +70,6 @@ public class PlayerInput : MonoBehaviour
     {
         selectedPiece = null;
         currentValidMoves.Clear();
-        boardRenderer.ClearValidMoves();
+        boardRenderer.ClearAllHighlights(); // 调用新的统一清除方法
     }
 }
