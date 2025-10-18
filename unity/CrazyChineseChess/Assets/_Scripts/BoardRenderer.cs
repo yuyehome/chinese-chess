@@ -13,25 +13,37 @@ public class BoardRenderer : MonoBehaviour
     
     [Header("UI & Effects")]
     public GameObject moveMarkerPrefab; // 高亮提示的Prefab
+    public Color attackHighlightColor = Color.green; // <-- [新增] 在这里添加颜色变量
     private List<GameObject> activeMarkers = new List<GameObject>();
     
     private List<PieceComponent> highlightedPieces = new List<PieceComponent>(); // 用于追踪被高亮的棋子
-
     
     public void ShowValidMoves(List<Vector2Int> moves, BoardState boardState)
     {
         ClearAllHighlights(); // 先清除旧的
-
+        
+        // --- 【新增或修改】获取当前选中棋子的颜色 ---
+        PieceComponent selectedPC = GetPieceComponentAt(moves.Count > 0 ? moves[0] : Vector2Int.zero);
+        PlayerColor currentPieceColor = (selectedPC != null) 
+            ? boardState.GetPieceAt(selectedPC.BoardPosition).Color 
+            : PlayerColor.None; 
+        // 注意: 这里获取选中棋子颜色的方式需要依赖 moves 列表不为空，
+        //       更准确的逻辑应该在 PlayerInput 中处理，但为了快速测试，暂时用此方法。
+    
         foreach (var move in moves)
         {
             Piece targetPiece = boardState.GetPieceAt(move);
             if (targetPiece.Type != PieceType.None)
             {
-                // 如果是敌方棋子，高亮它
-                PieceComponent pc = GetPieceComponentAt(move);
-                if (pc != null)
+                // 【重点修改】判断是否是敌方棋子
+                if (targetPiece.Color != currentPieceColor)
                 {
-                    HighlightPiece(pc, Color.green); // 用绿色高光表示可攻击
+                    // 是敌方棋子，高亮它
+                    PieceComponent pc = GetPieceComponentAt(move);
+                    if (pc != null)
+                    {
+                        HighlightPiece(pc, attackHighlightColor); // 表示可攻击
+                    }
                 }
             }
             else
@@ -81,33 +93,20 @@ public class BoardRenderer : MonoBehaviour
 
         highlightedPieces.Add(piece);
     }
-    
-    // 辅助方法：通过坐标获取棋子的Component
+
+    /// 辅助方法：通过坐标获取棋子的Component (O(1)查找)
     public PieceComponent GetPieceComponentAt(Vector2Int position)
     {
-        // 注意：这个查找效率不高，但对于目前够用。未来可优化。
-        return FindObjectsOfType<PieceComponent>().FirstOrDefault(p => p.BoardPosition == position);
-    }
-    
-    public void ShowValidMoves(List<Vector2Int> moves)
-    {
-        ClearValidMoves(); // 先清除旧的
-        foreach (var move in moves)
+        if (position.x >= 0 && position.x < BoardState.BOARD_WIDTH &&
+            position.y >= 0 && position.y < BoardState.BOARD_HEIGHT)
         {
-            Vector3 markerPos = GetLocalPosition(move.x, move.y);
-            GameObject marker = Instantiate(moveMarkerPrefab, this.transform);
-            marker.transform.localPosition = markerPos;
-            activeMarkers.Add(marker);
+            GameObject pieceGO = pieceObjects[position.x, position.y];
+            if (pieceGO != null)
+            {
+                return pieceGO.GetComponent<PieceComponent>();
+            }
         }
-    }
-
-    public void ClearValidMoves()
-    {
-        foreach (var marker in activeMarkers)
-        {
-            Destroy(marker);
-        }
-        activeMarkers.Clear();
+        return null;
     }
 
     // --- UV坐标映射 ---
@@ -189,6 +188,9 @@ public class BoardRenderer : MonoBehaviour
                         propBlock.SetVector("_MainTex_ST", new Vector4(0.25f, 0.5f, offset.x, offset.y));
                     }
                     
+                    // 在初始渲染时，确保所有棋子的自发光都关闭（为黑色）
+                    propBlock.SetColor("_EmissionColor", Color.black);
+
                     renderer.SetPropertyBlock(propBlock);
 
                     pieceObjects[x, y] = pieceGO;
