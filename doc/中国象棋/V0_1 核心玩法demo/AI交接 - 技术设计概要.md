@@ -75,7 +75,11 @@
 
 #### **4. 美术资源工作流**
 
-(无变化) 使用单一模型 + 贴图集 + MaterialPropertyBlock 的高性能方案。
+- **模型:** 使用Blender制作统一尺寸的低多边形棋子模型(Piece.fbx)，并正确展开UV。
+    
+- **贴图:** 使用Photoshop制作**贴图集(Atlas)**，一张图片包含所有棋子的文字。红黑双方各一张。
+    
+- **渲染:** 在Unity中，通过MaterialPropertyBlock动态修改材质的UV偏移(_MainTex_ST)来显示正确的文字，此方法性能极高，能有效利用GPU实例化。
 
 ---
 
