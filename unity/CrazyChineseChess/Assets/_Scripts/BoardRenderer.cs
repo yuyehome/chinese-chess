@@ -1,122 +1,135 @@
 // File: _Scripts/BoardRenderer.cs
 using UnityEngine;
-using System.Collections.Generic; // 需要使用字典
-using System.Linq; // 需要使用Linq
+using System.Collections.Generic;
 
+/// <summary>
+/// 负责将BoardState中的逻辑数据“渲染”为场景中的3D对象。
+/// 管理所有棋子和UI标记的创建、销毁、移动和高亮。
+/// </summary>
 public class BoardRenderer : MonoBehaviour
 {
-    // --- 资源引用 ---
+    // --- 在Unity编辑器中指定的资源 ---
     [Header("Prefabs & Materials")]
-    public GameObject gamePiecePrefab; // 新的棋子Prefab
-    public Material redPieceMaterial;  // 红棋材质
-    public Material blackPieceMaterial;// 黑棋材质
-    
-    [Header("UI & Effects")]
-    public GameObject moveMarkerPrefab; // 高亮提示的Prefab
-    public Color attackHighlightColor = Color.green; // <-- [新增] 在这里添加颜色变量
-    private List<GameObject> activeMarkers = new List<GameObject>();
-    
-    private List<PieceComponent> highlightedPieces = new List<PieceComponent>(); // 用于追踪被高亮的棋子
+    public GameObject gamePiecePrefab;  // 棋子的3D模型预制件
+    public Material redPieceMaterial;   // 红棋的材质
+    public Material blackPieceMaterial; // 黑棋的材质
 
+    [Header("UI & Effects")]
+    public GameObject moveMarkerPrefab; // 可移动位置的提示标记 (小绿片)
+    public Color attackHighlightColor = new Color(1f, 0.2f, 0.2f); // 可攻击棋子的高亮颜色 (改为红色更直观)
+
+    // --- 内部状态变量 ---
+    private List<GameObject> activeMarkers = new List<GameObject>(); // 存储当前显示的所有移动标记
+    private List<PieceComponent> highlightedPieces = new List<PieceComponent>(); // 存储当前被高亮的棋子
+    private GameObject[,] pieceObjects = new GameObject[BoardState.BOARD_WIDTH, BoardState.BOARD_HEIGHT]; // 二维数组，用于快速通过坐标查找棋子GameObject
+
+    /// <summary>
+    /// 根据传入的合法移动列表，在棋盘上显示高亮提示。
+    /// </summary>
+    /// <param name="moves">所有合法移动的坐标列表</param>
+    /// <param name="movingPieceColor">正在移动的棋子的颜色</param>
+    /// <param name="boardState">当前的棋盘状态</param>
     public void ShowValidMoves(List<Vector2Int> moves, PlayerColor movingPieceColor, BoardState boardState)
     {
-        ClearAllHighlights();
+        ClearAllHighlights(); // 在显示新标记前，清除所有旧的
 
         foreach (var move in moves)
         {
             Piece targetPiece = boardState.GetPieceAt(move);
-            if (targetPiece.Type != PieceType.None)
+            if (targetPiece.Type != PieceType.None) // 如果目标点有棋子
             {
-                if (targetPiece.Color != movingPieceColor)
+                if (targetPiece.Color != movingPieceColor) // 并且是敌方棋子
                 {
                     PieceComponent pc = GetPieceComponentAt(move);
-                    if (pc != null) HighlightPiece(pc, attackHighlightColor);
+                    if (pc != null) HighlightPiece(pc, attackHighlightColor); // 高亮该敌方棋子
                 }
             }
-            else
+            else // 如果目标点是空格
             {
                 Vector3 markerPos = GetLocalPosition(move.x, move.y);
-                markerPos.y += 0.001f;
+                markerPos.y += 0.001f; // 稍微抬高，防止与棋盘平面穿模
                 GameObject marker = Instantiate(moveMarkerPrefab, this.transform);
                 marker.transform.localPosition = markerPos;
+
+                // 给标记添加Collider和Component，以便被射线检测到
+                var collider = marker.GetComponent<SphereCollider>();
+                if (collider == null) collider = marker.AddComponent<SphereCollider>();
+                collider.radius = 0.0175f; // 设置点击半径为棋子半径
+
+                var markerComp = marker.GetComponent<MoveMarkerComponent>();
+                if (markerComp == null) markerComp = marker.AddComponent<MoveMarkerComponent>();
+                markerComp.BoardPosition = move; // 记录该标记对应的棋盘坐标
+
                 activeMarkers.Add(marker);
             }
         }
     }
 
-    // 清除所有高亮和标记
+    /// <summary>
+    /// 清除棋盘上所有的高亮效果和移动标记。
+    /// </summary>
     public void ClearAllHighlights()
     {
-        // 清除移动标记
         foreach (var marker in activeMarkers) Destroy(marker);
         activeMarkers.Clear();
-        
-        // 清除棋子高光
+
         foreach (var pc in highlightedPieces)
         {
-            if (pc != null) // 棋子可能已经被吃掉
+            if (pc != null)
             {
-                // 重置自发光颜色
                 var renderer = pc.GetComponent<MeshRenderer>();
                 var propBlock = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(propBlock);
-                propBlock.SetColor("_EmissionColor", Color.black);
+                propBlock.SetColor("_EmissionColor", Color.black); // 将自发光颜色重置为黑
                 renderer.SetPropertyBlock(propBlock);
             }
         }
         highlightedPieces.Clear();
     }
-    
-    // 高亮单个棋子
+
+    /// <summary>
+    /// 高亮单个棋子，通过设置材质的自发光颜色实现。
+    /// </summary>
     private void HighlightPiece(PieceComponent piece, Color color)
     {
         var renderer = piece.GetComponent<MeshRenderer>();
         var propBlock = new MaterialPropertyBlock();
         renderer.GetPropertyBlock(propBlock);
-        
-        // 设置自发光颜色。乘以一个系数让它更亮
-        propBlock.SetColor("_EmissionColor", color * 2.0f); 
-        renderer.SetPropertyBlock(propBlock);
 
+        propBlock.SetColor("_EmissionColor", color * 2.0f); // 乘以一个系数让它更亮
+        renderer.SetPropertyBlock(propBlock);
         highlightedPieces.Add(piece);
     }
 
-    /// 辅助方法：通过坐标获取棋子的Component (O(1)查找)
+    /// <summary>
+    /// 辅助方法：通过棋盘坐标快速获取棋子对象的PieceComponent。
+    /// </summary>
     public PieceComponent GetPieceComponentAt(Vector2Int position)
     {
-        // 修复：直接进行数学边界检查，不再依赖错误的 boardState 实例
         if (position.x >= 0 && position.x < BoardState.BOARD_WIDTH &&
             position.y >= 0 && position.y < BoardState.BOARD_HEIGHT)
         {
             GameObject pieceGO = pieceObjects[position.x, position.y];
-            if (pieceGO != null)
-            {
-                return pieceGO.GetComponent<PieceComponent>();
-            }
+            if (pieceGO != null) return pieceGO.GetComponent<PieceComponent>();
         }
         return null;
     }
 
-    // --- UV坐标映射 ---
-    // 这个字典定义了每种棋子的文字在贴图集(Atlas)上的UV偏移量
-    // Key: PieceType
-    // Value: Vector2(x_offset, y_offset)
-    // 假设我们的贴图集是 4x2 的网格
+    // UV坐标映射字典，用于从贴图集中选择正确的棋子文字
     private Dictionary<PieceType, Vector2> uvOffsets = new Dictionary<PieceType, Vector2>()
     {
-        // 假设第一行: 帅, 仕, 相, 车
         { PieceType.General,   new Vector2(0.0f, 0.5f) },
         { PieceType.Advisor,   new Vector2(0.25f, 0.5f) },
         { PieceType.Elephant,  new Vector2(0.5f, 0.5f) },
         { PieceType.Chariot,   new Vector2(0.75f, 0.5f) },
-        // 假设第二行: 马, 炮, 兵
         { PieceType.Horse,     new Vector2(0.0f, 0.0f) },
         { PieceType.Cannon,    new Vector2(0.25f, 0.0f) },
         { PieceType.Soldier,   new Vector2(0.5f, 0.0f) },
     };
-    
-    private GameObject[,] pieceObjects = new GameObject[BoardState.BOARD_WIDTH, BoardState.BOARD_HEIGHT];
 
+    /// <summary>
+    /// 根据BoardState数据，完全重新绘制整个棋盘。通常只在游戏开始时调用。
+    /// </summary>
     public void RenderBoard(BoardState boardState)
     {
         foreach (Transform child in transform) Destroy(child.gameObject);
@@ -135,9 +148,11 @@ public class BoardRenderer : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 创建单个棋子的GameObject并放置在棋盘上。
+    /// </summary>
     private void CreatePieceObject(Piece piece, Vector2Int position)
     {
-        // This method now contains all the logic from the old RenderBoard's loop
         Vector3 localPosition = GetLocalPosition(position.x, position.y);
         GameObject pieceGO = Instantiate(gamePiecePrefab, this.transform);
         pieceGO.transform.localPosition = localPosition;
@@ -154,7 +169,6 @@ public class BoardRenderer : MonoBehaviour
 
         MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
         renderer.GetPropertyBlock(propBlock);
-
         renderer.material = (piece.Color == PlayerColor.Red) ? redPieceMaterial : blackPieceMaterial;
 
         if (uvOffsets.ContainsKey(piece.Type))
@@ -164,25 +178,28 @@ public class BoardRenderer : MonoBehaviour
         }
         propBlock.SetColor("_EmissionColor", Color.black);
         renderer.SetPropertyBlock(propBlock);
-
         pieceObjects[position.x, position.y] = pieceGO;
     }
 
+    /// <summary>
+    /// 在视觉上移动一个棋子（GameObject）。
+    /// </summary>
     public void MovePiece(Vector2Int from, Vector2Int to)
     {
         GameObject pieceToMove = pieceObjects[from.x, from.y];
         if (pieceToMove != null)
         {
             pieceToMove.transform.localPosition = GetLocalPosition(to.x, to.y);
-
             pieceObjects[to.x, to.y] = pieceToMove;
             pieceObjects[from.x, from.y] = null;
-
             PieceComponent pc = pieceToMove.GetComponent<PieceComponent>();
             if (pc != null) pc.BoardPosition = to;
         }
     }
 
+    /// <summary>
+    /// 在视觉上移除一个棋子（GameObject）。
+    /// </summary>
     public void RemovePieceAt(Vector2Int position)
     {
         GameObject pieceToRemove = pieceObjects[position.x, position.y];
@@ -194,36 +211,27 @@ public class BoardRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// 将棋盘格子坐标 (x,y) 转换为相对于此对象(BoardVisual)的本地坐标。
-    /// 这个版本是基于设计尺寸，与模型本身大小解耦，最稳定。
-    /// 棋盘固定尺寸45X45cm，棋子固定尺寸35mm
+    /// 【已修正】将棋盘格子坐标转换为相对于此对象的本地3D坐标。
     /// </summary>
     private Vector3 GetLocalPosition(int x, int y)
     {
         // --- 设计常量 ---
-        // 我们在代码中定义棋盘的逻辑尺寸，而不是依赖模型。
-        // 棋盘总宽度 (X轴, 8个间隔)
-        const float boardLogicalWidth = 0.45f; 
-        // 棋盘总高度 (Z轴, 9个间隔)
-        const float boardLogicalHeight = 0.45f * (10f / 9f); // 按比例计算，中国象棋棋盘是长方形的
-        
+        const float boardLogicalWidth = 0.45f;
+        const float boardLogicalHeight = 0.45f * (10f / 9f);
+
         // --- 计算 ---
-        // 计算每个格子的间距
         float cellWidth = boardLogicalWidth / (BoardState.BOARD_WIDTH - 1);
         float cellHeight = boardLogicalHeight / (BoardState.BOARD_HEIGHT - 1);
-        
-        // 计算偏移量，使得棋盘中心在 (0,0)
+
         float xOffset = boardLogicalWidth / 2f;
         float zOffset = boardLogicalHeight / 2f;
-        
-        // 计算最终本地坐标
+
         float xPos = x * cellWidth - xOffset;
         float zPos = y * cellHeight - zOffset;
 
-        // 获取棋子的高度，使其刚好浮在棋盘上
-        float pieceHeight = 0.0175f; // 对应棋子世界高度
+        float pieceHeight = 0.0175f;
 
+        // 必须有一个返回值，否则会产生 CS0161 错误
         return new Vector3(xPos, pieceHeight / 2f, zPos);
     }
-
 }
