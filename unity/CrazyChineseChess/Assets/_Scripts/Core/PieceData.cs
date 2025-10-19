@@ -18,3 +18,19 @@ public struct Piece
         this.Color = color;
     }
 }
+
+
+#region Game State Enums
+
+/// <summary>
+/// 枚举，用于表示游戏当前的几种状态。
+/// </summary>
+public enum GameStatus
+{
+    Ongoing,    // 游戏中
+    RedWin,     // 红方胜
+    BlackWin,   // 黑方胜
+    Stalemate   // 和棋
+}
+
+#endregion

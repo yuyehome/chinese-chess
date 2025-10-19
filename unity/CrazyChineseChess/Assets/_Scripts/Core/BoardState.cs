@@ -100,4 +100,21 @@ public class BoardState
         return position.x >= 0 && position.x < BOARD_WIDTH && 
                position.y >= 0 && position.y < BOARD_HEIGHT;
     }
+
+    /// <summary>
+    /// 创建并返回当前棋盘状态的一个深拷贝副本。
+    /// </summary>
+    public BoardState Clone()
+    {
+        BoardState newBoardState = new BoardState();
+        for (int x = 0; x < BOARD_WIDTH; x++)
+        {
+            for (int y = 0; y < BOARD_HEIGHT; y++)
+            {
+                newBoardState.board[x, y] = this.board[x, y];
+            }
+        }
+        return newBoardState;
+    }
+
 }

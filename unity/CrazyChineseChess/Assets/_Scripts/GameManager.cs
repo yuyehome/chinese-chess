@@ -2,18 +2,16 @@
 using UnityEngine;
 
 /// <summary>
-/// 游戏总管理器，【重构后】负责初始化游戏、管理核心状态和当前的游戏模式。
+/// 【已修正】游戏总管理器，终局判断逻辑已更新以符合GDD。
 /// </summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
     public BoardState CurrentBoardState { get; private set; }
-
-    // 【新增】当前激活的游戏模式控制器
     public GameModeController CurrentGameMode { get; private set; }
 
-    // 缓存对BoardRenderer的引用
     private BoardRenderer boardRenderer;
+    private bool isGameEnded = false; // 新增一个标志位，防止游戏结束后还能继续操作
 
     private void Awake()
     {
@@ -23,7 +21,6 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // --- 依赖获取 ---
         boardRenderer = FindObjectOfType<BoardRenderer>();
         if (boardRenderer == null)
         {
@@ -31,32 +28,80 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // --- 核心数据初始化 ---
         CurrentBoardState = new BoardState();
         CurrentBoardState.InitializeDefaultSetup();
 
-        // --- 游戏模式初始化 ---
-        // 在这里决定启动哪种游戏模式。我们先默认启动回合制模式。
-        // 未来可以根据主菜单的选择来实例化不同的控制器。
         CurrentGameMode = new TurnBasedModeController(this, CurrentBoardState, boardRenderer);
         Debug.Log("游戏开始，已进入回合制模式。");
 
-        // --- 初始渲染 ---
         boardRenderer.RenderBoard(CurrentBoardState);
     }
 
     /// <summary>
-    /// 执行移动操作。这个方法保持不变，因为它代表了一个原子性的游戏行为，
-    /// 无论在哪种模式下，“移动”这个动作本身是不变的。
+    /// 【已修正】执行移动操作，并在移动后检查将军和游戏结束（吃掉将/帅）。
     /// </summary>
     public void ExecuteMove(Vector2Int from, Vector2Int to)
     {
+        // 如果游戏已经结束，则不执行任何操作
+        if (isGameEnded) return;
+
+        // --- 1. 检查吃子与终局 ---
         Piece targetPiece = CurrentBoardState.GetPieceAt(to);
         if (targetPiece.Type != PieceType.None)
         {
+            // TODO: 在这里播放“吃子”音效
             boardRenderer.RemovePieceAt(to);
+
+            // 【核心改动】检查被吃的棋子是否是将/帅
+            if (targetPiece.Type == PieceType.General)
+            {
+                // 游戏结束！
+                GameStatus status = (targetPiece.Color == PlayerColor.Black) ? GameStatus.RedWin : GameStatus.BlackWin;
+                HandleEndGame(status);
+                // 必须在更新数据和视觉之前返回，因为游戏已经结束了
+                CurrentBoardState.MovePiece(from, to); // 仍然执行数据移动，以便棋盘状态是最终的
+                boardRenderer.MovePiece(from, to);
+                return;
+            }
         }
+
+        // --- 2. 更新数据和视觉 ---
         CurrentBoardState.MovePiece(from, to);
         boardRenderer.MovePiece(from, to);
+
+        // --- 3. 检查将军状态 (作为提示) ---
+        CheckForCheck();
+    }
+
+    /// <summary>
+    /// 【已修正】只检查将军状态，不判断游戏结束。
+    /// </summary>
+    private void CheckForCheck()
+    {
+        // 在回合制模式下，检查下一个行动方是否被将军
+        if (CurrentGameMode is TurnBasedModeController turnBasedMode)
+        {
+            PlayerColor nextPlayer = turnBasedMode.GetCurrentPlayer();
+            if (RuleEngine.IsKingInCheck(nextPlayer, CurrentBoardState))
+            {
+                Debug.Log($"将军！{nextPlayer} 方的王正被攻击！");
+                // TODO: 在这里播放“将军”音效，并显示将军UI提示
+            }
+        }
+        // TODO: 在实时模式下，可能需要同时检查双方是否被将军
+    }
+
+    /// <summary>
+    /// 处理游戏结束的逻辑。
+    /// </summary>
+    private void HandleEndGame(GameStatus status)
+    {
+        isGameEnded = true; // 设置游戏结束标志
+        Debug.Log($"游戏结束！结果: {status}");
+        // TODO: 在这里播放“胜利/失败/和棋”音效，并显示游戏结束面板
+
+        // 禁用玩家输入
+        var playerInput = FindObjectOfType<PlayerInput>();
+        if (playerInput != null) playerInput.enabled = false;
     }
 }
