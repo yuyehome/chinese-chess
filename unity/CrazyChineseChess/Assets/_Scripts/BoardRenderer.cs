@@ -17,39 +17,26 @@ public class BoardRenderer : MonoBehaviour
     private List<GameObject> activeMarkers = new List<GameObject>();
     
     private List<PieceComponent> highlightedPieces = new List<PieceComponent>(); // 用于追踪被高亮的棋子
-    
-    public void ShowValidMoves(List<Vector2Int> moves, BoardState boardState)
+
+    public void ShowValidMoves(List<Vector2Int> moves, PlayerColor movingPieceColor, BoardState boardState)
     {
-        ClearAllHighlights(); // 先清除旧的
-        
-        // --- 【新增或修改】获取当前选中棋子的颜色 ---
-        PieceComponent selectedPC = GetPieceComponentAt(moves.Count > 0 ? moves[0] : Vector2Int.zero);
-        PlayerColor currentPieceColor = (selectedPC != null) 
-            ? boardState.GetPieceAt(selectedPC.BoardPosition).Color 
-            : PlayerColor.None; 
-        // 注意: 这里获取选中棋子颜色的方式需要依赖 moves 列表不为空，
-        //       更准确的逻辑应该在 PlayerInput 中处理，但为了快速测试，暂时用此方法。
-    
+        ClearAllHighlights();
+
         foreach (var move in moves)
         {
             Piece targetPiece = boardState.GetPieceAt(move);
             if (targetPiece.Type != PieceType.None)
             {
-                // 【重点修改】判断是否是敌方棋子
-                if (targetPiece.Color != currentPieceColor)
+                if (targetPiece.Color != movingPieceColor)
                 {
-                    // 是敌方棋子，高亮它
                     PieceComponent pc = GetPieceComponentAt(move);
-                    if (pc != null)
-                    {
-                        HighlightPiece(pc, attackHighlightColor); // 表示可攻击
-                    }
+                    if (pc != null) HighlightPiece(pc, attackHighlightColor);
                 }
             }
             else
             {
-                // 如果是空格，显示移动标记
                 Vector3 markerPos = GetLocalPosition(move.x, move.y);
+                markerPos.y += 0.001f;
                 GameObject marker = Instantiate(moveMarkerPrefab, this.transform);
                 marker.transform.localPosition = markerPos;
                 activeMarkers.Add(marker);
@@ -97,6 +84,7 @@ public class BoardRenderer : MonoBehaviour
     /// 辅助方法：通过坐标获取棋子的Component (O(1)查找)
     public PieceComponent GetPieceComponentAt(Vector2Int position)
     {
+        // 修复：直接进行数学边界检查，不再依赖错误的 boardState 实例
         if (position.x >= 0 && position.x < BoardState.BOARD_WIDTH &&
             position.y >= 0 && position.y < BoardState.BOARD_HEIGHT)
         {
@@ -132,6 +120,7 @@ public class BoardRenderer : MonoBehaviour
     public void RenderBoard(BoardState boardState)
     {
         foreach (Transform child in transform) Destroy(child.gameObject);
+        System.Array.Clear(pieceObjects, 0, pieceObjects.Length);
 
         for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
         {
@@ -140,65 +129,70 @@ public class BoardRenderer : MonoBehaviour
                 Piece piece = boardState.GetPieceAt(new Vector2Int(x, y));
                 if (piece.Type != PieceType.None)
                 {
-                    Vector3 localPosition = GetLocalPosition(x, y);
-                    GameObject pieceGO = Instantiate(gamePiecePrefab, this.transform);
-                    pieceGO.transform.localPosition = localPosition;
-                    pieceGO.name = $"{piece.Color}_{piece.Type}_{x}_{y}";
-                    
-                    // 给棋子游戏对象赋予其在棋盘上的坐标身份
-                    PieceComponent pc = pieceGO.GetComponent<PieceComponent>();
-                    if (pc != null)
-                    {
-                        pc.BoardPosition = new Vector2Int(x, y);
-                    }
-
-                    // 1. 先设置位置，再应用旋转
-                    pieceGO.transform.localPosition = localPosition;
-
-                    // 2. 使用 Rotate() 在当前旋转基础上追加旋转
-                    if (piece.Color == PlayerColor.Red)
-                    {
-                        // 红色棋子，在当前基础上，绕世界Y轴旋转90度
-                        pieceGO.transform.Rotate(0, 95, 0, Space.World);
-                    }
-                    else if (piece.Color == PlayerColor.Black)
-                    {
-                        // 黑色棋子，在当前基础上，绕世界Y轴旋转-90度
-                        pieceGO.transform.Rotate(0, -85, 0, Space.World);
-                    }
-
-                    // 1. 获取渲染器组件
-                    MeshRenderer renderer = pieceGO.GetComponent<MeshRenderer>();
-                    if (renderer == null) continue;
-
-                    // 2. 动态创建材质实例，避免修改共享材质
-                    MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
-                    renderer.GetPropertyBlock(propBlock);
-
-                    // 3. 根据颜色选择基础材质
-                    Material baseMaterial = (piece.Color == PlayerColor.Red) ? redPieceMaterial : blackPieceMaterial;
-                    renderer.material = baseMaterial;
-
-                    // 4. 设置UV偏移以显示正确的文字
-                    if (uvOffsets.ContainsKey(piece.Type))
-                    {
-                        Vector2 offset = uvOffsets[piece.Type];
-                        // "_MainTex_ST" 是Unity标准着色器中控制贴图Tiling和Offset的属性名
-                        // Vector4(Tiling.x, Tiling.y, Offset.x, Offset.y)
-                        propBlock.SetVector("_MainTex_ST", new Vector4(0.25f, 0.5f, offset.x, offset.y));
-                    }
-                    
-                    // 在初始渲染时，确保所有棋子的自发光都关闭（为黑色）
-                    propBlock.SetColor("_EmissionColor", Color.black);
-
-                    renderer.SetPropertyBlock(propBlock);
-
-                    pieceObjects[x, y] = pieceGO;
+                    CreatePieceObject(piece, new Vector2Int(x, y));
                 }
             }
         }
     }
-    
+
+    private void CreatePieceObject(Piece piece, Vector2Int position)
+    {
+        // This method now contains all the logic from the old RenderBoard's loop
+        Vector3 localPosition = GetLocalPosition(position.x, position.y);
+        GameObject pieceGO = Instantiate(gamePiecePrefab, this.transform);
+        pieceGO.transform.localPosition = localPosition;
+        pieceGO.name = $"{piece.Color}_{piece.Type}_{position.x}_{position.y}";
+
+        PieceComponent pc = pieceGO.GetComponent<PieceComponent>();
+        if (pc != null) pc.BoardPosition = position;
+
+        if (piece.Color == PlayerColor.Red) pieceGO.transform.Rotate(0, 95, 0, Space.World);
+        else if (piece.Color == PlayerColor.Black) pieceGO.transform.Rotate(0, -85, 0, Space.World);
+
+        MeshRenderer renderer = pieceGO.GetComponent<MeshRenderer>();
+        if (renderer == null) return;
+
+        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
+        renderer.GetPropertyBlock(propBlock);
+
+        renderer.material = (piece.Color == PlayerColor.Red) ? redPieceMaterial : blackPieceMaterial;
+
+        if (uvOffsets.ContainsKey(piece.Type))
+        {
+            Vector2 offset = uvOffsets[piece.Type];
+            propBlock.SetVector("_MainTex_ST", new Vector4(0.25f, 0.5f, offset.x, offset.y));
+        }
+        propBlock.SetColor("_EmissionColor", Color.black);
+        renderer.SetPropertyBlock(propBlock);
+
+        pieceObjects[position.x, position.y] = pieceGO;
+    }
+
+    public void MovePiece(Vector2Int from, Vector2Int to)
+    {
+        GameObject pieceToMove = pieceObjects[from.x, from.y];
+        if (pieceToMove != null)
+        {
+            pieceToMove.transform.localPosition = GetLocalPosition(to.x, to.y);
+
+            pieceObjects[to.x, to.y] = pieceToMove;
+            pieceObjects[from.x, from.y] = null;
+
+            PieceComponent pc = pieceToMove.GetComponent<PieceComponent>();
+            if (pc != null) pc.BoardPosition = to;
+        }
+    }
+
+    public void RemovePieceAt(Vector2Int position)
+    {
+        GameObject pieceToRemove = pieceObjects[position.x, position.y];
+        if (pieceToRemove != null)
+        {
+            Destroy(pieceToRemove);
+            pieceObjects[position.x, position.y] = null;
+        }
+    }
+
     /// <summary>
     /// 将棋盘格子坐标 (x,y) 转换为相对于此对象(BoardVisual)的本地坐标。
     /// 这个版本是基于设计尺寸，与模型本身大小解耦，最稳定。
