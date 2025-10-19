@@ -3,6 +3,14 @@
   "WorkspaceRootPath": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\BoardRenderer.cs||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\BoardRenderer.cs||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\PlayerInput.cs||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\PlayerInput.cs||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\RuleEngine.cs||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Core\\RuleEngine.cs||{3B902123-F8A7-4915-9F01-361F908088D0}"
     }
@@ -19,15 +27,36 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "BoardRenderer.cs",
+              "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\BoardRenderer.cs",
+              "RelativeDocumentMoniker": "Assets\\_Scripts\\BoardRenderer.cs",
+              "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\BoardRenderer.cs",
+              "RelativeToolTip": "Assets\\_Scripts\\BoardRenderer.cs",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-18T16:15:20.43Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "PlayerInput.cs",
+              "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\PlayerInput.cs",
+              "RelativeDocumentMoniker": "Assets\\_Scripts\\PlayerInput.cs",
+              "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\PlayerInput.cs",
+              "RelativeToolTip": "Assets\\_Scripts\\PlayerInput.cs",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-18T16:12:20.906Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "RuleEngine.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\RuleEngine.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\Core\\RuleEngine.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\RuleEngine.cs",
               "RelativeToolTip": "Assets\\_Scripts\\Core\\RuleEngine.cs",
-              "ViewState": "AgIAAAcBAAAAAAAAAAAAACABAAANAAAAAAAAAA==",
+              "ViewState": "AgIAAAcBAAAAAAAAAAAAABcBAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-18T15:08:30.689Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-18T15:08:30.689Z"
             }
           ]
         }
