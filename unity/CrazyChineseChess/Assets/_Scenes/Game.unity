@@ -156,6 +156,8 @@ MonoBehaviour:
   blackPieceMaterial: {fileID: 2100000, guid: 45530da568bc7be45be191fb79bb2ce4, type: 2}
   moveMarkerPrefab: {fileID: 7351242616635427954, guid: 84b50c92684b41b4784ffa19d05ebc8c, type: 3}
   attackHighlightColor: {r: 0.09211462, g: 0.12203175, b: 0.4245283, a: 0.5019608}
+  moveSpeed: 0.5
+  jumpHeight: 0.1
 --- !u!4 &226577798
 Transform:
   m_ObjectHideFlags: 0

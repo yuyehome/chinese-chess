@@ -18,6 +18,10 @@ public class BoardRenderer : MonoBehaviour
     public GameObject moveMarkerPrefab; // 可移动位置的提示标记 (小绿片)
     public Color attackHighlightColor = new Color(1f, 0.2f, 0.2f); // 可攻击棋子的高亮颜色 (改为红色更直观)
 
+    [Header("Animation Settings")]
+    public float moveSpeed = 0.5f; // 棋子移动速度 (单位/秒)
+    public float jumpHeight = 0.1f;  // 棋子跳跃高度
+
     // --- 内部状态变量 ---
     private List<GameObject> activeMarkers = new List<GameObject>(); // 存储当前显示的所有移动标记
     private List<PieceComponent> highlightedPieces = new List<PieceComponent>(); // 存储当前被高亮的棋子
@@ -181,19 +185,76 @@ public class BoardRenderer : MonoBehaviour
         pieceObjects[position.x, position.y] = pieceGO;
     }
 
+
     /// <summary>
-    /// 在视觉上移动一个棋子（GameObject）。
+    /// 【核心修改】在视觉上移动一个棋子。
+    /// 这个方法现在会启动一个协程来执行平滑的移动动画。
     /// </summary>
-    public void MovePiece(Vector2Int from, Vector2Int to)
+    public void MovePiece(Vector2Int from, Vector2Int to, BoardState boardState, bool isCapture)
     {
         GameObject pieceToMove = pieceObjects[from.x, from.y];
         if (pieceToMove != null)
         {
-            pieceToMove.transform.localPosition = GetLocalPosition(to.x, to.y);
+            Vector3 startPos = GetLocalPosition(from.x, from.y);
+            Vector3 endPos = GetLocalPosition(to.x, to.y);
+            Piece pieceData = boardState.GetPieceAt(to);
+
+            // 【修改】直接使用传入的 isCapture 参数
+            bool isJump = IsJumpingPiece(pieceData.Type, isCapture);
+
             pieceObjects[to.x, to.y] = pieceToMove;
             pieceObjects[from.x, from.y] = null;
             PieceComponent pc = pieceToMove.GetComponent<PieceComponent>();
             if (pc != null) pc.BoardPosition = to;
+
+            StartCoroutine(MovePieceCoroutine(pieceToMove, startPos, endPos, isJump));
+        }
+    }
+
+    /// <summary>
+    /// 移动动画的核心协程。
+    /// </summary>
+    private System.Collections.IEnumerator MovePieceCoroutine(GameObject piece, Vector3 startPos, Vector3 endPos, bool isJump)
+    {
+        GameManager.Instance.SetAnimating(true);
+        float journeyDuration = Vector3.Distance(startPos, endPos) / moveSpeed;
+        if (journeyDuration <= 0) journeyDuration = 0.1f; // 防止除零错误
+        float elapsedTime = 0f;
+
+        while (elapsedTime < journeyDuration)
+        {
+            elapsedTime += Time.deltaTime;
+            float percent = Mathf.Clamp01(elapsedTime / journeyDuration);
+            Vector3 currentPos = Vector3.Lerp(startPos, endPos, percent);
+            if (isJump)
+            {
+                currentPos.y += Mathf.Sin(percent * Mathf.PI) * jumpHeight;
+            }
+            if (piece != null) piece.transform.localPosition = currentPos;
+            yield return null;
+        }
+        if (piece != null) piece.transform.localPosition = endPos;
+        GameManager.Instance.SetAnimating(false);
+    }
+
+    /// <summary>
+    /// 【已修正】辅助方法：根据棋子类型和移动情况判断是否应该执行跳跃动画。
+    /// 使用 pieceObjects 数组来正确判断炮是否在吃子。
+    /// </summary>
+    private bool IsJumpingPiece(PieceType type, bool isCapture)
+    {
+        switch (type)
+        {
+            case PieceType.Horse:
+            case PieceType.Elephant:
+                return true;
+
+            case PieceType.Cannon:
+                // 炮只有在吃子时才跳跃
+                return isCapture;
+
+            default:
+                return false;
         }
     }
 

@@ -13,6 +13,8 @@ public class GameManager : MonoBehaviour
     private BoardRenderer boardRenderer;
     private bool isGameEnded = false; // 新增一个标志位，防止游戏结束后还能继续操作
 
+    public bool IsAnimating { get; private set; } = false; // 【新增】动画状态锁
+
     private void Awake()
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
@@ -42,36 +44,46 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void ExecuteMove(Vector2Int from, Vector2Int to)
     {
-        // 如果游戏已经结束，则不执行任何操作
+        if (IsAnimating) return;
         if (isGameEnded) return;
 
-        // --- 1. 检查吃子与终局 ---
+        // 1. 【核心改动】在所有操作之前，先判断这次移动是否是吃子
         Piece targetPiece = CurrentBoardState.GetPieceAt(to);
-        if (targetPiece.Type != PieceType.None)
-        {
-            // TODO: 在这里播放“吃子”音效
-            boardRenderer.RemovePieceAt(to);
+        bool isCapture = targetPiece.Type != PieceType.None;
 
-            // 【核心改动】检查被吃的棋子是否是将/帅
+        // 2. 如果是吃子，处理终局判断和视觉移除
+        if (isCapture)
+        {
+            boardRenderer.RemovePieceAt(to);
             if (targetPiece.Type == PieceType.General)
             {
-                // 游戏结束！
                 GameStatus status = (targetPiece.Color == PlayerColor.Black) ? GameStatus.RedWin : GameStatus.BlackWin;
+                CurrentBoardState.MovePiece(from, to);
+                // 【修改】将 isCapture 信息传递过去
+                boardRenderer.MovePiece(from, to, CurrentBoardState, isCapture);
                 HandleEndGame(status);
-                // 必须在更新数据和视觉之前返回，因为游戏已经结束了
-                CurrentBoardState.MovePiece(from, to); // 仍然执行数据移动，以便棋盘状态是最终的
-                boardRenderer.MovePiece(from, to);
                 return;
             }
         }
 
-        // --- 2. 更新数据和视觉 ---
+        // 3. 更新数据层
         CurrentBoardState.MovePiece(from, to);
-        boardRenderer.MovePiece(from, to);
 
-        // --- 3. 检查将军状态 (作为提示) ---
+        // 4. 【修改】调用视觉移动，并明确告知它这是否是一次吃子
+        boardRenderer.MovePiece(from, to, CurrentBoardState, isCapture);
+
+        // 5. 检查将军
         CheckForCheck();
     }
+
+    /// <summary>
+    /// 【新增】公共方法，用于从外部（如BoardRenderer）设置动画状态。
+    /// </summary>
+    public void SetAnimating(bool isAnimating)
+    {
+        this.IsAnimating = isAnimating;
+    }
+
 
     /// <summary>
     /// 【已修正】只检查将军状态，不判断游戏结束。

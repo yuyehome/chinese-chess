@@ -25,6 +25,10 @@ public class PlayerInput : MonoBehaviour
 
     private void HandleMouseClick()
     {
+
+        // 【新增】如果当前有动画正在播放，则忽略所有点击输入
+        if (GameManager.Instance.IsAnimating) return;
+
         // 获取当前的游戏模式控制器，如果不存在则不进行任何操作
         GameModeController gameMode = GameManager.Instance.CurrentGameMode;
         if (gameMode == null) return;
