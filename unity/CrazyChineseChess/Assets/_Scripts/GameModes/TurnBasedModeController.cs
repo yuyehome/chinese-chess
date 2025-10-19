@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 【新增】传统回合制游戏模式的控制器。
+/// 【已修正】传统回合制游戏模式的控制器。
 /// 负责处理轮流走棋的逻辑。
 /// </summary>
 public class TurnBasedModeController : GameModeController
@@ -13,34 +13,44 @@ public class TurnBasedModeController : GameModeController
     public TurnBasedModeController(GameManager manager, BoardState state, BoardRenderer renderer)
         : base(manager, state, renderer) { }
 
-    public override void OnPieceClicked(PieceComponent piece)
+    /// <summary>
+    /// 【已修正】处理点击棋子的逻辑。
+    /// 这里的逻辑顺序至关重要，以正确处理选择、切换选择和攻击。
+    /// </summary>
+    public override void OnPieceClicked(PieceComponent clickedPiece)
     {
-        Piece pieceData = boardState.GetPieceAt(piece.BoardPosition);
-
-        // 检查是否轮到该棋子的阵营行动
-        if (pieceData.Color != currentPlayerTurn)
-        {
-            Debug.Log($"现在是 {currentPlayerTurn} 方的回合，不能移动 {pieceData.Color} 方的棋子。");
-            return;
-        }
-
-        // 如果已经有棋子被选中（通常是自己的棋子）
+        // --- 情况一：玩家已经选中了一个棋子 ---
+        // 这种情况下，再次点击棋子，意图可能是“攻击”或“切换选择”。
         if (selectedPiece != null)
         {
-            // 如果点击的是一个合法的攻击目标
-            if (currentValidMoves.Contains(piece.BoardPosition))
+            // 检查新点击的棋子，是否是已选中棋子的合法攻击目标。
+            if (currentValidMoves.Contains(clickedPiece.BoardPosition))
             {
-                gameManager.ExecuteMove(selectedPiece.BoardPosition, piece.BoardPosition);
-                SwitchTurn(); // 移动后切换回合
-            }
-            else // 否则，切换选择到这个新棋子上
-            {
-                SelectPiece(piece);
+                // 是合法目标！执行移动/吃子操作。
+                gameManager.ExecuteMove(selectedPiece.BoardPosition, clickedPiece.BoardPosition);
+                SwitchTurn(); // 操作完成后切换回合
+                return; // 本次点击处理完毕，直接返回。
             }
         }
-        else // 如果之前没有棋子被选中
+
+        // --- 情况二：执行到这里，说明不是一次有效的攻击点击 ---
+        // 那么意图就是“选择”或“重新选择”一个己方棋子。
+
+        Piece clickedPieceData = boardState.GetPieceAt(clickedPiece.BoardPosition);
+
+        // 检查点击的棋子是否属于当前回合方。
+        if (clickedPieceData.Color == currentPlayerTurn)
         {
-            SelectPiece(piece);
+            // 是己方棋子，执行“选择”操作。
+            // SelectPiece内部会处理好清除上一个选择的逻辑。
+            SelectPiece(clickedPiece);
+        }
+        else
+        {
+            // 如果点击的是敌方棋子，但又不是合法的攻击目标，
+            // 那么最符合直觉的操作就是清空当前选择。
+            Debug.Log("点击了敌方棋子，但不是合法的攻击目标。取消选择。");
+            ClearSelection();
         }
     }
 
@@ -62,7 +72,7 @@ public class TurnBasedModeController : GameModeController
     }
 
     /// <summary>
-    /// 切换回合。
+    /// 切换回合，并清空所有选择状态。
     /// </summary>
     private void SwitchTurn()
     {
