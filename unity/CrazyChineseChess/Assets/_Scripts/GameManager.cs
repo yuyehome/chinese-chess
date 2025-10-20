@@ -33,8 +33,22 @@ public class GameManager : MonoBehaviour
         CurrentBoardState = new BoardState();
         CurrentBoardState.InitializeDefaultSetup();
 
-        CurrentGameMode = new TurnBasedModeController(this, CurrentBoardState, boardRenderer);
-        Debug.Log("游戏开始，已进入回合制模式。");
+        // 【核心修改】根据 GameModeSelector 的选择来实例化对应的控制器
+        switch (GameModeSelector.SelectedMode)
+        {
+            case GameModeType.TurnBased:
+                CurrentGameMode = new TurnBasedModeController(this, CurrentBoardState, boardRenderer);
+                Debug.Log("游戏开始，已进入【传统回合制】模式。");
+                break;
+            case GameModeType.RealTime:
+                CurrentGameMode = new RealTimeModeController(this, CurrentBoardState, boardRenderer);
+                Debug.Log("游戏开始，已进入【实时对战】模式。");
+                break;
+            default:
+                Debug.LogError("未知的游戏模式！默认进入回合制。");
+                CurrentGameMode = new TurnBasedModeController(this, CurrentBoardState, boardRenderer);
+                break;
+        }
 
         boardRenderer.RenderBoard(CurrentBoardState);
     }
