@@ -234,7 +234,6 @@ public class BoardRenderer : MonoBehaviour
 
         //if (piece.Color == PlayerColor.Red) pieceGO.transform.Rotate(0, 95, 0, Space.World);
         //else if (piece.Color == PlayerColor.Black) pieceGO.transform.Rotate(0, -85, 0, Space.World);
-        pieceGO.transform.Rotate(0, 95, 0, Space.World);
 
         MeshRenderer renderer = pieceGO.GetComponent<MeshRenderer>();
         if (renderer == null) return;
