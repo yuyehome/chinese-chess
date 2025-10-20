@@ -63,14 +63,19 @@
     <Compile Include="Assets\_Scripts\GameManager.cs" />
     <Compile Include="Assets\_Scripts\PlayerInput.cs" />
     <Compile Include="Assets\_Scripts\UI\MainMenuController.cs" />
+    <Compile Include="Assets\_Scripts\MovementStrategies\CannonStrategy.cs" />
     <Compile Include="Assets\_Scripts\Core\PieceData.cs" />
     <Compile Include="Assets\_Scripts\GameModes\GameModeController.cs" />
+    <Compile Include="Assets\_Scripts\MovementStrategies\PhysicalMoverStrategy.cs" />
     <Compile Include="Assets\_Scripts\GameModes\RealTimeModeController.cs" />
     <Compile Include="Assets\_Scripts\Core\RuleEngine.cs" />
     <Compile Include="Assets\_Scripts\UI\GameUIManager.cs" />
     <Compile Include="Assets\_Scripts\GameModes\TurnBasedModeController.cs" />
     <Compile Include="Assets\_Scripts\MoveMarkerComponent.cs" />
+    <Compile Include="Assets\_Scripts\MovementStrategies\ElephantStrategy.cs" />
+    <Compile Include="Assets\_Scripts\MovementStrategies\HorseStrategy.cs" />
     <Compile Include="Assets\_Scripts\Core\BoardState.cs" />
+    <Compile Include="Assets\_Scripts\MovementStrategies\PieceStrategyFactory.cs" />
     <Compile Include="Assets\FishNet\Upgrading\UpgradeFromMirrorMenu.cs" />
     <Compile Include="Assets\_Scripts\UI\EnergyBarSegmentsUI.cs" />
     <Compile Include="Assets\_Scripts\Core\GameModeSelector.cs" />
@@ -78,6 +83,8 @@
     <Compile Include="Assets\_Scripts\Core\EnergySystem.cs" />
     <Compile Include="Assets\_Scripts\PieceComponent.cs" />
     <Compile Include="Assets\FishNet\Upgrading\MirrorUpgrade.cs" />
+    <Compile Include="Assets\_Scripts\MovementStrategies\IPieceMovementStrategy.cs" />
+    <Compile Include="Assets\_Scripts\Core\PieceStateController.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />
