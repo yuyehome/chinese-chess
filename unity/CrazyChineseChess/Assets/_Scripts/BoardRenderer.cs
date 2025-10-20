@@ -15,6 +15,7 @@ public class BoardRenderer : MonoBehaviour
     public Material blackPieceMaterial; // 黑棋的材质
 
     [Header("UI & Effects")]
+    public GameObject selectionMarkerPrefab; // 【新增】在Inspector中指定选择标记的预制件
     public GameObject moveMarkerPrefab; // 可移动位置的提示标记 (小绿片)
     public Color attackHighlightColor = new Color(1f, 0.2f, 0.2f); // 可攻击棋子的高亮颜色 (改为红色更直观)
 
@@ -23,6 +24,7 @@ public class BoardRenderer : MonoBehaviour
     public float jumpHeight = 0.1f;  // 棋子跳跃高度
 
     // --- 内部状态变量 ---
+    private GameObject activeSelectionMarker = null; // 【新增】用于存储当前的选择标记实例
     private List<GameObject> activeMarkers = new List<GameObject>(); // 存储当前显示的所有移动标记
     private List<PieceComponent> highlightedPieces = new List<PieceComponent>(); // 存储当前被高亮的棋子
     private GameObject[,] pieceObjects = new GameObject[BoardState.BOARD_WIDTH, BoardState.BOARD_HEIGHT]; // 二维数组，用于快速通过坐标查找棋子GameObject
@@ -89,7 +91,68 @@ public class BoardRenderer : MonoBehaviour
             }
         }
         highlightedPieces.Clear();
+
+        // 【新增】清除选择标记
+        if (activeSelectionMarker != null)
+        {
+            Destroy(activeSelectionMarker);
+            activeSelectionMarker = null;
+        }
+
     }
+
+    /// <summary>
+    /// 【已修正】显示选中棋子的标记。
+    /// </summary>
+    public void ShowSelectionMarker(Vector2Int position)
+    {
+        // 1. 清除任何可能存在的旧标记
+        if (activeSelectionMarker != null)
+        {
+            Destroy(activeSelectionMarker);
+        }
+
+        // 2. 检查预制件是否存在
+        if (selectionMarkerPrefab == null)
+        {
+            Debug.LogWarning("SelectionMarkerPrefab 未在 BoardRenderer 中指定！");
+            return;
+        }
+
+        // 3. 获取被选中的棋子的GameObject
+        GameObject pieceGO = GetPieceObjectAt(position);
+        if (pieceGO != null)
+        {
+            // 4. 【核心修正】将标记实例化为 pieceGO 的子对象
+            //    这样它的坐标系就是相对于棋子的，并且会自动跟随棋子移动。
+            activeSelectionMarker = Instantiate(selectionMarkerPrefab, pieceGO.transform);
+
+            // 5. 【核心修正】设置标记的局部位置 (localPosition)，让它在棋子正上方
+            //    因为父对象就是棋子本身，所以我们只需要一个简单的向上偏移。
+            activeSelectionMarker.transform.localPosition = new Vector3(0, 0.03f, 0);
+
+            // 6. （可选）如果你希望标记不随棋子旋转，可以重置它的局部旋转
+            activeSelectionMarker.transform.localRotation = Quaternion.identity;
+        }
+    }
+
+    /// <summary>
+    /// 【新增】辅助方法：通过棋盘坐标快速获取棋子的GameObject。
+    /// </summary>
+    public GameObject GetPieceObjectAt(Vector2Int position)
+    {
+        // 先检查坐标是否在棋盘的有效范围内
+        if (position.x >= 0 && position.x < BoardState.BOARD_WIDTH &&
+            position.y >= 0 && position.y < BoardState.BOARD_HEIGHT)
+        {
+            // 如果有效，则返回存储在二维数组中的GameObject
+            return pieceObjects[position.x, position.y];
+        }
+
+        // 如果坐标无效，则返回null
+        return null;
+    }
+
 
     /// <summary>
     /// 高亮单个棋子，通过设置材质的自发光颜色实现。
@@ -169,8 +232,9 @@ public class BoardRenderer : MonoBehaviour
             pc.PieceData = piece; // 【新增】将棋子的逻辑数据存入组件
         }
 
-        if (piece.Color == PlayerColor.Red) pieceGO.transform.Rotate(0, 95, 0, Space.World);
-        else if (piece.Color == PlayerColor.Black) pieceGO.transform.Rotate(0, -85, 0, Space.World);
+        //if (piece.Color == PlayerColor.Red) pieceGO.transform.Rotate(0, 95, 0, Space.World);
+        //else if (piece.Color == PlayerColor.Black) pieceGO.transform.Rotate(0, -85, 0, Space.World);
+        pieceGO.transform.Rotate(0, 95, 0, Space.World);
 
         MeshRenderer renderer = pieceGO.GetComponent<MeshRenderer>();
         if (renderer == null) return;
@@ -220,7 +284,7 @@ public class BoardRenderer : MonoBehaviour
     /// </summary>
     private System.Collections.IEnumerator MovePieceCoroutine(GameObject piece, Vector3 startPos, Vector3 endPos, bool isJump)
     {
-        GameManager.Instance.SetAnimating(true);
+        //GameManager.Instance.SetAnimating(true);
         float journeyDuration = Vector3.Distance(startPos, endPos) / moveSpeed;
         if (journeyDuration <= 0) journeyDuration = 0.1f; // 防止除零错误
         float elapsedTime = 0f;
@@ -238,7 +302,7 @@ public class BoardRenderer : MonoBehaviour
             yield return null;
         }
         if (piece != null) piece.transform.localPosition = endPos;
-        GameManager.Instance.SetAnimating(false);
+        //GameManager.Instance.SetAnimating(false);
     }
 
     /// <summary>

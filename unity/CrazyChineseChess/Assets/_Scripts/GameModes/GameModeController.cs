@@ -58,6 +58,8 @@ public abstract class GameModeController
         currentValidMoves = RuleEngine.GetValidMoves(pieceData, piece.BoardPosition, boardState);
 
         boardRenderer.ShowValidMoves(currentValidMoves, pieceData.Color, boardState);
+        // 【新增】显示选择标记
+        boardRenderer.ShowSelectionMarker(piece.BoardPosition);
     }
 
     /// <summary>

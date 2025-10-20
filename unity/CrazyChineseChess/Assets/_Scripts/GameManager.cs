@@ -80,7 +80,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void ExecuteMove(Vector2Int from, Vector2Int to)
     {
-        if (IsAnimating) return;
+        //if (IsAnimating) return;
         if (isGameEnded) return;
 
         // 1. 【核心改动】在所有操作之前，先判断这次移动是否是吃子
@@ -115,10 +115,10 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// 【新增】公共方法，用于从外部（如BoardRenderer）设置动画状态。
     /// </summary>
-    public void SetAnimating(bool isAnimating)
-    {
-        this.IsAnimating = isAnimating;
-    }
+    //public void SetAnimating(bool isAnimating)
+    //{
+    //    this.IsAnimating = isAnimating;
+    //}
 
 
     /// <summary>
