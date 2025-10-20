@@ -76,51 +76,50 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 【修改】现在只负责逻辑移动，并将isCapture传递给BoardRenderer
+    /// 【已修正】执行移动操作，并在移动后检查将军和游戏结束（吃掉将/帅）。
     /// </summary>
     public void ExecuteMove(Vector2Int from, Vector2Int to)
     {
+        //if (IsAnimating) return;
         if (isGameEnded) return;
 
+        // 1. 【核心改动】在所有操作之前，先判断这次移动是否是吃子
         Piece targetPiece = CurrentBoardState.GetPieceAt(to);
         bool isCapture = targetPiece.Type != PieceType.None;
 
-        // 【旧的吃子逻辑删除】
-        // 碰撞系统会自动处理吃子，但如果终点是静止棋子，我们需要特殊处理
-        // 这是一个复杂点，我们先简化：假设移动到终点时，如果目标是静止棋子，也算碰撞
+        // 2. 如果是吃子，处理终局判断和视觉移除
+        if (isCapture)
+        {
+            boardRenderer.RemovePieceAt(to);
+            if (targetPiece.Type == PieceType.General)
+            {
+                GameStatus status = (targetPiece.Color == PlayerColor.Black) ? GameStatus.RedWin : GameStatus.BlackWin;
+                CurrentBoardState.MovePiece(from, to);
+                // 【修改】将 isCapture 信息传递过去
+                boardRenderer.MovePiece(from, to, CurrentBoardState, isCapture);
+                HandleEndGame(status);
+                return;
+            }
+        }
 
-        // 1. 更新数据层
+        // 3. 更新数据层
         CurrentBoardState.MovePiece(from, to);
 
-        // 2. 触发视觉移动
-        boardRenderer.MovePiece(from, to, isCapture);
+        // 4. 【修改】调用视觉移动，并明确告知它这是否是一次吃子
+        boardRenderer.MovePiece(from, to, CurrentBoardState, isCapture);
 
-        // 3. 将军检查暂时可以保留，但其有效性会受实时状态影响
+        // 5. 检查将军
         CheckForCheck();
     }
 
     /// <summary>
-    /// 当PieceStateController报告一个棋子死亡时，此方法被调用以更新逻辑棋盘。
+    /// 【新增】公共方法，用于从外部（如BoardRenderer）设置动画状态。
     /// </summary>
-    /// <param name="position">死亡棋子所在的棋盘坐标</param>
+    //public void SetAnimating(bool isAnimating)
+    //{
+    //    this.IsAnimating = isAnimating;
+    //}
 
-    public void ReportPieceDeath(Vector2Int position)
-    {
-        // 获取死亡棋子的数据，用于后续可能的判断（比如是不是将/帅）
-        Piece deadPiece = CurrentBoardState.GetPieceAt(position);
-
-        // 从逻辑棋盘上移除
-        CurrentBoardState.RemovePieceAt(position);
-
-        Debug.Log($"逻辑棋盘 BoardState 已在坐标 {position} 处移除棋子。");
-
-        // 【未来扩展】在这里检查游戏是否结束
-        if (deadPiece.Type == PieceType.General)
-        {
-            GameStatus status = (deadPiece.Color == PlayerColor.Black) ? GameStatus.RedWin : GameStatus.BlackWin;
-            // HandleEndGame(status); // 注意：HandleEndGame方法可能需要从ExecuteMove中提取出来，成为公共方法
-        }
-    }
 
     /// <summary>
     /// 【已修正】只检查将军状态，不判断游戏结束。

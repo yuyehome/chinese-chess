@@ -64,10 +64,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: GamePiecePrefab
       objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: e0b1cb777eb17e64183d0883780a30ff, type: 3}
-      propertyPath: m_Layer
-      value: 12
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -78,12 +74,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e0b1cb777eb17e64183d0883780a30ff, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3296664937178004574}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e0b1cb777eb17e64183d0883780a30ff, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 8813875638846050927}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e0b1cb777eb17e64183d0883780a30ff, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 4220111057616514242}
   m_SourcePrefab: {fileID: 100100000, guid: e0b1cb777eb17e64183d0883780a30ff, type: 3}
 --- !u!1 &6122554271908802643 stripped
 GameObject:
@@ -122,46 +112,6 @@ CapsuleCollider:
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.0175
-  m_Height: 0.0175
+  m_Height: 0.035
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &8813875638846050927
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6122554271908802643}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 76a2917801fa3d14c96be82e8ff17674, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  pieceComponent: {fileID: 0}
---- !u!54 &4220111057616514242
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6122554271908802643}
-  serializedVersion: 4
-  m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 112
-  m_CollisionDetection: 0

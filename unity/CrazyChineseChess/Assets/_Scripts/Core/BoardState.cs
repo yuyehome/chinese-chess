@@ -117,18 +117,4 @@ public class BoardState
         return newBoardState;
     }
 
-
-    /// <summary>
-    /// 【新增】在指定位置移除一个棋子（将其变为空位）。
-    /// </summary>
-    /// <param name="position">要移除棋子的棋盘坐标</param>
-    public void RemovePieceAt(Vector2Int position)
-    {
-        if (IsWithinBounds(position))
-        {
-            board[position.x, position.y] = new Piece(PieceType.None, PlayerColor.None);
-        }
-    }
-
-
 }
