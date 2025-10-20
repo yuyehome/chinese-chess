@@ -7,11 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FishNet.Codegen.Cecil", "Fi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FishNet.Demos", "FishNet.Demos.csproj", "{F217251A-8AD6-D115-E63A-C4C12CB6965C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp.csproj", "{CE1A1688-7766-3882-1A69-098C58905133}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.FishNet.Codegen", "Unity.FishNet.Codegen.csproj", "{FE4222FA-7A7E-E23F-1798-3CA5E5657FAB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameKit.Dependencies", "GameKit.Dependencies.csproj", "{86B2C576-D1CE-288B-F60A-484E2CD3E453}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp.csproj", "{CE1A1688-7766-3882-1A69-098C58905133}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +31,10 @@ Global
 		{F217251A-8AD6-D115-E63A-C4C12CB6965C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F217251A-8AD6-D115-E63A-C4C12CB6965C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F217251A-8AD6-D115-E63A-C4C12CB6965C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE1A1688-7766-3882-1A69-098C58905133}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE1A1688-7766-3882-1A69-098C58905133}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE1A1688-7766-3882-1A69-098C58905133}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE1A1688-7766-3882-1A69-098C58905133}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FE4222FA-7A7E-E23F-1798-3CA5E5657FAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE4222FA-7A7E-E23F-1798-3CA5E5657FAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FE4222FA-7A7E-E23F-1798-3CA5E5657FAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -39,10 +43,6 @@ Global
 		{86B2C576-D1CE-288B-F60A-484E2CD3E453}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{86B2C576-D1CE-288B-F60A-484E2CD3E453}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{86B2C576-D1CE-288B-F60A-484E2CD3E453}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CE1A1688-7766-3882-1A69-098C58905133}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CE1A1688-7766-3882-1A69-098C58905133}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CE1A1688-7766-3882-1A69-098C58905133}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CE1A1688-7766-3882-1A69-098C58905133}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

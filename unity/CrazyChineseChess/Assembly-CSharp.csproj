@@ -60,6 +60,7 @@
     <Analyzer Include="D:\projects\chinese-chess\unity\CrazyChineseChess\Assets\FishNet\Runtime\Plugins\CodeAnalysis\FishNet.CodeAnalysis.Analyzers.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\_Scripts\Core\RealTimePieceState.cs" />
     <Compile Include="Assets\_Scripts\GameManager.cs" />
     <Compile Include="Assets\_Scripts\PlayerInput.cs" />
     <Compile Include="Assets\_Scripts\UI\MainMenuController.cs" />
