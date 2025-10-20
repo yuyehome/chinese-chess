@@ -14,7 +14,7 @@ public abstract class GameModeController
     protected GameManager gameManager;
 
     // 当前选中的棋子和其合法移动
-    protected PieceComponent selectedPiece = null;
+    protected PieceComponent selectedPiece { get; private set; } = null; // 【修改】改为带 private set 的属性
     protected List<Vector2Int> currentValidMoves = new List<Vector2Int>();
 
     /// <summary>

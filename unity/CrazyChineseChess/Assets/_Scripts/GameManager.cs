@@ -10,6 +10,8 @@ public class GameManager : MonoBehaviour
     public BoardState CurrentBoardState { get; private set; }
     public GameModeController CurrentGameMode { get; private set; }
 
+    public EnergySystem EnergySystem { get; private set; }
+
     private BoardRenderer boardRenderer;
     private bool isGameEnded = false; // 新增一个标志位，防止游戏结束后还能继续操作
 
@@ -33,7 +35,12 @@ public class GameManager : MonoBehaviour
         CurrentBoardState = new BoardState();
         CurrentBoardState.InitializeDefaultSetup();
 
-        // 【核心修改】根据 GameModeSelector 的选择来实例化对应的控制器
+        // 【修正】只有在实时模式下才需要创建EnergySystem
+        if (GameModeSelector.SelectedMode == GameModeType.RealTime)
+        {
+            EnergySystem = new EnergySystem();
+        }
+
         switch (GameModeSelector.SelectedMode)
         {
             case GameModeType.TurnBased:
@@ -41,7 +48,8 @@ public class GameManager : MonoBehaviour
                 Debug.Log("游戏开始，已进入【传统回合制】模式。");
                 break;
             case GameModeType.RealTime:
-                CurrentGameMode = new RealTimeModeController(this, CurrentBoardState, boardRenderer);
+                // 【关键修正】确保在这里将已经创建的 EnergySystem 实例传递进去
+                CurrentGameMode = new RealTimeModeController(this, CurrentBoardState, boardRenderer, EnergySystem);
                 Debug.Log("游戏开始，已进入【实时对战】模式。");
                 break;
             default:
@@ -51,6 +59,20 @@ public class GameManager : MonoBehaviour
         }
 
         boardRenderer.RenderBoard(CurrentBoardState);
+    }
+
+
+    // Update方法来驱动能量系统
+    private void Update()
+    {
+        // 只有在实时模式下才更新能量
+        if (GameModeSelector.SelectedMode == GameModeType.RealTime && !isGameEnded)
+        {
+            EnergySystem?.Tick();
+
+            // (可选) 在这里打印能量值用于调试
+            // Debug.Log($"Red Energy: {EnergySystem.GetEnergyInt(PlayerColor.Red)}, Black Energy: {EnergySystem.GetEnergyInt(PlayerColor.Black)}");
+        }
     }
 
     /// <summary>

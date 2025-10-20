@@ -163,7 +163,11 @@ public class BoardRenderer : MonoBehaviour
         pieceGO.name = $"{piece.Color}_{piece.Type}_{position.x}_{position.y}";
 
         PieceComponent pc = pieceGO.GetComponent<PieceComponent>();
-        if (pc != null) pc.BoardPosition = position;
+        if (pc != null)
+        {
+            pc.BoardPosition = position;
+            pc.PieceData = piece; // 【新增】将棋子的逻辑数据存入组件
+        }
 
         if (piece.Color == PlayerColor.Red) pieceGO.transform.Rotate(0, 95, 0, Space.World);
         else if (piece.Color == PlayerColor.Black) pieceGO.transform.Rotate(0, -85, 0, Space.World);

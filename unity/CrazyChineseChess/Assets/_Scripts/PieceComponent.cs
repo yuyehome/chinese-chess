@@ -4,4 +4,5 @@ using UnityEngine;
 public class PieceComponent : MonoBehaviour
 {
     public Vector2Int BoardPosition { get; set; }
+    public Piece PieceData { get; set; }
 }
