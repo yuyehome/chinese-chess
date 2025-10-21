@@ -111,9 +111,9 @@ public class RealTimeModeController : GameModeController
                     break;
             }
 
-            if (Time.frameCount % 60 == 0)
+            if (Time.frameCount % 300 == 0)
             {
-                Debug.Log($"[State-Update] 移动中棋子: {pc.name}, Progress: {progress:F2}, LogicalPos: {pc.RTState.LogicalPosition}, Attacking: {pc.RTState.IsAttacking}, Vulnerable: {pc.RTState.IsVulnerable}");
+                Debug.Log($"[State-Update] 移动中棋子: {pc.name}, type:{type}, Progress: {progress:F2}, LogicalPos: {pc.RTState.LogicalPosition}, Attacking: {pc.RTState.IsAttacking}, Vulnerable: {pc.RTState.IsVulnerable}");
             }
 
         }
@@ -149,7 +149,7 @@ public class RealTimeModeController : GameModeController
 
                 if (energySystem.CanSpendEnergy(selectedPiece.PieceData.Color))
                 {
-                    PerformMove(selectedPiece, clickedPiece.BoardPosition, true);
+                    PerformMove(selectedPiece, clickedPiece.BoardPosition);
                 }
                 else
                 {
@@ -195,7 +195,7 @@ public class RealTimeModeController : GameModeController
 
         if (energySystem.CanSpendEnergy(selectedPiece.PieceData.Color))
         {
-            PerformMove(selectedPiece, marker.BoardPosition, false);
+            PerformMove(selectedPiece, marker.BoardPosition);
         }
         else
         {
@@ -234,14 +234,10 @@ public class RealTimeModeController : GameModeController
     /// <summary>
     /// 封装了执行移动的核心逻辑，供OnPieceClicked和OnMarkerClicked调用。
     /// </summary>
-    private void PerformMove(PieceComponent pieceToMove, Vector2Int targetPosition, bool isCapture)
+    private void PerformMove(PieceComponent pieceToMove, Vector2Int targetPosition)
     {
         PlayerColor movingColor = pieceToMove.PieceData.Color;
-        string moveType = isCapture ? "吃子" : "移动";
-        Debug.Log($"[Action] {movingColor}方 {pieceToMove.name} 开始 {moveType} 到 {targetPosition}。");
-
-        // 【重要】在启动移动时，决定炮是否应该播放跳跃动画
-        bool isCannonJump = pieceToMove.PieceData.Type == PieceType.Cannon && isCapture;
+        Debug.Log($"[Action] {movingColor}方 {pieceToMove.name} 开始 到 {targetPosition}。");
 
         // 步骤1: 更新棋子内部状态，并加入到移动列表中
         pieceToMove.RTState.IsMoving = true;

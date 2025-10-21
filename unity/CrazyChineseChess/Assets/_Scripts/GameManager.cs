@@ -97,14 +97,9 @@ public class GameManager : MonoBehaviour
     {
         if (isGameEnded) return;
 
-        // 2.【核心修改】不再在这里移动逻辑棋子，只移除起点棋子
         CurrentBoardState.RemovePieceAt(from);
 
-        // 3. 视觉移动的触发保持不变，但 isCapture 参数现在永远是 false，
-        //    因为跳跃动画（炮）的判断将由 RealTimeModeController 在启动时决定。
-        boardRenderer.MovePiece(from, to, CurrentBoardState, false, onProgressUpdate, onComplete);
-
-
+        boardRenderer.MovePiece(from, to, CurrentBoardState, onProgressUpdate, onComplete);
     }
 
 

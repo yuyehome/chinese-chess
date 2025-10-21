@@ -42,6 +42,9 @@ public class RealTimePieceState
     /// </summary>
     public void ResetToDefault(Vector2Int finalPosition) // 【修复】添加缺失的 finalPosition 参数
     {
+        // 如果棋子已死，则不进行任何状态重置
+        if (IsDead) return;
+
         IsMoving = false;
         IsVulnerable = true;
         IsAttacking = false;

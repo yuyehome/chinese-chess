@@ -48,44 +48,53 @@ public class BoardRenderer : MonoBehaviour
     };
 
     /// <summary>
-    /// 在视觉上移动一个棋子，并为其实时模式提供状态更新回调。
+    /// 【已重构和修正】在视觉上移动一个棋子。
+    /// 此方法现在完全依赖于发起移动的棋子自身的数据，解决了数据混乱问题。
     /// </summary>
-    public void MovePiece(Vector2Int from, Vector2Int to, BoardState boardState, bool isCapture, Action<PieceComponent, float> onProgressUpdate = null, Action<PieceComponent> onComplete = null)
+    public void MovePiece(Vector2Int from, Vector2Int to, BoardState boardState, Action<PieceComponent, float> onProgressUpdate = null, Action<PieceComponent> onComplete = null)
     {
         GameObject pieceToMoveGO = GetPieceObjectAt(from);
-        if (pieceToMoveGO != null)
+        if (pieceToMoveGO == null)
         {
-            PieceComponent pc = pieceToMoveGO.GetComponent<PieceComponent>();
-
-
-            // 【核心修改】只将起点在数组中清空，终点位置暂时不赋值
-            // 这意味着在飞行过程中，终点格子在 pieceObjects 层面是“空的”
-            pieceObjects[from.x, from.y] = null;
-            if (pc != null) pc.BoardPosition = to; // pc的逻辑位置可以先更新
-
-            // 计算动画参数
-            Vector3 startPos = GetLocalPosition(from.x, from.y);
-            Vector3 endPos = GetLocalPosition(to.x, to.y);
-            Piece pieceData = boardState.GetPieceAt(to);
-            bool isJump = IsJumpingPiece(pieceData.Type, isCapture);
-
-            StartCoroutine(MovePieceCoroutine(pc, startPos, endPos, isJump, onProgressUpdate,
-                // ================== 新增逻辑开始 ==================
-                // 我们在原始 onComplete 回调的基础上，包装一层新的回调
-                (completedPiece) => {
-                    // 动画完成后，再更新 pieceObjects 数组
-                    if (completedPiece != null && !completedPiece.RTState.IsDead)
-                    {
-                        pieceObjects[to.x, to.y] = completedPiece.gameObject;
-                    }
-                    // 然后再调用原始的回调
-                    onComplete?.Invoke(completedPiece);
-                }
-                // ================== 新增逻辑结束 ==================
-            ));
-
+            Debug.LogWarning($"[Renderer] 尝试移动一个在坐标 {from} 上不存在的棋子。");
+            return;
         }
+
+        PieceComponent pc = pieceToMoveGO.GetComponent<PieceComponent>();
+        if (pc == null || pc.PieceData.Type == PieceType.None)
+        {
+            Debug.LogError($"[Error] 尝试移动的棋子 {pieceToMoveGO.name} 没有有效的 PieceComponent 或 PieceData！");
+            return;
+        }
+
+        // --- 逻辑清晰化：所有判断都基于发起移动的棋子 'pc' ---
+
+        // 1. 更新 pieceObjects 数组（只清空起点）
+        pieceObjects[from.x, from.y] = null;
+        pc.BoardPosition = to; // 更新组件内的目标位置
+
+        // 2. 计算动画参数
+        Vector3 startPos = GetLocalPosition(from.x, from.y);
+        Vector3 endPos = GetLocalPosition(to.x, to.y);
+
+        // 3. 【核心修正】使用 'pc.PieceData.Type' 进行跳跃判断
+        bool isJump = IsJumpingPiece(pc.PieceData.Type);
+        Debug.Log($"[Jumping-Check] 正在移动的棋子 {pc.name} (类型: {pc.PieceData.Type}) 的跳跃判断结果: {isJump}");
+
+        // 4. 启动协程，并包装 onComplete 回调以在动画结束后更新 pieceObjects 数组
+        StartCoroutine(MovePieceCoroutine(pc, startPos, endPos, isJump, onProgressUpdate,
+            (completedPiece) => {
+                // 动画完成后，在目标位置记录 GameObject
+                if (completedPiece != null && !completedPiece.RTState.IsDead)
+                {
+                    pieceObjects[to.x, to.y] = completedPiece.gameObject;
+                }
+                // 调用原始的 onComplete 回调（例如，用于重置棋子状态）
+                onComplete?.Invoke(completedPiece);
+            }
+        ));
     }
+
 
     /// <summary>
     /// 移动动画的核心协程，负责驱动棋子平滑移动。
@@ -118,19 +127,23 @@ public class BoardRenderer : MonoBehaviour
             {
                 yield break;
             }
+
+            onProgressUpdate?.Invoke(piece, percent);
             piece.transform.localPosition = currentPos;
 
             yield return null;
         }
 
-        // 确保动画结束时棋子精确在终点位置
+
+        // 【重要】只有当协程正常完成（未被中途销毁）时，才执行以下逻辑
         if (piece != null && piece.gameObject != null)
         {
+            // 确保动画结束时棋子精确在终点位置
             piece.transform.localPosition = endPos;
+            // 动画完成时，调用完成回调
+            onComplete?.Invoke(piece);
         }
 
-        // 动画完成时，调用完成回调
-        onComplete?.Invoke(piece);
     }
 
     #region Public Utility Methods
@@ -326,17 +339,22 @@ public class BoardRenderer : MonoBehaviour
         highlightedPieces.Add(piece);
     }
 
+
     /// <summary>
-    /// 根据棋子类型和移动情况判断是否应该执行跳跃动画。
+    /// 【已修改】根据棋子类型判断是否应该执行跳跃动画。
+    /// 统一了马、象、炮的移动方式，它们总是跳跃。
     /// </summary>
-    private bool IsJumpingPiece(PieceType type, bool isCapture)
+    private bool IsJumpingPiece(PieceType type)
     {
         switch (type)
         {
             case PieceType.Horse:
-            case PieceType.Elephant: return true;
-            case PieceType.Cannon: return isCapture;
-            default: return false;
+            case PieceType.Elephant:
+            case PieceType.Cannon: 
+                return true;
+
+            default:
+                return false;
         }
     }
 

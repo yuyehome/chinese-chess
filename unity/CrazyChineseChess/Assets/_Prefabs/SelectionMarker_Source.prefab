@@ -42,7 +42,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8613607953724029854}
   - component: {fileID: 2232581676869644700}
-  m_Layer: 10
+  m_Layer: 14
   m_Name: ArrowSprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
