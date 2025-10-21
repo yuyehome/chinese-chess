@@ -33,3 +33,121 @@
 这次的改动太大，几乎肯定会影响到原来的传统回合制象棋，有没有办法完全做到代码隔离？
 
 特别注意，我这次的要求很多，太过复杂，请你不要一次性做完，你再梳理一次，分阶段完成，请你先把你的理解和计划再说一下，列出来。我确定没问题就告诉你做哪一条或者哪几条。
+
+
+
+========================准备开始第二阶段
+
+
+### **我的理解与分阶段开发计划 (待您确认)**
+
+基于您最新的、详细的需求，我已经重新梳理了我的理解，并制定了一个清晰、分步的开发计划。请您审阅，确认无误后，我们再开始具体实施。
+
+#### **第一阶段：数据结构与状态机基础**
+
+**目标:** 搭建能够承载您所有复杂状态的数据结构，并建立一个管理这些状态的核心机制。这是所有后续玩法的基础。
+
+- **1.1 - 创建 PieceFacade 和 RealTimePieceState:**
+    
+    - **理解:** 我们需要一个统一的入口来访问一个棋子的所有信息（视觉对象GameObject, 逻辑数据Piece, 实时状态等）。PieceFacade（外观模式）就是这个入口。RealTimePieceState 则是一个纯数据类，用于存储您定义的是否死亡、是否移动中等所有状态。
+        
+    - **计划:**
+        
+        - 创建 RealTimePieceState.cs 类，包含您定义的5个状态变量 ( isDead, isMoving, movementType, isVulnerable, isAttacking )。
+            
+        - 创建 PieceFacade.cs 类。这个类将挂载在每个棋子的Prefab上，取代现在的 PieceComponent。它会包含对 GameObject、Piece 数据、RealTimePieceState 实例的引用。
+            
+        - RealTimeModeController 将持有一个 Dictionary<Vector2Int, PieceFacade> 来快速通过坐标查找棋子。
+            
+- **1.2 - 建立状态更新循环:**
+    
+    - **理解:** 棋子的状态（尤其是移动过程中的状态）是随时间变化的。我们需要一个地方来集中处理这些更新。
+        
+    - **计划:**
+        
+        - 在 RealTimeModeController 中创建一个 UpdateAllPieceStates() 方法，并在 Update() 中每帧调用。
+            
+        - 这个方法会遍历所有正在移动的棋子。
+            
+        - 根据每个棋子的移动进度 (moveProgress) 和其类型 (车 vs 马)，**完全按照您定义的规则**来更新它的 RealTimePieceState。
+            
+            - **伪代码示例:**
+                
+                codeCode
+                
+
+#### **第二阶段：战斗逻辑与碰撞检测**
+
+**目标:** 实现核心的吃子和碰撞双亡逻辑。
+
+- **2.1 - 创建 CombatManager:**
+    
+    - **理解:** 战斗判定逻辑比较复杂，最好独立成一个模块，而不是全塞在 RealTimeModeController 里。
+        
+    - **计划:**
+        
+        - 创建一个 CombatManager.cs 类。
+            
+        - RealTimeModeController 在 Update() 的最后，会调用 combatManager.ProcessCombat()。
+            
+- **2.2 - 实现碰撞检测与伤害判定:**
+    
+    - **理解:** 我们需要每帧检测所有处于“攻击状态”的棋子，看它们的攻击范围是否覆盖了处于“可被攻击状态”的敌方棋子。
+        
+    - **计划:**
+        
+        - 在 CombatManager.ProcessCombat() 中:
+            
+            - 获取所有棋子的列表。
+                
+            - 使用两层循环 for each pieceA in allPieces 和 for each pieceB in allPieces 来进行配对检查（A和B不能是同一方）。
+                
+            - **伪代码示例:**
+                
+                codeCode
+                
+        - IsInAttackRange() 是一个辅助函数，它会检查两个棋子的 GameObject 之间的距离是否小于一个阈值（比如棋子半径）。
+            
+        - Kill(piece) 函数会负责处理棋子死亡的所有逻辑：更新BoardState、销毁GameObject、更新RealTimeModeController中的棋子列表。
+            
+
+#### **第三阶段：规则整合与表现**
+
+**目标:** 将新的状态和战斗系统与现有的移动规则、高亮显示等功能无缝结合。
+
+- **3.1 - 整合移动选择逻辑:**
+    
+    - **理解:** 现在只有静止的棋子才能被操作。
+        
+    - **计划:**
+        
+        - 修改 RealTimeModeController.OnPieceClicked()。在最开始就检查：if (clickedPieceFacade.realTimeState.isMoving) return;。
+            
+- **3.2 - 整合移动规则 (RuleEngine):**
+    
+    - **理解:** RuleEngine.GetValidMoves 在计算炮的落点时，需要知道中间是否有“炮架”。现在“炮架”的定义是任何“实体”棋子，而一个棋子是否实体，取决于它的 RealTimePieceState。这会造成RuleEngine（纯静态工具类）和RealTimePieceState（运行时数据）的耦合。
+        
+    - **解决方案:**
+        
+        - 我们将**克隆一份** RuleEngine.cs 为 RealTimeRuleEngine.cs。
+            
+        - 修改 RealTimeRuleEngine 的方法，让它们可以接收一个棋子列表（包含实时状态）作为额外参数，或者直接接收 RealTimeModeController 的引用来查询状态。这样，当它判断炮的路径时，就能查询路径上的棋子**当前是否为实体**。
+            
+        - RealTimeModeController 将调用 RealTimeRuleEngine，而TurnBasedModeController继续调用旧的RuleEngine，完美隔离。
+            
+- **3.3 - 视觉表现增强:**
+    
+    - **理解:** 我们需要视觉上区分不同状态的棋子。
+        
+    - **计划:**
+        
+        - 在 BoardRenderer 中增加新方法：
+            
+            - SetEtherealEffect(pieceGameObject, bool active): 切换半透明/虚化着色器。
+                
+            - ShowAttackEffect(pieceGameObject, bool active): 播放攻击光效。
+                
+        - 在 RealTimeModeController.UpdateAllPieceStates() 中，当棋子状态发生变化时，调用BoardRenderer的这些新方法来更新视觉效果。
+            
+        - **高亮逻辑不受影响**，ShowValidMoves 依然有效，因为它只在高亮静止的棋子。
+        - 

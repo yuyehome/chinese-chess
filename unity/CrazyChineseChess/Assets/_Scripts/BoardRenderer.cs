@@ -25,7 +25,7 @@ public class BoardRenderer : MonoBehaviour
 
     [Header("Animation Settings")]
     [Tooltip("棋子移动速度 (单位/秒)")]
-    public float moveSpeed = 0.5f;
+    public float moveSpeed = 0.1f;
     [Tooltip("棋子跳跃高度")]
     public float jumpHeight = 0.1f;
 
@@ -57,10 +57,11 @@ public class BoardRenderer : MonoBehaviour
         {
             PieceComponent pc = pieceToMoveGO.GetComponent<PieceComponent>();
 
-            // 更新 pieceObjects 数组，这是视觉移动的“逻辑瞬间”
-            pieceObjects[to.x, to.y] = pieceToMoveGO;
+
+            // 【核心修改】只将起点在数组中清空，终点位置暂时不赋值
+            // 这意味着在飞行过程中，终点格子在 pieceObjects 层面是“空的”
             pieceObjects[from.x, from.y] = null;
-            if (pc != null) pc.BoardPosition = to;
+            if (pc != null) pc.BoardPosition = to; // pc的逻辑位置可以先更新
 
             // 计算动画参数
             Vector3 startPos = GetLocalPosition(from.x, from.y);
@@ -68,8 +69,21 @@ public class BoardRenderer : MonoBehaviour
             Piece pieceData = boardState.GetPieceAt(to);
             bool isJump = IsJumpingPiece(pieceData.Type, isCapture);
 
-            // 为这次移动启动一个全新的、独立的协程
-            StartCoroutine(MovePieceCoroutine(pc, startPos, endPos, isJump, onProgressUpdate, onComplete));
+            StartCoroutine(MovePieceCoroutine(pc, startPos, endPos, isJump, onProgressUpdate,
+                // ================== 新增逻辑开始 ==================
+                // 我们在原始 onComplete 回调的基础上，包装一层新的回调
+                (completedPiece) => {
+                    // 动画完成后，再更新 pieceObjects 数组
+                    if (completedPiece != null && !completedPiece.RTState.IsDead)
+                    {
+                        pieceObjects[to.x, to.y] = completedPiece.gameObject;
+                    }
+                    // 然后再调用原始的回调
+                    onComplete?.Invoke(completedPiece);
+                }
+                // ================== 新增逻辑结束 ==================
+            ));
+
         }
     }
 
@@ -229,8 +243,12 @@ public class BoardRenderer : MonoBehaviour
         GameObject pieceToRemove = GetPieceObjectAt(position);
         if (pieceToRemove != null)
         {
+            Debug.Log($"[Renderer] 正在从坐标 {position} 移除GameObject: {pieceToRemove.name}。");
             Destroy(pieceToRemove);
             pieceObjects[position.x, position.y] = null;
+        } else
+        {
+            Debug.LogWarning($"[Renderer] 尝试移除坐标 {position} 的棋子，但未找到GameObject。");
         }
     }
 

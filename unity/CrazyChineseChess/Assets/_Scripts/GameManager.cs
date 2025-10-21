@@ -90,42 +90,23 @@ public class GameManager : MonoBehaviour
 
     /// <summary>
     /// 执行一次棋子移动的完整操作，包含逻辑更新和视觉表现触发。
+    /// 【核心重构】本方法不再处理任何吃子逻辑，只负责下达移动指令。
+    /// 所有战斗判定都交由 CombatManager 在每帧处理。
     /// </summary>
-    /// <param name="from">起始坐标</param>
-    /// <param name="to">目标坐标</param>
-    /// <param name="onProgressUpdate">（实时模式用）动画过程回调</param>
-    /// <param name="onComplete">（实时模式用）动画完成回调</param>
     public void ExecuteMove(Vector2Int from, Vector2Int to, Action<PieceComponent, float> onProgressUpdate = null, Action<PieceComponent> onComplete = null)
     {
         if (isGameEnded) return;
 
-        Piece movingPieceData = CurrentBoardState.GetPieceAt(from);
-        Piece targetPieceData = CurrentBoardState.GetPieceAt(to);
-        bool isCapture = targetPieceData.Type != PieceType.None;
+        // 2.【核心修改】不再在这里移动逻辑棋子，只移除起点棋子
+        CurrentBoardState.RemovePieceAt(from);
 
-        if (isCapture)
-        {
-            Debug.Log($"[Combat] 发生吃子: {movingPieceData.Color}方的{movingPieceData.Type} 捕获了 {targetPieceData.Color}方的{targetPieceData.Type}。");
-            boardRenderer.RemovePieceAt(to);
-            if (targetPieceData.Type == PieceType.General)
-            {
-                // 游戏结束的终局判断
-                GameStatus status = (targetPieceData.Color == PlayerColor.Black) ? GameStatus.RedWin : GameStatus.BlackWin;
-                CurrentBoardState.MovePiece(from, to);
-                boardRenderer.MovePiece(from, to, CurrentBoardState, true, onProgressUpdate, onComplete);
-                HandleEndGame(status);
-                return;
-            }
-        }
+        // 3. 视觉移动的触发保持不变，但 isCapture 参数现在永远是 false，
+        //    因为跳跃动画（炮）的判断将由 RealTimeModeController 在启动时决定。
+        boardRenderer.MovePiece(from, to, CurrentBoardState, false, onProgressUpdate, onComplete);
 
-        // 更新棋盘数据模型
-        CurrentBoardState.MovePiece(from, to);
-        // 触发棋盘视觉表现
-        boardRenderer.MovePiece(from, to, CurrentBoardState, isCapture, onProgressUpdate, onComplete);
 
-        // 检查是否将军（主要用于回合制）
-        CheckForCheck();
     }
+
 
     /// <summary>
     /// 检查并打印将军状态，目前仅在回合制模式下有实际意义。
@@ -145,7 +126,7 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// 处理游戏结束的逻辑。
     /// </summary>
-    private void HandleEndGame(GameStatus status)
+    public void HandleEndGame(GameStatus status)
     {
         isGameEnded = true;
         Debug.Log($"[GameFlow] 游戏结束！结果: {status}");

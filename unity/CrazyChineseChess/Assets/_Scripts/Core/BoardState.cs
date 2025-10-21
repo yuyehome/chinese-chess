@@ -83,6 +83,17 @@ public class BoardState
         return new Piece(PieceType.None, PlayerColor.None);
     }
 
+    /// <summary>
+    /// 在指定位置设置一个棋子，用于动态构建逻辑棋盘。
+    /// </summary>
+    public void SetPieceAt(Vector2Int position, Piece piece)
+    {
+        if (IsWithinBounds(position))
+        {
+            board[position.x, position.y] = piece;
+        }
+    }
+
     // 移动棋子 (这只是一个数据操作，不包含规则校验)
     public void MovePiece(Vector2Int from, Vector2Int to)
     {
@@ -93,7 +104,18 @@ public class BoardState
             board[from.x, from.y] = new Piece(PieceType.None, PlayerColor.None);
         }
     }
-    
+
+    /// <summary>
+    /// 从棋盘上移除一个棋子（将其设置为空）。
+    /// </summary>
+    public void RemovePieceAt(Vector2Int position)
+    {
+        if (IsWithinBounds(position))
+        {
+            board[position.x, position.y] = new Piece(PieceType.None, PlayerColor.None);
+        }
+    }
+
     // 检查坐标是否在棋盘内
     public bool IsWithinBounds(Vector2Int position)
     {
