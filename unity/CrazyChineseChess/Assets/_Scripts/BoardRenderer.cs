@@ -237,10 +237,30 @@ public class BoardRenderer : MonoBehaviour
     }
 
     /// <summary>
+    /// 直接根据PieceComponent移除棋子的视觉对象。
+    /// 这个方法用于处理移动中被击杀的棋子，因为它不依赖于pieceObjects数组。
+    /// </summary>
+    /// <param name="pieceToRemove">要移除的棋子组件。</param>
+    public void RemovePiece(PieceComponent pieceToRemove)
+    {
+        if (pieceToRemove != null && pieceToRemove.gameObject != null)
+        {
+            Debug.Log($"[Renderer] 正在直接移除GameObject: {pieceToRemove.name}。");
+            Destroy(pieceToRemove.gameObject);
+        }
+        else
+        {
+            Debug.LogWarning($"[Renderer] 尝试直接移除一个空的PieceComponent或其GameObject。");
+        }
+    }
+
+    /// <summary>
     /// 在视觉上移除一个棋子（销毁其GameObject）。
     /// </summary>
     public void RemovePieceAt(Vector2Int position)
     {
+        Debug.Log($"[Renderer] 尝试从坐标 {position} 查找并移除一个静止的棋子。");
+
         GameObject pieceToRemove = GetPieceObjectAt(position);
         if (pieceToRemove != null)
         {

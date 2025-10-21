@@ -161,18 +161,25 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"[GameManager] 收到 {killedPiece.name} 的死亡事件。");
 
-        // 1. 更新模型层 (Model)
-        // 只有静止的棋子才需要在BoardState中被移除，移动中的棋子已经不在BoardState里了。
-        if (!killedPiece.RTState.IsMoving)
+        // 1. 更新视图层 (View)
+        // 核心修复：根据棋子是否在移动，调用不同的移除方法。
+        if (killedPiece.RTState.IsMoving)
         {
+            // 对于移动中的棋子，我们不能按坐标去查找，因为pieceObjects里没有它。
+            // 我们需要直接销毁它的GameObject。
+            Debug.Log($"[GameManager] 死亡的棋子 {killedPiece.name} 正在移动，直接移除其GameObject。");
+            boardRenderer.RemovePiece(killedPiece);
+        }
+        else
+        {
+            // 对于静止的棋子，它在BoardState和pieceObjects中都有记录。
+            // 我们可以按坐标来移除它，并更新模型。
+            Debug.Log($"[GameManager] 死亡的棋子 {killedPiece.name} 是静止的，按坐标移除并更新模型。");
             CurrentBoardState.RemovePieceAt(killedPiece.RTState.LogicalPosition);
+            boardRenderer.RemovePieceAt(killedPiece.RTState.LogicalPosition);
         }
 
-        // 2. 更新视图层 (View)
-        // BoardRenderer的RemovePieceAt会负责销毁GameObject
-        boardRenderer.RemovePieceAt(killedPiece.RTState.LogicalPosition);
-
-        // 3. 检查游戏结束条件
+        // 2. 检查游戏结束条件
         if (killedPiece.PieceData.Type == PieceType.General)
         {
             Debug.Log($"[GameFlow] {killedPiece.PieceData.Type} 被击杀！游戏结束！");
