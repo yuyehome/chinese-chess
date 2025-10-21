@@ -22,8 +22,8 @@ public class EnergySystem
     public EnergySystem()
     {
         // 游戏开始时，双方能量为0
-        redPlayerEnergy = 0.0f;
-        blackPlayerEnergy = 0.0f;
+        redPlayerEnergy = 2.0f;
+        blackPlayerEnergy = 2.0f;
     }
 
     /// <summary>

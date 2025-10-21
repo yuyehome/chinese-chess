@@ -4,7 +4,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// 负责处理实时模式下所有战斗相关的逻辑，如碰撞检测和伤害判定。
+/// 负责处理实时模式下所有战斗相关的逻辑，包括敌方和友方的碰撞检测与伤害判定。
 /// </summary>
 public class CombatManager
 {
@@ -12,7 +12,6 @@ public class CombatManager
     private BoardRenderer boardRenderer;
     private GameManager gameManager;
 
-    // 碰撞检测的距离阈值，棋子半径约为0.0175f，我们用稍小一点的值
     private const float COLLISION_DISTANCE_SQUARED = 0.0175f * 0.0175f;
 
     public CombatManager(BoardState state, BoardRenderer renderer)
@@ -27,8 +26,6 @@ public class CombatManager
     /// </summary>
     public void ProcessCombat(List<PieceComponent> allActivePieces)
     {
-
-        // 执行两两配对的碰撞检测
         for (int i = 0; i < allActivePieces.Count; i++)
         {
             for (int j = i + 1; j < allActivePieces.Count; j++)
@@ -36,32 +33,14 @@ public class CombatManager
                 PieceComponent pieceA = allActivePieces[i];
                 PieceComponent pieceB = allActivePieces[j];
 
-                // 跳过无效或已死亡的棋子，或属于同一方的棋子
                 if (pieceA == null || pieceB == null || pieceA.RTState.IsDead || pieceB.RTState.IsDead) continue;
-                if (pieceA.PieceData.Color == pieceB.PieceData.Color) continue;
 
-                // 检查物理距离是否足够近以发生碰撞
-                float sqrDist = Vector3.SqrMagnitude(pieceA.transform.position - pieceB.transform.position);
+                // 【修改】移除了跳过友方单位的判断
+                // if (pieceA.PieceData.Color == pieceB.PieceData.Color) continue;
 
-                //if (Time.frameCount % 120 == 0)
-                //{
-                //    // 新增一个 if 判断，只在我们关心的两个棋子之间打印日志
-                //    if ((pieceA.name == "Red_Cannon_7_2" && pieceB.name == "Black_Horse_7_9") ||
-                //    (pieceA.name == "Black_Horse_7_9" && pieceB.name == "Red_Cannon_7_2"))
-                //    {
-                //        // 在这里，我们可以无条件打印，不再需要距离判断
-                //        Debug.Log($"[Debug-Distance] " +
-                //                  $"{pieceA.name} vs {pieceB.name}. " +
-                //                  $"距离平方: {sqrDist}. " +
-                //                  $"A坐标: {pieceA.transform.position}, " +
-                //                  $"B坐标: {pieceB.transform.position}");
-                //    }
-
-                //}
-
+                float sqrDist = Vector3.SqrMagnitude(pieceA.transform.localPosition - pieceB.transform.localPosition);
                 if (sqrDist < COLLISION_DISTANCE_SQUARED)
                 {
-                    Debug.Log($"[Combat-Check] 检测到碰撞! 棋子A: {pieceA.name}, 棋子B: {pieceB.name}, 距离平方: {sqrDist}");
                     ResolveCollision(pieceA, pieceB);
                 }
             }
@@ -69,36 +48,84 @@ public class CombatManager
     }
 
     /// <summary>
-    /// 处理两个棋子之间的碰撞结果。
+    /// 【已重构】处理两个棋子之间的碰撞结果，包含敌方和友方逻辑。
     /// </summary>
     private void ResolveCollision(PieceComponent pieceA, PieceComponent pieceB)
+    {
+        // 如果是友方单位碰撞
+        if (pieceA.PieceData.Color == pieceB.PieceData.Color)
+        {
+            ResolveFriendlyCollision(pieceA, pieceB);
+        }
+        // 如果是敌方单位碰撞
+        else
+        {
+            ResolveEnemyCollision(pieceA, pieceB);
+        }
+    }
+
+    /// <summary>
+    /// 【新增】处理敌方单位的碰撞逻辑。
+    /// </summary>
+    private void ResolveEnemyCollision(PieceComponent pieceA, PieceComponent pieceB)
     {
         RealTimePieceState stateA = pieceA.RTState;
         RealTimePieceState stateB = pieceB.RTState;
 
-        Debug.Log($"[Combat-Resolve] -- 棋子A ({pieceA.name}) 状态: IsAttacking={stateA.IsAttacking}, IsVulnerable={stateA.IsVulnerable}");
-        Debug.Log($"[Combat-Resolve] -- 棋子B ({pieceB.name}) 状态: IsAttacking={stateB.IsAttacking}, IsVulnerable={stateB.IsVulnerable}");
-
-        // 根据双方的攻击和易伤状态，判断伤害
         bool aCanDamageB = stateA.IsAttacking && stateB.IsVulnerable;
         bool bCanDamageA = stateB.IsAttacking && stateA.IsVulnerable;
 
         if (aCanDamageB && bCanDamageA)
         {
-            // 双方都满足条件，同归于尽
-            Debug.Log($"[Combat] 碰撞双亡！ {pieceA.name} 与 {pieceB.name} 同归于尽。");
+            Debug.Log($"[Combat-Enemy] 碰撞双亡！ {pieceA.name} 与 {pieceB.name} 同归于尽。");
             Kill(pieceA);
             Kill(pieceB);
         }
         else if (aCanDamageB)
         {
-            // 只有A能伤害B
             Kill(pieceB);
         }
         else if (bCanDamageA)
         {
-            // 只有B能伤害A
             Kill(pieceA);
+        }
+    }
+
+    /// <summary>
+    /// 【新增】处理友方单位的碰撞逻辑。
+    /// </summary>
+    private void ResolveFriendlyCollision(PieceComponent pieceA, PieceComponent pieceB)
+    {
+        RealTimePieceState stateA = pieceA.RTState;
+        RealTimePieceState stateB = pieceB.RTState;
+
+        //只要满足任何一个攻击条件，就触发逻辑，如果车远距离过来，帅主动上去送死，并且帅静止不处于攻击状态。车会被反杀
+        if (stateA.IsAttacking && stateB.IsVulnerable || stateA.IsVulnerable && stateB.IsAttacking) 
+        {
+            int valueA = PieceValue.GetValue(pieceA.PieceData.Type);
+            int valueB = PieceValue.GetValue(pieceB.PieceData.Type);
+
+            Debug.Log($"[Combat-Friendly] 友方碰撞！ {pieceA.name} (价值:{valueA}) 与 {pieceB.name} (价值:{valueB}) 相撞。");
+
+            if (valueA > valueB)
+            {
+                // A价值更高，B死亡
+                Debug.Log($"[Combat-Friendly] {pieceA.name} 价值更高，{pieceB.name} 被摧毁。");
+                Kill(pieceB);
+            }
+            else if (valueB > valueA)
+            {
+                // B价值更高，A死亡
+                Debug.Log($"[Combat-Friendly] {pieceB.name} 价值更高，{pieceA.name} 被摧毁。");
+                Kill(pieceA);
+            }
+            else // 价值相等
+            {
+                // 价值相等，如双车碰撞，则同归于尽
+                Debug.Log($"[Combat-Friendly] 双方价值相等，同归于尽！");
+                Kill(pieceA);
+                Kill(pieceB);
+            }
         }
     }
 
@@ -109,25 +136,27 @@ public class CombatManager
     {
         if (piece == null || piece.RTState.IsDead) return;
 
-        // 【核心修改】在所有逻辑操作之前，先销毁GameObject。
-        // 这会触发协程中的null检查，从而立即停止动画。
-        // 我们需要棋子当前的逻辑位置来移除，而不是未来的目标位置。
         Vector2Int currentLogicalPos = piece.RTState.LogicalPosition;
+        Debug.Log($"[Combat] 棋子 {piece.name} 在逻辑坐标 {currentLogicalPos} 被击杀！");
 
-        Debug.Log($"[Combat] 棋子 {piece.name} 在坐标 {piece.BoardPosition} 被击杀！");
-
-        // 1. 标记为死亡状态
         piece.RTState.IsDead = true;
 
-        // 2. 移除视觉对象
-        // 注意：我们直接销毁GameObject，而不是通过BoardRenderer的方法
-        // 因为BoardRenderer的方法依赖pieceObjects数组，而那个数组在飞行中不准
+
+        // 【核心修改】CombatManager不再直接修改BoardState。
+        // BoardState只记录静止棋子。一个移动中的棋子被击杀，它本来也就不在BoardState里。
+        // 如果被击杀的是一个静止的棋子，我们需要移除它。
+        if (!piece.RTState.IsMoving)
+        {
+            boardState.RemovePieceAt(currentLogicalPos);
+            Debug.Log($"[Combat-Kill] 已从BoardState的 {currentLogicalPos} 移除一个静止的棋子。");
+        }
+        else
+        {
+            Debug.Log($"[Combat-Kill] 一个移动中的棋子被击杀，无需操作BoardState。");
+        }
+
+        // 销毁GameObject的操作保持不变，这会终止它的协程
         GameObject.Destroy(piece.gameObject);
-
-        // 3. 更新棋盘逻辑数据 (使用正确的当前位置)
-        boardState.RemovePieceAt(currentLogicalPos);
-        Debug.Log($"[Combat-Kill] 已从BoardState的 {currentLogicalPos} 移除棋子。");
-
 
         // 检查是否击杀了将/帅，如果是则结束游戏
         if (piece.PieceData.Type == PieceType.General)

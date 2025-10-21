@@ -257,17 +257,25 @@ public class RealTimeModeController : GameModeController
             },
             // OnComplete: 动画完成时的回调
             (pc) => {
-                if (pc != null && pc.RTState != null)
-                {
 
-                    // 在棋盘上正式“落座”
+
+                // 【核心修复】在执行任何落子逻辑前，必须检查棋子是否在中途被击杀
+                if (pc != null && pc.RTState != null && !pc.RTState.IsDead)
+                {
+                    // 只有存活的棋子才能执行落子和状态重置
                     boardState.SetPieceAt(pc.RTState.MoveEndPos, pc.PieceData);
                     pc.BoardPosition = pc.RTState.MoveEndPos;
                     pc.RTState.ResetToDefault(pc.RTState.MoveEndPos);
                     movingPieces.Remove(pc);
                     Debug.Log($"[State] {pc.name} 移动完成，状态已重置于 {pc.RTState.MoveEndPos}。");
-
                 }
+                else if (pc != null)
+                {
+                    // 如果棋子在中途死亡，只需确保它从移动列表中移除
+                    movingPieces.Remove(pc);
+                    Debug.Log($"[State] 已死亡的棋子 {pc.name} 动画结束，不执行落子逻辑。");
+                }
+
             }
         );
 
