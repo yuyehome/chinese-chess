@@ -105,9 +105,9 @@ public class RealTimeModeController : GameModeController
                 case PieceType.Horse:
                 case PieceType.Elephant:
                     // 马和象在移动后半段具有攻击性
-                    if (progress > 0.6f) { state.IsAttacking = true; }
+                    if (progress > 0.8f) { state.IsAttacking = true; }
                     // 在移动中间阶段处于无敌状态
-                    if (progress > 0.2f && progress < 0.8f) { state.IsVulnerable = false; }
+                    if (progress > 0.1f && progress < 0.8f) { state.IsVulnerable = false; }
                     break;
             }
 

@@ -232,7 +232,7 @@ MonoBehaviour:
   selectionMarkerPrefab: {fileID: 714919338215821614, guid: b9509c9c2daa1a9428339054598c52ac, type: 3}
   moveMarkerPrefab: {fileID: 7351242616635427954, guid: 84b50c92684b41b4784ffa19d05ebc8c, type: 3}
   attackHighlightColor: {r: 0.09211462, g: 0.12203175, b: 0.4245283, a: 0.5019608}
-  moveSpeed: 0.5
+  moveSpeed: 0.1
   jumpHeight: 0.1
 --- !u!4 &226577798
 Transform:

@@ -43,22 +43,21 @@ public class CombatManager
                 // 检查物理距离是否足够近以发生碰撞
                 float sqrDist = Vector3.SqrMagnitude(pieceA.transform.position - pieceB.transform.position);
 
+                //if (Time.frameCount % 120 == 0)
+                //{
+                //    // 新增一个 if 判断，只在我们关心的两个棋子之间打印日志
+                //    if ((pieceA.name == "Red_Cannon_7_2" && pieceB.name == "Black_Horse_7_9") ||
+                //    (pieceA.name == "Black_Horse_7_9" && pieceB.name == "Red_Cannon_7_2"))
+                //    {
+                //        // 在这里，我们可以无条件打印，不再需要距离判断
+                //        Debug.Log($"[Debug-Distance] " +
+                //                  $"{pieceA.name} vs {pieceB.name}. " +
+                //                  $"距离平方: {sqrDist}. " +
+                //                  $"A坐标: {pieceA.transform.position}, " +
+                //                  $"B坐标: {pieceB.transform.position}");
+                //    }
 
-                if (Time.frameCount % 120 == 0)
-                {
-                    // 新增一个 if 判断，只在我们关心的两个棋子之间打印日志
-                    if ((pieceA.name == "Red_Cannon_7_2" && pieceB.name == "Black_Horse_7_9") ||
-                    (pieceA.name == "Black_Horse_7_9" && pieceB.name == "Red_Cannon_7_2"))
-                    {
-                        // 在这里，我们可以无条件打印，不再需要距离判断
-                        Debug.Log($"[Debug-Distance] " +
-                                  $"{pieceA.name} vs {pieceB.name}. " +
-                                  $"距离平方: {sqrDist}. " +
-                                  $"A坐标: {pieceA.transform.position}, " +
-                                  $"B坐标: {pieceB.transform.position}");
-                    }
-
-                }
+                //}
 
                 if (sqrDist < COLLISION_DISTANCE_SQUARED)
                 {
@@ -110,13 +109,25 @@ public class CombatManager
     {
         if (piece == null || piece.RTState.IsDead) return;
 
+        // 【核心修改】在所有逻辑操作之前，先销毁GameObject。
+        // 这会触发协程中的null检查，从而立即停止动画。
+        // 我们需要棋子当前的逻辑位置来移除，而不是未来的目标位置。
+        Vector2Int currentLogicalPos = piece.RTState.LogicalPosition;
+
         Debug.Log($"[Combat] 棋子 {piece.name} 在坐标 {piece.BoardPosition} 被击杀！");
 
+        // 1. 标记为死亡状态
         piece.RTState.IsDead = true;
 
-        boardRenderer.RemovePieceAt(piece.BoardPosition);
+        // 2. 移除视觉对象
+        // 注意：我们直接销毁GameObject，而不是通过BoardRenderer的方法
+        // 因为BoardRenderer的方法依赖pieceObjects数组，而那个数组在飞行中不准
+        GameObject.Destroy(piece.gameObject);
 
-        Debug.Log($"[Combat-Kill] 已从BoardState的 {piece.BoardPosition} 移除棋子。");
+        // 3. 更新棋盘逻辑数据 (使用正确的当前位置)
+        boardState.RemovePieceAt(currentLogicalPos);
+        Debug.Log($"[Combat-Kill] 已从BoardState的 {currentLogicalPos} 移除棋子。");
+
 
         // 检查是否击杀了将/帅，如果是则结束游戏
         if (piece.PieceData.Type == PieceType.General)

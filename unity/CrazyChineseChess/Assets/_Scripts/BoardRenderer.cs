@@ -25,7 +25,7 @@ public class BoardRenderer : MonoBehaviour
 
     [Header("Animation Settings")]
     [Tooltip("棋子移动速度 (单位/秒)")]
-    public float moveSpeed = 0.1f;
+    public float moveSpeed = 0.2f;
     [Tooltip("棋子跳跃高度")]
     public float jumpHeight = 0.1f;
 
