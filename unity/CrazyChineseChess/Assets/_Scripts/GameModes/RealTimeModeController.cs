@@ -320,8 +320,27 @@ public class RealTimeModeController : GameModeController
             if (piece.RTState.IsDead) continue;
 
             // TODO: 这里可以根据您的规则扩展，例如“虚无”状态的棋子不产生阻挡
-            // 目前，所有移动中的棋子都在其逻辑位置上产生阻挡
-            logicalBoard.SetPieceAt(piece.RTState.LogicalPosition, piece.PieceData);
+
+            // 根据棋子类型判断其在移动中是否为逻辑阻碍物
+            switch (piece.PieceData.Type)
+            {
+                // -- 跳跃单位：在空中不产生阻碍 --
+                case PieceType.Horse:
+                case PieceType.Elephant:
+                case PieceType.Cannon:
+                    // Do nothing, they don't block while moving.
+                    break;
+
+                // -- 平移/实体单位：在移动中会实时产生阻碍 --
+                case PieceType.Chariot:
+                case PieceType.Soldier:
+                case PieceType.General:
+                case PieceType.Advisor:
+                default: // 将默认情况也视为实体移动，更安全
+                    logicalBoard.SetPieceAt(piece.RTState.LogicalPosition, piece.PieceData);
+                    break;
+            }
+
         }
         return logicalBoard;
     }
