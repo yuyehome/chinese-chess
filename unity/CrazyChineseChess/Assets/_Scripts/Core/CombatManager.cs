@@ -2,23 +2,30 @@
 
 using UnityEngine;
 using System.Collections.Generic;
+using System; 
 
 /// <summary>
 /// 负责处理实时模式下所有战斗相关的逻辑，包括敌方和友方的碰撞检测与伤害判定。
 /// </summary>
 public class CombatManager
 {
-    private BoardState boardState;
-    private BoardRenderer boardRenderer;
+
+    // 棋子被击杀时触发的事件，将死亡的棋子组件作为参数传递
+    public event Action<PieceComponent> OnPieceKilled;
+
+    private readonly BoardState boardState;
+    private readonly BoardRenderer boardRenderer;
+
     private GameManager gameManager;
 
     // 碰撞检测的距离阈值（距离的平方），用于性能优化
-    private const float COLLISION_DISTANCE_SQUARED = 0.0175f * 0.0175f;
+    private readonly float collisionDistanceSquared;
 
-    public CombatManager(BoardState state, BoardRenderer renderer)
+    public CombatManager(BoardState state, BoardRenderer renderer, float collisionDistanceSquared)
     {
         this.boardState = state;
         this.boardRenderer = renderer;
+        this.collisionDistanceSquared = collisionDistanceSquared;
         this.gameManager = GameManager.Instance;
     }
 
@@ -37,7 +44,7 @@ public class CombatManager
                 if (pieceA == null || pieceB == null || pieceA.RTState.IsDead || pieceB.RTState.IsDead) continue;
 
                 float sqrDist = Vector3.SqrMagnitude(pieceA.transform.localPosition - pieceB.transform.localPosition);
-                if (sqrDist < COLLISION_DISTANCE_SQUARED)
+                if (sqrDist < collisionDistanceSquared)
                 {
                     ResolveCollision(pieceA, pieceB);
                 }
@@ -127,34 +134,24 @@ public class CombatManager
     /// </summary>
     private void Kill(PieceComponent piece)
     {
+        // 防止重复击杀或对空对象操作
         if (piece == null || piece.RTState.IsDead) return;
 
-        Vector2Int currentLogicalPos = piece.RTState.LogicalPosition;
-        Debug.Log($"[Combat] 棋子 {piece.name} 在逻辑坐标 {currentLogicalPos} 被击杀！");
-
+        // 1. 标记棋子在逻辑上已死亡
         piece.RTState.IsDead = true;
 
-        // 如果被击杀的是一个静止的棋子，需要从BoardState中移除
-        if (!piece.RTState.IsMoving)
-        {
-            boardState.RemovePieceAt(currentLogicalPos);
-            Debug.Log($"[Combat-Kill] 已从BoardState的 {currentLogicalPos} 移除一个静止的棋子。");
-        }
-        else
-        {
-            Debug.Log($"[Combat-Kill] 一个移动中的棋子被击杀，无需操作BoardState（它已不在其中）。");
-        }
+        Debug.Log($"[Combat] 判定 {piece.name} 在逻辑坐标 {piece.RTState.LogicalPosition} 被击杀，触发OnPieceKilled事件。");
 
-        // 销毁GameObject，这将自动终止其移动协程
-        GameObject.Destroy(piece.gameObject);
+        // 2. 触发事件，通知其他系统（如GameManager）来处理后续的视图销毁和模型更新
+        OnPieceKilled?.Invoke(piece);
 
-        // 检查是否击杀了将/帅，如果是则触发游戏结束
-        if (piece.PieceData.Type == PieceType.General)
-        {
-            GameStatus status = (piece.PieceData.Color == PlayerColor.Black)
-                                ? GameStatus.RedWin
-                                : GameStatus.BlackWin;
-            gameManager.HandleEndGame(status);
-        }
+        //// 检查是否击杀了将/帅，如果是则触发游戏结束
+        //if (piece.PieceData.Type == PieceType.General)
+        //{
+        //    GameStatus status = (piece.PieceData.Color == PlayerColor.Black)
+        //                        ? GameStatus.RedWin
+        //                        : GameStatus.BlackWin;
+        //    gameManager.HandleEndGame(status);
+        //}
     }
 }

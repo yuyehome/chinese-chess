@@ -7,20 +7,31 @@ using UnityEngine;
 /// </summary>
 public class EnergySystem
 {
-    // --- 配置常量 ---
-    private const float MAX_ENERGY = 4.0f;
-    private const float ENERGY_RECOVERY_RATE = 0.3f;
-    private const int MOVE_COST = 1;
+    // --- 配置参数 (由外部注入) ---
+    private readonly float maxEnergy;
+    private readonly float energyRecoveryRate;
+    private readonly int moveCost;
 
     // --- 内部状态 ---
     private float redPlayerEnergy;
     private float blackPlayerEnergy;
 
-    public EnergySystem()
+    /// <summary>
+    /// 构造函数，用于初始化能量系统并注入配置参数。
+    /// </summary>
+    /// <param name="maxEnergy">最大能量上限</param>
+    /// <param name="recoveryRate">每秒恢复速率</param>
+    /// <param name="moveCost">每次移动消耗</param>
+    /// <param name="startEnergy">初始能量</param>
+    public EnergySystem(float maxEnergy, float recoveryRate, int moveCost, float startEnergy)
     {
+        this.maxEnergy = maxEnergy;
+        this.energyRecoveryRate = recoveryRate;
+        this.moveCost = moveCost;
+
         // 游戏开始时，双方拥有初始能量
-        redPlayerEnergy = 2.0f;
-        blackPlayerEnergy = 2.0f;
+        this.redPlayerEnergy = startEnergy;
+        this.blackPlayerEnergy = startEnergy;
     }
 
     /// <summary>
@@ -29,17 +40,17 @@ public class EnergySystem
     public void Tick()
     {
         // 恢复红方能量
-        if (redPlayerEnergy < MAX_ENERGY)
+        if (redPlayerEnergy < maxEnergy)
         {
-            redPlayerEnergy += ENERGY_RECOVERY_RATE * Time.deltaTime;
-            redPlayerEnergy = Mathf.Min(redPlayerEnergy, MAX_ENERGY); // 确保不超过上限
+            redPlayerEnergy += energyRecoveryRate * Time.deltaTime;
+            redPlayerEnergy = Mathf.Min(redPlayerEnergy, maxEnergy); // 确保不超过上限
         }
 
         // 恢复黑方能量
-        if (blackPlayerEnergy < MAX_ENERGY)
+        if (blackPlayerEnergy < maxEnergy)
         {
-            blackPlayerEnergy += ENERGY_RECOVERY_RATE * Time.deltaTime;
-            blackPlayerEnergy = Mathf.Min(blackPlayerEnergy, MAX_ENERGY); // 确保不超过上限
+            blackPlayerEnergy += energyRecoveryRate * Time.deltaTime;
+            blackPlayerEnergy = Mathf.Min(blackPlayerEnergy, maxEnergy); // 确保不超过上限
         }
     }
 
@@ -48,7 +59,7 @@ public class EnergySystem
     /// </summary>
     public bool CanSpendEnergy(PlayerColor player)
     {
-        return GetEnergy(player) >= MOVE_COST;
+        return GetEnergy(player) >= moveCost;
     }
 
     /// <summary>
@@ -58,11 +69,11 @@ public class EnergySystem
     {
         if (player == PlayerColor.Red)
         {
-            redPlayerEnergy -= MOVE_COST;
+            redPlayerEnergy -= moveCost;
         }
         else if (player == PlayerColor.Black)
         {
-            blackPlayerEnergy -= MOVE_COST;
+            blackPlayerEnergy -= moveCost;
         }
     }
 

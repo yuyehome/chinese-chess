@@ -12,7 +12,8 @@ public class RealTimeModeController : GameModeController
 {
     // --- 依赖模块 ---
     private readonly EnergySystem energySystem;
-    private readonly CombatManager combatManager;
+
+    public CombatManager CombatManager { get; private set; }
 
     // --- 内部状态 ---
     // 存储所有正在移动中的棋子，方便每帧集中更新它们的状态
@@ -20,12 +21,14 @@ public class RealTimeModeController : GameModeController
     // 缓存上次为选中棋子计算的合法移动列表，用于检测变化以决定是否重绘高亮
     private List<Vector2Int> lastCalculatedValidMoves = new List<Vector2Int>();
 
-    public RealTimeModeController(GameManager manager, BoardState state, BoardRenderer renderer, EnergySystem energySystem)
+    public RealTimeModeController(GameManager manager, BoardState state, BoardRenderer renderer, EnergySystem energySystem, float collisionDistanceSquared)
         : base(manager, state, renderer)
     {
         this.energySystem = energySystem;
-        this.combatManager = new CombatManager(state, renderer);
+        // 传入碰撞距离配置来实例化CombatManager
+        this.CombatManager = new CombatManager(state, renderer, collisionDistanceSquared);
     }
+
 
     /// <summary>
     /// 初始化棋盘上所有棋子的实时状态数据。此方法必须在BoardRenderer完成渲染后调用。
@@ -59,7 +62,7 @@ public class RealTimeModeController : GameModeController
     public void Tick()
     {
         UpdateAllPieceStates();
-        combatManager.ProcessCombat(GetAllActivePieces());
+        CombatManager.ProcessCombat(GetAllActivePieces());
         UpdateSelectionHighlights();
     }
 

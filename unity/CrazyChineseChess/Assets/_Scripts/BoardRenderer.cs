@@ -27,9 +27,10 @@ public class BoardRenderer : MonoBehaviour
 
     [Header("Animation Settings")]
     [Tooltip("棋子移动速度 (米/秒)")]
-    public float moveSpeed = 0.2f;
+    [SerializeField] private float moveSpeed = 0.2f;
     [Tooltip("棋子跳跃动画的高度")]
-    public float jumpHeight = 0.1f;
+    [SerializeField] private float jumpHeight = 0.1f;
+
 
     // --- 内部状态 ---
     // 存储当前显示的所有移动标记

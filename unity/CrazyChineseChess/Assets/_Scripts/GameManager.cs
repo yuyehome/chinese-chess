@@ -12,6 +12,23 @@ public class GameManager : MonoBehaviour
     // 单例实例，方便全局访问
     public static GameManager Instance { get; private set; }
 
+    [Header("游戏平衡性配置")]
+    [SerializeField]
+    [Tooltip("能量最大值")]
+    private float maxEnergy = 4.0f;
+    [SerializeField]
+    [Tooltip("能量每秒恢复速率")]
+    private float energyRecoveryRate = 0.3f; 
+    [SerializeField]
+    [Tooltip("移动一次消耗的能量点数")]
+    private int moveCost = 1;
+    [SerializeField]
+    [Tooltip("开局时的初始能量")]
+    private float startEnergy = 1.0f;
+    [SerializeField]
+    [Tooltip("实时模式下，棋子碰撞的判定距离")]
+    private float collisionDistance = 0.035f;
+
     // --- 核心系统引用 ---
     public BoardState CurrentBoardState { get; private set; }
     public GameModeController CurrentGameMode { get; private set; }
@@ -40,7 +57,8 @@ public class GameManager : MonoBehaviour
         // 初始化核心数据系统
         CurrentBoardState = new BoardState();
         CurrentBoardState.InitializeDefaultSetup();
-        EnergySystem = new EnergySystem();
+        // 使用配置化的参数实例化能量系统
+        EnergySystem = new EnergySystem(maxEnergy, energyRecoveryRate, moveCost, startEnergy);
 
         // 根据模式选择器，实例化对应的游戏模式控制器 (策略模式)
         switch (GameModeSelector.SelectedMode)
@@ -50,8 +68,16 @@ public class GameManager : MonoBehaviour
                 Debug.Log("[System] 游戏开始，已进入【传统回合制】模式。");
                 break;
             case GameModeType.RealTime:
-                CurrentGameMode = new RealTimeModeController(this, CurrentBoardState, boardRenderer, EnergySystem);
+
+                // 1. 直接实例化并赋值给 CurrentGameMode
+                float collisionDistanceSquared = collisionDistance * collisionDistance;
+                CurrentGameMode = new RealTimeModeController(this, CurrentBoardState, boardRenderer, EnergySystem, collisionDistanceSquared);
+
+                // 2. 通过类型转换来订阅事件
+                ((RealTimeModeController)CurrentGameMode).CombatManager.OnPieceKilled += HandlePieceKilled;
+
                 Debug.Log("[System] 游戏开始，已进入【实时对战】模式。");
+
                 break;
             default: // 备用分支，保证游戏能正常运行
                 Debug.LogWarning("[Warning] 未知的游戏模式，默认进入回合制。");
@@ -124,6 +150,38 @@ public class GameManager : MonoBehaviour
     }
 
     #endregion
+
+    /// <summary>
+    /// 事件处理器，当CombatManager判定一个棋子死亡时被调用。
+    /// </summary>
+    /// <param name="killedPiece">被击杀的棋子组件</param>
+    private void HandlePieceKilled(PieceComponent killedPiece)
+    {
+        if (killedPiece == null) return;
+
+        Debug.Log($"[GameManager] 收到 {killedPiece.name} 的死亡事件。");
+
+        // 1. 更新模型层 (Model)
+        // 只有静止的棋子才需要在BoardState中被移除，移动中的棋子已经不在BoardState里了。
+        if (!killedPiece.RTState.IsMoving)
+        {
+            CurrentBoardState.RemovePieceAt(killedPiece.RTState.LogicalPosition);
+        }
+
+        // 2. 更新视图层 (View)
+        // BoardRenderer的RemovePieceAt会负责销毁GameObject
+        boardRenderer.RemovePieceAt(killedPiece.RTState.LogicalPosition);
+
+        // 3. 检查游戏结束条件
+        if (killedPiece.PieceData.Type == PieceType.General)
+        {
+            Debug.Log($"[GameFlow] {killedPiece.PieceData.Type} 被击杀！游戏结束！");
+            GameStatus status = (killedPiece.PieceData.Color == PlayerColor.Black)
+                                ? GameStatus.RedWin
+                                : GameStatus.BlackWin;
+            HandleEndGame(status);
+        }
+    }
 
     /// <summary>
     /// 检查并打印将军状态，目前主要在回合制模式下有提示意义。
