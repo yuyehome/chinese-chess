@@ -2,6 +2,7 @@
 
 /// <summary>
 /// 提供与棋子价值相关的静态数据和方法。
+/// 用于在友方单位碰撞时进行优先级裁决。
 /// </summary>
 public static class PieceValue
 {
@@ -12,14 +13,14 @@ public static class PieceValue
     {
         switch (type)
         {
-            case PieceType.General: return 100; // 将/帅 
-            case PieceType.Chariot: return 90;   // 车
-            case PieceType.Cannon: return 70;   // 炮
-            case PieceType.Horse: return 50;   // 马
-            case PieceType.Elephant: return 30;   // 象
-            case PieceType.Advisor: return 20;   // 士
-            case PieceType.Soldier: return 10;   // 兵
-            default: return 0;   // 无
+            case PieceType.General: return 100; // 将/帅
+            case PieceType.Chariot: return 90;  // 车
+            case PieceType.Cannon: return 70;  // 炮
+            case PieceType.Horse: return 50;  // 马
+            case PieceType.Elephant: return 30;  // 象
+            case PieceType.Advisor: return 20;  // 士
+            case PieceType.Soldier: return 10;  // 兵
+            default: return 0;   // 无或未知类型
         }
     }
 }

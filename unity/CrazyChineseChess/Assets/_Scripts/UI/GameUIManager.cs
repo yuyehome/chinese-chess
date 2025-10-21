@@ -2,44 +2,76 @@
 
 using UnityEngine;
 
+/// <summary>
+/// 游戏内主UI的管理器。
+/// 负责根据游戏模式和屏幕朝向，动态地创建和布局UI元素，如能量条、玩家信息块等。
+/// </summary>
 public class GameUIManager : MonoBehaviour
 {
-    [Header("Prefabs")]
-    [SerializeField] private GameObject energyBarPrefab; // 能量条UI预制件
+    [Header("UI Prefabs")]
+    [Tooltip("能量条UI的预制件")]
+    [SerializeField] private GameObject energyBarPrefab;
 
-    [Header("UI Containers")]
-    [SerializeField] private RectTransform myInfoBlock;      // 我方信息块的根对象
-    [SerializeField] private RectTransform enemyInfoBlock;   // 敌方信息块的根对象
+    [Header("UI Layout Containers")]
+    [Tooltip("我方信息块的根对象，用于布局定位")]
+    [SerializeField] private RectTransform myInfoBlock;
+    [Tooltip("敌方信息块的根对象，用于布局定位")]
+    [SerializeField] private RectTransform enemyInfoBlock;
 
-    // 【修改】这两个是能量条要被实例化的具体位置
+    [Header("UI Element Parents")]
+    [Tooltip("我方能量条将被实例化到的具体位置")]
     [SerializeField] private Transform myEnergyBarContainer;
+    [Tooltip("敌方能量条将被实例化到的具体位置")]
     [SerializeField] private Transform enemyEnergyBarContainer;
 
+    // --- 内部引用 ---
     private EnergySystem energySystem;
     private EnergyBarSegmentsUI myEnergyBar;
     private EnergyBarSegmentsUI enemyEnergyBar;
 
     void Start()
     {
+        // 确保GameManager及其核心系统已准备就绪
         if (GameManager.Instance != null && GameManager.Instance.EnergySystem != null)
         {
             energySystem = GameManager.Instance.EnergySystem;
 
+            // 仅在实时模式下才需要能量条等相关UI
             if (GameModeSelector.SelectedMode == GameModeType.RealTime)
             {
-                AdaptUILayout(); // 先调整布局
-                SetupUI();       // 再创建UI
+                AdaptUILayout(); // 步骤1: 先根据屏幕比例调整布局容器的位置
+                SetupUI();       // 步骤2: 在调整好的容器内创建UI元素
             }
         }
         else
         {
+            // 如果不是实时模式或GameManager异常，则禁用此UI管理器
             gameObject.SetActive(false);
         }
     }
 
+    private void Update()
+    {
+        // 如果UI未初始化，则不执行任何操作
+        if (energySystem == null || myEnergyBar == null || enemyEnergyBar == null) return;
+
+        // 每帧更新能量条的显示
+        // 注意：当前硬编码我方为红方，敌方为黑方。未来网络对战中需根据服务器分配的角色动态决定。
+        myEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Red), 4.0f);
+        enemyEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Black), 4.0f);
+    }
+
+    /// <summary>
+    /// 在指定的容器内实例化能量条UI。
+    /// </summary>
     private void SetupUI()
     {
-        // 【注意】这里我们假设“我方”总是红方。在未来网络对战中，需要根据服务器分配的角色来决定。
+        if (energyBarPrefab == null)
+        {
+            Debug.LogError("[UI] EnergyBar Prefab 未在 GameUIManager 中指定！");
+            return;
+        }
+
         // 为我方(红方)创建能量条
         GameObject myBarGO = Instantiate(energyBarPrefab, myEnergyBarContainer);
         myEnergyBar = myBarGO.GetComponent<EnergyBarSegmentsUI>();
@@ -47,38 +79,30 @@ public class GameUIManager : MonoBehaviour
         // 为敌方(黑方)创建能量条
         GameObject enemyBarGO = Instantiate(energyBarPrefab, enemyEnergyBarContainer);
         enemyEnergyBar = enemyBarGO.GetComponent<EnergyBarSegmentsUI>();
-
-        // 【重要】不再需要旋转180度，双方布局一致
     }
 
+    /// <summary>
+    /// 检查屏幕朝向，并动态调整UI布局以适应竖屏或横屏。
+    /// </summary>
     private void AdaptUILayout()
     {
-        // 检查屏幕是竖屏还是横屏
-        if ((float)Screen.height / Screen.width > 1.0f) // 高度大于宽度，视为竖屏
+        // 判断是否为竖屏 (高度大于宽度)
+        if ((float)Screen.height / Screen.width > 1.0f)
         {
-            Debug.Log("竖屏模式，调整UI布局为上下结构。");
+            Debug.Log("[UI] 检测到竖屏模式，调整UI布局为上下结构。");
 
-            // --- 调整我方信息块到下中 ---
-            myInfoBlock.anchorMin = new Vector2(0.5f, 0);   // 锚点左下角 X, Y
-            myInfoBlock.anchorMax = new Vector2(0.5f, 0);   // 锚点右上角 X, Y
-            myInfoBlock.pivot = new Vector2(0.5f, 0);       // 轴心
-            myInfoBlock.anchoredPosition = new Vector2(0, 20); // 位置(从锚点计算)，稍微给点边距
+            // --- 调整我方信息块到屏幕下中 ---
+            myInfoBlock.anchorMin = new Vector2(0.5f, 0);   // 锚点(左,下)
+            myInfoBlock.anchorMax = new Vector2(0.5f, 0);   // 锚点(右,上)
+            myInfoBlock.pivot = new Vector2(0.5f, 0);       // 轴心点
+            myInfoBlock.anchoredPosition = new Vector2(0, 20); // 离锚点的偏移，向上20像素
 
-            // --- 调整敌方信息块到上中 ---
+            // --- 调整敌方信息块到屏幕上中 ---
             enemyInfoBlock.anchorMin = new Vector2(0.5f, 1);
             enemyInfoBlock.anchorMax = new Vector2(0.5f, 1);
             enemyInfoBlock.pivot = new Vector2(0.5f, 1);
-            enemyInfoBlock.anchoredPosition = new Vector2(0, -20);
+            enemyInfoBlock.anchoredPosition = new Vector2(0, -20); // 向下20像素
         }
-        // 如果是横屏，则保持在编辑器里设置的右下角和左上角，无需代码干预。
-    }
-
-    void Update()
-    {
-        if (energySystem == null || myEnergyBar == null || enemyEnergyBar == null) return;
-
-        // 【注意】这里我们假设“我方”总是红方，“敌方”总是黑方
-        myEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Red), 4.0f);
-        enemyEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Black), 4.0f);
+        // 如果是横屏，则UI会保持其在编辑器中通过锚点设置的默认布局，无需代码干预。
     }
 }

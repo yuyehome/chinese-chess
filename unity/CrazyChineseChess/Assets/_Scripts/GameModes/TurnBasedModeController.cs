@@ -1,9 +1,10 @@
-// File: _Scripts/GameModes/TurnBasedModeController.cs
+// File: _Scripts/GameModes/TurnBasedMode-Controller.cs
+
 using UnityEngine;
 
 /// <summary>
-/// 【已修正】传统回合制游戏模式的控制器。
-/// 移除了“必须解将”的强制逻辑，允许玩家自由行棋。
+/// 传统回合制游戏模式的控制器。
+/// 实现了经典象棋的轮流走棋逻辑。
 /// </summary>
 public class TurnBasedModeController : GameModeController
 {
@@ -12,13 +13,17 @@ public class TurnBasedModeController : GameModeController
     public TurnBasedModeController(GameManager manager, BoardState state, BoardRenderer renderer)
         : base(manager, state, renderer) { }
 
+    /// <summary>
+    /// 处理点击棋子的事件。
+    /// </summary>
     public override void OnPieceClicked(PieceComponent clickedPiece)
     {
-        // 检查点击的棋子是否属于当前回合方
         Piece clickedPieceData = boardState.GetPieceAt(clickedPiece.BoardPosition);
+
+        // 如果点击的是非当前回合方的棋子
         if (clickedPieceData.Color != currentPlayerTurn)
         {
-            // 如果已经有棋子被选中，并且点击的敌方棋子是合法攻击目标
+            // 如果已选中己方棋子，且本次点击是合法的吃子目标
             if (selectedPiece != null && currentValidMoves.Contains(clickedPiece.BoardPosition))
             {
                 gameManager.ExecuteMove(selectedPiece.BoardPosition, clickedPiece.BoardPosition);
@@ -26,24 +31,28 @@ public class TurnBasedModeController : GameModeController
             }
             else
             {
-                // 如果点击了非当前回合方的棋子，且不是为了吃子，则不响应或清空选择
+                // 否则，视为无效操作，清空选择
                 ClearSelection();
             }
             return;
         }
 
-        // 如果点击的是己方棋子，则执行选择/切换选择操作
+        // 如果点击的是当前回合方的棋子，则执行选择/切换选择操作
         SelectPiece(clickedPiece);
     }
 
+    /// <summary>
+    /// 处理点击移动标记的事件。
+    /// </summary>
     public override void OnMarkerClicked(MoveMarkerComponent marker)
     {
         if (selectedPiece == null) return;
 
-        // 检查是否轮到该棋子行动
+        // 再次确认选中的棋子是否属于当前回合方
         Piece selectedPieceData = boardState.GetPieceAt(selectedPiece.BoardPosition);
         if (selectedPieceData.Color != currentPlayerTurn) return;
 
+        // 如果点击的标记是合法的移动点
         if (currentValidMoves.Contains(marker.BoardPosition))
         {
             gameManager.ExecuteMove(selectedPiece.BoardPosition, marker.BoardPosition);
@@ -51,11 +60,17 @@ public class TurnBasedModeController : GameModeController
         }
     }
 
+    /// <summary>
+    /// 点击棋盘空白处，清空选择。
+    /// </summary>
     public override void OnBoardClicked(RaycastHit hit)
     {
         ClearSelection();
     }
 
+    /// <summary>
+    /// 切换回合。
+    /// </summary>
     private void SwitchTurn()
     {
         ClearSelection();
@@ -63,6 +78,9 @@ public class TurnBasedModeController : GameModeController
         Debug.Log($"回合结束，现在轮到 {currentPlayerTurn} 方行动。");
     }
 
+    /// <summary>
+    /// 获取当前轮到哪一方行动。
+    /// </summary>
     public PlayerColor GetCurrentPlayer()
     {
         return currentPlayerTurn;

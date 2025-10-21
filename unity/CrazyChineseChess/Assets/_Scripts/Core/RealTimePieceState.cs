@@ -1,4 +1,3 @@
-
 // File: _Scripts/Core/RealTimePieceState.cs
 
 using UnityEngine;
@@ -14,35 +13,31 @@ public class RealTimePieceState
     /// </summary>
     public enum MovementType { Physical, Ethereal }
 
-    // --- 核心状态变量 ---
+    #region Core State Variables
     public bool IsDead { get; set; } = false;
     public bool IsMoving { get; set; } = false;
-
-    // 当前设计中，所有棋子都是实体移动。此属性为未来扩展保留。
+    public bool IsVulnerable { get; set; } = true;
+    public bool IsAttacking { get; set; } = false;
     public MovementType CurrentMovementType { get; set; } = MovementType.Physical;
+    #endregion
 
-    public bool IsVulnerable { get; set; } = true;  // 是否可被攻击
-    public bool IsAttacking { get; set; } = false; // 是否正处于攻击状态
-
-    // --- 移动过程追踪 ---
-    public float MoveProgress { get; set; } = 0f; // 移动动画的进度 (0.0 to 1.0)
-
-    // 记录移动的起点和终点
+    #region Movement Tracking
+    // 移动动画的归一化进度 (0.0 to 1.0)
+    public float MoveProgress { get; set; } = 0f;
+    // 移动的起点和终点逻辑坐标
     public Vector2Int MoveStartPos { get; set; }
     public Vector2Int MoveEndPos { get; set; }
-
-    /// <summary>
-    /// 棋子在移动过程中的当前逻辑坐标。
-    /// 对于静止棋子，它等于其在BoardState中的位置。
-    /// </summary>
+    // 棋子在移动过程中的当前逻辑坐标
     public Vector2Int LogicalPosition { get; set; }
+    #endregion
 
     /// <summary>
     /// 将状态重置为棋子静止时的默认值。
     /// </summary>
-    public void ResetToDefault(Vector2Int finalPosition) // 【修复】添加缺失的 finalPosition 参数
+    /// <param name="finalPosition">棋子静止后的最终位置</param>
+    public void ResetToDefault(Vector2Int finalPosition)
     {
-        // 如果棋子已死，则不进行任何状态重置
+        // 如果棋子已死，则不进行任何状态重置，防止“复活”
         if (IsDead) return;
 
         IsMoving = false;

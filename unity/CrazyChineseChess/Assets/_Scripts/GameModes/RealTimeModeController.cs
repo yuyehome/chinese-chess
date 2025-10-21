@@ -1,3 +1,5 @@
+// File: _Scripts/GameModes/RealTimeModeController.cs
+
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,14 +10,14 @@ using System.Linq;
 /// </summary>
 public class RealTimeModeController : GameModeController
 {
+    // --- 依赖模块 ---
     private readonly EnergySystem energySystem;
-
     private readonly CombatManager combatManager;
 
+    // --- 内部状态 ---
     // 存储所有正在移动中的棋子，方便每帧集中更新它们的状态
     private readonly List<PieceComponent> movingPieces = new List<PieceComponent>();
-
-    // 缓存上次计算的合法移动，用于检测变化
+    // 缓存上次为选中棋子计算的合法移动列表，用于检测变化以决定是否重绘高亮
     private List<Vector2Int> lastCalculatedValidMoves = new List<Vector2Int>();
 
     public RealTimeModeController(GameManager manager, BoardState state, BoardRenderer renderer, EnergySystem energySystem)
@@ -41,8 +43,7 @@ public class RealTimeModeController : GameModeController
                     if (pc != null)
                     {
                         pc.RTState = new RealTimePieceState();
-                        // 初始化棋子的逻辑位置
-                        pc.RTState.LogicalPosition = pos;
+                        pc.RTState.LogicalPosition = pos; // 初始化棋子的逻辑位置
                     }
                 }
             }
@@ -50,18 +51,20 @@ public class RealTimeModeController : GameModeController
         Debug.Log("[System] 实时模式控制器：已为所有棋子初始化实时状态(RTState)。");
     }
 
+    #region Main Logic Loop
+
     /// <summary>
     /// 由GameManager每帧调用，作为实时逻辑的驱动器。
     /// </summary>
     public void Tick()
     {
         UpdateAllPieceStates();
-        combatManager.ProcessCombat(GetAllActivePieces()); // 【修改】传递棋子列表
+        combatManager.ProcessCombat(GetAllActivePieces());
         UpdateSelectionHighlights();
     }
 
     /// <summary>
-    /// 遍历所有移动中的棋子，并根据其类型和移动进度，实时更新其攻击/防御状态。
+    /// 遍历所有移动中的棋子，并根据其类型和移动进度，实时更新其攻击/防御状态和逻辑位置。
     /// </summary>
     private void UpdateAllPieceStates()
     {
@@ -79,45 +82,67 @@ public class RealTimeModeController : GameModeController
             PieceType type = pc.PieceData.Type;
             float progress = state.MoveProgress;
 
-            // 每帧开始时，先重置为移动中的基础状态
+            // 1. 更新移动中棋子的逻辑位置
+            UpdatePieceLogicalPosition(pc);
+
+            // 2. 根据规则应用不同的攻防状态变化
             state.IsAttacking = false;
             state.IsVulnerable = true;
 
-            // 更新移动中棋子的逻辑位置
-            UpdatePieceLogicalPosition(pc);
-
-            // 根据规则应用不同的状态变化
             switch (type)
             {
                 case PieceType.Chariot:
                 case PieceType.Soldier:
                 case PieceType.General:
                 case PieceType.Advisor:
-                    // 实体移动棋子，全程保持攻击性和可被攻击
                     state.IsAttacking = true;
                     state.IsVulnerable = true;
                     break;
                 case PieceType.Cannon:
-                    // 炮在跳跃攻击的最后阶段才具有攻击性
                     if (progress > 0.9f) { state.IsAttacking = true; }
                     state.IsVulnerable = true;
                     break;
                 case PieceType.Horse:
                 case PieceType.Elephant:
-                    // 马和象在移动后半段具有攻击性
                     if (progress > 0.8f) { state.IsAttacking = true; }
-                    // 在移动中间阶段处于无敌状态
                     if (progress > 0.1f && progress < 0.8f) { state.IsVulnerable = false; }
                     break;
             }
 
+            // 调试日志，定期打印移动中棋子的状态
             if (Time.frameCount % 300 == 0)
             {
                 Debug.Log($"[State-Update] 移动中棋子: {pc.name}, type:{type}, Progress: {progress:F2}, LogicalPos: {pc.RTState.LogicalPosition}, Attacking: {pc.RTState.IsAttacking}, Vulnerable: {pc.RTState.IsVulnerable}");
             }
-
         }
     }
+
+    /// <summary>
+    /// 当有棋子被选中时，每帧检查并更新其合法移动点的视觉高亮。
+    /// 这是实现“动态炮架”等实时战术的关键。
+    /// </summary>
+    private void UpdateSelectionHighlights()
+    {
+        if (selectedPiece == null) return;
+
+        BoardState logicalBoard = GetLogicalBoardState();
+        List<Vector2Int> newValidMoves = RuleEngine.GetValidMoves(selectedPiece.PieceData, selectedPiece.RTState.LogicalPosition, logicalBoard);
+
+        // 仅当合法移动列表发生变化时才重绘，以优化性能
+        if (!newValidMoves.SequenceEqual(lastCalculatedValidMoves))
+        {
+            currentValidMoves = newValidMoves;
+            lastCalculatedValidMoves = new List<Vector2Int>(newValidMoves);
+
+            boardRenderer.ClearAllHighlights();
+            boardRenderer.ShowValidMoves(currentValidMoves, selectedPiece.PieceData.Color, logicalBoard);
+            boardRenderer.ShowSelectionMarker(selectedPiece.RTState.LogicalPosition);
+        }
+    }
+
+    #endregion
+
+    #region Player Input Handling
 
     /// <summary>
     /// 处理玩家点击棋子的事件。
@@ -132,21 +157,18 @@ public class RealTimeModeController : GameModeController
         {
             if (currentValidMoves.Contains(clickedPiece.BoardPosition))
             {
-                // 防御性编程：确保选中的棋子状态正常
                 if (selectedPiece.RTState == null)
                 {
                     Debug.LogError($"[Error] 严重错误：选中的棋子 {selectedPiece.name} 没有实时状态(RTState)！");
                     ClearSelection();
                     return;
                 }
-
                 if (selectedPiece.RTState.IsMoving)
                 {
                     Debug.Log($"[Action] 操作失败: {selectedPiece.name} 已在移动中，不可操作。");
                     ClearSelection();
                     return;
                 }
-
                 if (energySystem.CanSpendEnergy(selectedPiece.PieceData.Color))
                 {
                     PerformMove(selectedPiece, clickedPiece.BoardPosition);
@@ -178,21 +200,18 @@ public class RealTimeModeController : GameModeController
         Debug.Log($"[Input] 玩家点击了移动标记，目标坐标: {marker.BoardPosition}");
         if (selectedPiece == null) return;
 
-        // 防御性编程：确保选中的棋子状态正常
         if (selectedPiece.RTState == null)
         {
             Debug.LogError($"[Error] 严重错误：选中的棋子 {selectedPiece.name} 没有实时状态(RTState)！");
             ClearSelection();
             return;
         }
-
         if (selectedPiece.RTState.IsMoving)
         {
             Debug.Log($"[Action] 操作失败: {selectedPiece.name} 已在移动中，不可操作。");
             ClearSelection();
             return;
         }
-
         if (energySystem.CanSpendEnergy(selectedPiece.PieceData.Color))
         {
             PerformMove(selectedPiece, marker.BoardPosition);
@@ -213,8 +232,12 @@ public class RealTimeModeController : GameModeController
         ClearSelection();
     }
 
+    #endregion
+
+    #region Helper Methods
+
     /// <summary>
-    /// 尝试选择一个棋子，会检查行动点是否足够。
+    /// 尝试选择一个棋子，此操作会检查行动点是否足够。
     /// </summary>
     private void TrySelectPiece(PieceComponent pieceToSelect)
     {
@@ -232,34 +255,30 @@ public class RealTimeModeController : GameModeController
     }
 
     /// <summary>
-    /// 封装了执行移动的核心逻辑，供OnPieceClicked和OnMarkerClicked调用。
+    /// 封装了执行一次移动的所有逻辑步骤。
     /// </summary>
     private void PerformMove(PieceComponent pieceToMove, Vector2Int targetPosition)
     {
         PlayerColor movingColor = pieceToMove.PieceData.Color;
-        Debug.Log($"[Action] {movingColor}方 {pieceToMove.name} 开始 到 {targetPosition}。");
+        Debug.Log($"[Action] {movingColor}方 {pieceToMove.name} 开始移动到 {targetPosition}。");
 
-        // 步骤1: 更新棋子内部状态，并加入到移动列表中
+        // 1. 更新棋子内部状态，标记为“移动中”并记录路径
         pieceToMove.RTState.IsMoving = true;
-
         pieceToMove.RTState.MoveStartPos = pieceToMove.BoardPosition;
         pieceToMove.RTState.MoveEndPos = targetPosition;
-
         movingPieces.Add(pieceToMove);
 
-        // 步骤2: 调用GameManager执行移动，并传入回调函数用于状态更新
+        // 2. 调用GameManager执行移动，并传入回调函数用于状态更新
         gameManager.ExecuteMove(
             pieceToMove.BoardPosition,
             targetPosition,
-            // OnProgress: 动画过程中的回调
+            // OnProgress: 动画播放过程中的回调，用于更新进度
             (pc, progress) => {
                 if (pc != null && pc.RTState != null) pc.RTState.MoveProgress = progress;
             },
             // OnComplete: 动画完成时的回调
             (pc) => {
-
-
-                // 【核心修复】在执行任何落子逻辑前，必须检查棋子是否在中途被击杀
+                // 在执行任何落子逻辑前，必须检查棋子是否在中途被击杀
                 if (pc != null && pc.RTState != null && !pc.RTState.IsDead)
                 {
                     // 只有存活的棋子才能执行落子和状态重置
@@ -275,46 +294,14 @@ public class RealTimeModeController : GameModeController
                     movingPieces.Remove(pc);
                     Debug.Log($"[State] 已死亡的棋子 {pc.name} 动画结束，不执行落子逻辑。");
                 }
-
             }
         );
 
-        // 步骤3: 消耗能量
+        // 3. 消耗能量
         energySystem.SpendEnergy(movingColor);
 
-        // 步骤4: 清理选择状态
+        // 4. 清理当前的选择状态（高亮、标记等）
         ClearSelection();
-    }
-
-
-    /// <summary>
-    /// 当有棋子被选中时，每帧检查并更新其合法移动点的视觉高亮。
-    /// </summary>
-    private void UpdateSelectionHighlights()
-    {
-        if (selectedPiece == null) return;
-
-        // 1. 获取当前的“虚拟”棋盘状态
-        BoardState logicalBoard = GetLogicalBoardState();
-
-        // 2. 重新计算合法移动
-        // 注意：这里我们暂时继续使用旧的RuleEngine，它不认识实时状态，但能读取虚拟棋盘
-        // 如果需要更复杂的实时规则（如穿人），则需要创建 RealTimeRuleEngine
-        List<Vector2Int> newValidMoves = RuleEngine.GetValidMoves(selectedPiece.PieceData, selectedPiece.RTState.LogicalPosition, logicalBoard);
-
-        // 3. 检查列表是否有变化
-        if (!newValidMoves.SequenceEqual(lastCalculatedValidMoves))
-        {
-            // 4. 如果有变化，则更新当前合法移动列表并重绘高亮
-            currentValidMoves = newValidMoves;
-            lastCalculatedValidMoves = new List<Vector2Int>(newValidMoves); // 必须创建新列表
-
-            // 清除旧高亮并显示新高亮
-            boardRenderer.ClearAllHighlights();
-            boardRenderer.ShowValidMoves(currentValidMoves, selectedPiece.PieceData.Color, logicalBoard);
-            // 重新显示选择标记，因为它可能被ClearAllHighlights清除了
-            boardRenderer.ShowSelectionMarker(selectedPiece.RTState.LogicalPosition);
-        }
     }
 
     /// <summary>
@@ -327,44 +314,36 @@ public class RealTimeModeController : GameModeController
         {
             if (piece.RTState.IsDead) continue;
 
-            // TODO: 这里可以根据您的规则扩展，例如“虚无”状态的棋子不产生阻挡
-
             // 根据棋子类型判断其在移动中是否为逻辑阻碍物
             switch (piece.PieceData.Type)
             {
-                // -- 跳跃单位：在空中不产生阻碍 --
+                // 跳跃单位在空中不产生阻碍
                 case PieceType.Horse:
                 case PieceType.Elephant:
                 case PieceType.Cannon:
-                    // Do nothing, they don't block while moving.
                     break;
-
-                // -- 平移/实体单位：在移动中会实时产生阻碍 --
+                // 实体单位在移动中会实时产生阻碍
                 case PieceType.Chariot:
                 case PieceType.Soldier:
                 case PieceType.General:
                 case PieceType.Advisor:
-                default: // 将默认情况也视为实体移动，更安全
+                default:
                     logicalBoard.SetPieceAt(piece.RTState.LogicalPosition, piece.PieceData);
                     break;
             }
-
         }
         return logicalBoard;
     }
 
     /// <summary>
-    /// 根据棋子的3D世界坐标，反向计算出其当前所在的逻辑格子坐标。
+    /// 通过线性插值，估算移动中棋子当前所在的逻辑格子坐标。
     /// </summary>
     private void UpdatePieceLogicalPosition(PieceComponent piece)
     {
-        // 这个反向计算比较复杂，我们先用一个简化的线性插值来模拟
-        // 在低帧率下可能不精确，但足以验证逻辑
         float progress = piece.RTState.MoveProgress;
         Vector2 start = piece.RTState.MoveStartPos;
         Vector2 end = piece.RTState.MoveEndPos;
 
-        // 线性插值计算理论位置
         float logicalX = Mathf.Lerp(start.x, end.x, progress);
         float logicalY = Mathf.Lerp(start.y, end.y, progress);
 
@@ -373,17 +352,16 @@ public class RealTimeModeController : GameModeController
     }
 
     /// <summary>
-    /// 获取场景中所有存活棋子的列表。
+    /// 获取场景中所有存活棋子的列表，用于战斗检测。
     /// </summary>
-    // 【修改】GetAllActivePieces 方法，使其不再依赖 pieceObjects 数组
     private List<PieceComponent> GetAllActivePieces()
     {
         List<PieceComponent> allPieces = new List<PieceComponent>();
 
-        // 1. 获取所有移动中的棋子
+        // 1. 添加所有移动中的棋子
         allPieces.AddRange(movingPieces.Where(p => p != null && !p.RTState.IsDead));
 
-        // 2. 遍历 BoardState 获取所有静止的棋子
+        // 2. 遍历 BoardState 添加所有静止的棋子
         for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
         {
             for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
@@ -391,8 +369,6 @@ public class RealTimeModeController : GameModeController
                 Vector2Int pos = new Vector2Int(x, y);
                 if (boardState.GetPieceAt(pos).Type != PieceType.None)
                 {
-                    // 通过 BoardRenderer 获取 GameObject，进而获取 Component
-                    // 这一步现在是安全的，因为静止棋子的 pieceObjects 引用是正确的
                     PieceComponent pc = boardRenderer.GetPieceComponentAt(pos);
                     if (pc != null && pc.RTState != null && !pc.RTState.IsDead)
                     {
@@ -405,4 +381,5 @@ public class RealTimeModeController : GameModeController
         return allPieces.Distinct().ToList(); // 去重并返回
     }
 
+    #endregion
 }

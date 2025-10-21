@@ -12,17 +12,18 @@ public class CombatManager
     private BoardRenderer boardRenderer;
     private GameManager gameManager;
 
+    // 碰撞检测的距离阈值（距离的平方），用于性能优化
     private const float COLLISION_DISTANCE_SQUARED = 0.0175f * 0.0175f;
 
     public CombatManager(BoardState state, BoardRenderer renderer)
     {
         this.boardState = state;
         this.boardRenderer = renderer;
-        this.gameManager = GameManager.Instance; // 获取GameManager的引用
+        this.gameManager = GameManager.Instance;
     }
 
     /// <summary>
-    /// 每帧调用的主处理函数，用于检测并处理所有可能的战斗。
+    /// 每帧调用的主处理函数，对所有活动的棋子进行两两配对的碰撞检测。
     /// </summary>
     public void ProcessCombat(List<PieceComponent> allActivePieces)
     {
@@ -35,9 +36,6 @@ public class CombatManager
 
                 if (pieceA == null || pieceB == null || pieceA.RTState.IsDead || pieceB.RTState.IsDead) continue;
 
-                // 【修改】移除了跳过友方单位的判断
-                // if (pieceA.PieceData.Color == pieceB.PieceData.Color) continue;
-
                 float sqrDist = Vector3.SqrMagnitude(pieceA.transform.localPosition - pieceB.transform.localPosition);
                 if (sqrDist < COLLISION_DISTANCE_SQUARED)
                 {
@@ -48,16 +46,14 @@ public class CombatManager
     }
 
     /// <summary>
-    /// 【已重构】处理两个棋子之间的碰撞结果，包含敌方和友方逻辑。
+    /// 碰撞裁决的入口，根据碰撞双方的阵营分发给不同的处理方法。
     /// </summary>
     private void ResolveCollision(PieceComponent pieceA, PieceComponent pieceB)
     {
-        // 如果是友方单位碰撞
         if (pieceA.PieceData.Color == pieceB.PieceData.Color)
         {
             ResolveFriendlyCollision(pieceA, pieceB);
         }
-        // 如果是敌方单位碰撞
         else
         {
             ResolveEnemyCollision(pieceA, pieceB);
@@ -65,7 +61,7 @@ public class CombatManager
     }
 
     /// <summary>
-    /// 【新增】处理敌方单位的碰撞逻辑。
+    /// 处理敌方单位的碰撞逻辑。
     /// </summary>
     private void ResolveEnemyCollision(PieceComponent pieceA, PieceComponent pieceB)
     {
@@ -92,15 +88,15 @@ public class CombatManager
     }
 
     /// <summary>
-    /// 【新增】处理友方单位的碰撞逻辑。
+    /// 处理友方单位的碰撞逻辑，引入了棋子价值裁决机制。
     /// </summary>
     private void ResolveFriendlyCollision(PieceComponent pieceA, PieceComponent pieceB)
     {
         RealTimePieceState stateA = pieceA.RTState;
         RealTimePieceState stateB = pieceB.RTState;
 
-        //只要满足任何一个攻击条件，就触发逻辑，如果车远距离过来，帅主动上去送死，并且帅静止不处于攻击状态。车会被反杀
-        if (stateA.IsAttacking && stateB.IsVulnerable || stateA.IsVulnerable && stateB.IsAttacking) 
+        // 友伤判定前提：至少一方处于攻击状态，另一方处于可被攻击状态
+        if (stateA.IsAttacking && stateB.IsVulnerable || stateA.IsVulnerable && stateB.IsAttacking)
         {
             int valueA = PieceValue.GetValue(pieceA.PieceData.Type);
             int valueB = PieceValue.GetValue(pieceB.PieceData.Type);
@@ -109,19 +105,16 @@ public class CombatManager
 
             if (valueA > valueB)
             {
-                // A价值更高，B死亡
                 Debug.Log($"[Combat-Friendly] {pieceA.name} 价值更高，{pieceB.name} 被摧毁。");
                 Kill(pieceB);
             }
             else if (valueB > valueA)
             {
-                // B价值更高，A死亡
                 Debug.Log($"[Combat-Friendly] {pieceB.name} 价值更高，{pieceA.name} 被摧毁。");
                 Kill(pieceA);
             }
             else // 价值相等
             {
-                // 价值相等，如双车碰撞，则同归于尽
                 Debug.Log($"[Combat-Friendly] 双方价值相等，同归于尽！");
                 Kill(pieceA);
                 Kill(pieceB);
@@ -130,7 +123,7 @@ public class CombatManager
     }
 
     /// <summary>
-    /// 封装了杀死一个棋子的所有必要操作。
+    /// 封装了“杀死”一个棋子的所有必要操作。
     /// </summary>
     private void Kill(PieceComponent piece)
     {
@@ -141,10 +134,7 @@ public class CombatManager
 
         piece.RTState.IsDead = true;
 
-
-        // 【核心修改】CombatManager不再直接修改BoardState。
-        // BoardState只记录静止棋子。一个移动中的棋子被击杀，它本来也就不在BoardState里。
-        // 如果被击杀的是一个静止的棋子，我们需要移除它。
+        // 如果被击杀的是一个静止的棋子，需要从BoardState中移除
         if (!piece.RTState.IsMoving)
         {
             boardState.RemovePieceAt(currentLogicalPos);
@@ -152,13 +142,13 @@ public class CombatManager
         }
         else
         {
-            Debug.Log($"[Combat-Kill] 一个移动中的棋子被击杀，无需操作BoardState。");
+            Debug.Log($"[Combat-Kill] 一个移动中的棋子被击杀，无需操作BoardState（它已不在其中）。");
         }
 
-        // 销毁GameObject的操作保持不变，这会终止它的协程
+        // 销毁GameObject，这将自动终止其移动协程
         GameObject.Destroy(piece.gameObject);
 
-        // 检查是否击杀了将/帅，如果是则结束游戏
+        // 检查是否击杀了将/帅，如果是则触发游戏结束
         if (piece.PieceData.Type == PieceType.General)
         {
             GameStatus status = (piece.PieceData.Color == PlayerColor.Black)
@@ -166,7 +156,5 @@ public class CombatManager
                                 : GameStatus.BlackWin;
             gameManager.HandleEndGame(status);
         }
-
-        // TODO: 可以在这里触发死亡特效、音效等
     }
 }

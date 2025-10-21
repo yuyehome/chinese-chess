@@ -1,19 +1,22 @@
 // File: _Scripts/Core/BoardState.cs
+
 using UnityEngine;
 
+/// <summary>
+/// 游戏状态的唯一真实来源 (Single Source of Truth) for STATIONALY pieces.
+/// 它是一个纯数据类，用二维数组表示棋盘上静止棋子的逻辑状态。
+/// 注意：在实时模式中，移动中的棋子不在此类中记录，其位置由RealTimePieceState动态管理。
+/// </summary>
 public class BoardState
 {
-    // C#中的二维数组。我们将用 Piece 结构体填充它
-    // [x, y] -> x是横坐标，y是纵坐标
-    // 中国象棋是 9x10 的棋盘
     public const int BOARD_WIDTH = 9;
     public const int BOARD_HEIGHT = 10;
-    
+
+    // 存储棋盘上所有静止棋子的数据
     private Piece[,] board = new Piece[BOARD_WIDTH, BOARD_HEIGHT];
 
     /// <summary>
-    /// 初始化棋盘到标准开局状态。
-    /// 坐标系: 左下角为 (0,0)，红方在下，黑方在上。
+    /// 初始化棋盘到中国象棋的标准开局状态。
     /// </summary>
     public void InitializeDefaultSetup()
     {
@@ -26,54 +29,48 @@ public class BoardState
             }
         }
 
-        // 2. 放置红方棋子 (Red Player, bottom side, y = 0 to 4)
-        // 底线 (y=0)
-        board[0, 0] = new Piece(PieceType.Chariot, PlayerColor.Red);   // 车
-        board[1, 0] = new Piece(PieceType.Horse, PlayerColor.Red);     // 马
-        board[2, 0] = new Piece(PieceType.Elephant, PlayerColor.Red);  // 象
-        board[3, 0] = new Piece(PieceType.Advisor, PlayerColor.Red);   // 士
-        board[4, 0] = new Piece(PieceType.General, PlayerColor.Red);   // 帅
-        board[5, 0] = new Piece(PieceType.Advisor, PlayerColor.Red);   // 士
-        board[6, 0] = new Piece(PieceType.Elephant, PlayerColor.Red);  // 象
-        board[7, 0] = new Piece(PieceType.Horse, PlayerColor.Red);     // 马
-        board[8, 0] = new Piece(PieceType.Chariot, PlayerColor.Red);   // 车
-        
-        // 炮线 (y=2)
-        board[1, 2] = new Piece(PieceType.Cannon, PlayerColor.Red);    // 炮
-        board[7, 2] = new Piece(PieceType.Cannon, PlayerColor.Red);    // 炮
-        
-        // 兵线 (y=3)
-        board[0, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);   // 兵
-        board[2, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);   // 兵
-        board[4, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);   // 兵
-        board[6, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);   // 兵
-        board[8, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);   // 兵
+        #region Piece Placement
+        // 2. 放置红方棋子 (下方, y = 0 to 4)
+        board[0, 0] = new Piece(PieceType.Chariot, PlayerColor.Red);
+        board[1, 0] = new Piece(PieceType.Horse, PlayerColor.Red);
+        board[2, 0] = new Piece(PieceType.Elephant, PlayerColor.Red);
+        board[3, 0] = new Piece(PieceType.Advisor, PlayerColor.Red);
+        board[4, 0] = new Piece(PieceType.General, PlayerColor.Red);
+        board[5, 0] = new Piece(PieceType.Advisor, PlayerColor.Red);
+        board[6, 0] = new Piece(PieceType.Elephant, PlayerColor.Red);
+        board[7, 0] = new Piece(PieceType.Horse, PlayerColor.Red);
+        board[8, 0] = new Piece(PieceType.Chariot, PlayerColor.Red);
+        board[1, 2] = new Piece(PieceType.Cannon, PlayerColor.Red);
+        board[7, 2] = new Piece(PieceType.Cannon, PlayerColor.Red);
+        board[0, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);
+        board[2, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);
+        board[4, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);
+        board[6, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);
+        board[8, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);
 
-        // 3. 放置黑方棋子 (Black Player, top side, y = 5 to 9)
-        // 底线 (y=9)
-        board[0, 9] = new Piece(PieceType.Chariot, PlayerColor.Black); // 车
-        board[1, 9] = new Piece(PieceType.Horse, PlayerColor.Black);   // 马
-        board[2, 9] = new Piece(PieceType.Elephant, PlayerColor.Black);// 象
-        board[3, 9] = new Piece(PieceType.Advisor, PlayerColor.Black); // 士
-        board[4, 9] = new Piece(PieceType.General, PlayerColor.Black); // 将
-        board[5, 9] = new Piece(PieceType.Advisor, PlayerColor.Black); // 士
-        board[6, 9] = new Piece(PieceType.Elephant, PlayerColor.Black);// 象
-        board[7, 9] = new Piece(PieceType.Horse, PlayerColor.Black);   // 马
-        board[8, 9] = new Piece(PieceType.Chariot, PlayerColor.Black); // 车
-
-        // 炮线 (y=7)
-        board[1, 7] = new Piece(PieceType.Cannon, PlayerColor.Black);  // 砲
-        board[7, 7] = new Piece(PieceType.Cannon, PlayerColor.Black);  // 砲
-        
-        // 卒线 (y=6)
-        board[0, 6] = new Piece(PieceType.Soldier, PlayerColor.Black); // 卒
-        board[2, 6] = new Piece(PieceType.Soldier, PlayerColor.Black); // 卒
-        board[4, 6] = new Piece(PieceType.Soldier, PlayerColor.Black); // 卒
-        board[6, 6] = new Piece(PieceType.Soldier, PlayerColor.Black); // 卒
-        board[8, 6] = new Piece(PieceType.Soldier, PlayerColor.Black); // 卒
+        // 3. 放置黑方棋子 (上方, y = 5 to 9)
+        board[0, 9] = new Piece(PieceType.Chariot, PlayerColor.Black);
+        board[1, 9] = new Piece(PieceType.Horse, PlayerColor.Black);
+        board[2, 9] = new Piece(PieceType.Elephant, PlayerColor.Black);
+        board[3, 9] = new Piece(PieceType.Advisor, PlayerColor.Black);
+        board[4, 9] = new Piece(PieceType.General, PlayerColor.Black);
+        board[5, 9] = new Piece(PieceType.Advisor, PlayerColor.Black);
+        board[6, 9] = new Piece(PieceType.Elephant, PlayerColor.Black);
+        board[7, 9] = new Piece(PieceType.Horse, PlayerColor.Black);
+        board[8, 9] = new Piece(PieceType.Chariot, PlayerColor.Black);
+        board[1, 7] = new Piece(PieceType.Cannon, PlayerColor.Black);
+        board[7, 7] = new Piece(PieceType.Cannon, PlayerColor.Black);
+        board[0, 6] = new Piece(PieceType.Soldier, PlayerColor.Black);
+        board[2, 6] = new Piece(PieceType.Soldier, PlayerColor.Black);
+        board[4, 6] = new Piece(PieceType.Soldier, PlayerColor.Black);
+        board[6, 6] = new Piece(PieceType.Soldier, PlayerColor.Black);
+        board[8, 6] = new Piece(PieceType.Soldier, PlayerColor.Black);
+        #endregion
     }
-    
-    // 获取指定位置的棋子
+
+    /// <summary>
+    /// 获取指定位置的静止棋子。
+    /// </summary>
     public Piece GetPieceAt(Vector2Int position)
     {
         if (IsWithinBounds(position))
@@ -84,7 +81,8 @@ public class BoardState
     }
 
     /// <summary>
-    /// 在指定位置设置一个棋子，用于动态构建逻辑棋盘。
+    /// 在指定位置设置一个静止棋子。
+    /// 主要用于棋子移动完成或动态构建逻辑棋盘时。
     /// </summary>
     public void SetPieceAt(Vector2Int position, Piece piece)
     {
@@ -94,7 +92,9 @@ public class BoardState
         }
     }
 
-    // 移动棋子 (这只是一个数据操作，不包含规则校验)
+    /// <summary>
+    /// 在棋盘上移动一个静止棋子（用于回合制模式）。
+    /// </summary>
     public void MovePiece(Vector2Int from, Vector2Int to)
     {
         if (IsWithinBounds(from) && IsWithinBounds(to))
@@ -106,7 +106,7 @@ public class BoardState
     }
 
     /// <summary>
-    /// 从棋盘上移除一个棋子（将其设置为空）。
+    /// 从棋盘上移除一个静止棋子（将其设置为空）。
     /// </summary>
     public void RemovePieceAt(Vector2Int position)
     {
@@ -116,10 +116,12 @@ public class BoardState
         }
     }
 
-    // 检查坐标是否在棋盘内
+    /// <summary>
+    /// 检查坐标是否在棋盘的有效范围内。
+    /// </summary>
     public bool IsWithinBounds(Vector2Int position)
     {
-        return position.x >= 0 && position.x < BOARD_WIDTH && 
+        return position.x >= 0 && position.x < BOARD_WIDTH &&
                position.y >= 0 && position.y < BOARD_HEIGHT;
     }
 
@@ -138,5 +140,4 @@ public class BoardState
         }
         return newBoardState;
     }
-
 }

@@ -1,10 +1,12 @@
+// File: _Scripts/BoardRenderer.cs
+
 using UnityEngine;
 using System.Collections.Generic;
 using System;
 using System.Collections;
 
 /// <summary>
-/// 负责将BoardState中的逻辑数据渲染为场景中的3D对象。
+/// 视觉渲染层核心，负责将BoardState中的逻辑数据渲染为场景中的3D对象。
 /// 管理所有棋子和视觉元素的创建、销毁、移动和高亮，支持多个棋子同时独立移动。
 /// </summary>
 public class BoardRenderer : MonoBehaviour
@@ -24,15 +26,19 @@ public class BoardRenderer : MonoBehaviour
     public Color attackHighlightColor = new Color(1f, 0.2f, 0.2f);
 
     [Header("Animation Settings")]
-    [Tooltip("棋子移动速度 (单位/秒)")]
+    [Tooltip("棋子移动速度 (米/秒)")]
     public float moveSpeed = 0.2f;
-    [Tooltip("棋子跳跃高度")]
+    [Tooltip("棋子跳跃动画的高度")]
     public float jumpHeight = 0.1f;
 
-    // 内部状态变量
+    // --- 内部状态 ---
+    // 存储当前显示的所有移动标记
     private List<GameObject> activeMarkers = new List<GameObject>();
+    // 存储当前被高亮的棋子
     private List<PieceComponent> highlightedPieces = new List<PieceComponent>();
+    // 二维数组，用于通过坐标快速查找棋子的GameObject，是视觉表现的唯一真实来源
     private GameObject[,] pieceObjects = new GameObject[BoardState.BOARD_WIDTH, BoardState.BOARD_HEIGHT];
+    // 当前激活的选择标记实例
     private GameObject activeSelectionMarker = null;
 
     // UV坐标映射字典，用于从贴图集中选择正确的棋子文字
@@ -47,9 +53,10 @@ public class BoardRenderer : MonoBehaviour
         { PieceType.Soldier,   new Vector2(0.5f, 0.0f) },
     };
 
+    #region Public Action Methods
+
     /// <summary>
-    /// 【已重构和修正】在视觉上移动一个棋子。
-    /// 此方法现在完全依赖于发起移动的棋子自身的数据，解决了数据混乱问题。
+    /// 在视觉上启动一个棋子的移动动画。
     /// </summary>
     public void MovePiece(Vector2Int from, Vector2Int to, BoardState boardState, Action<PieceComponent, float> onProgressUpdate = null, Action<PieceComponent> onComplete = null)
     {
@@ -67,25 +74,20 @@ public class BoardRenderer : MonoBehaviour
             return;
         }
 
-        // --- 逻辑清晰化：所有判断都基于发起移动的棋子 'pc' ---
-
-        // 1. 更新 pieceObjects 数组（只清空起点）
+        // 1. 在视觉数组中将棋子从起点“提起”，使其在移动中不占据起始格
         pieceObjects[from.x, from.y] = null;
         pc.BoardPosition = to; // 更新组件内的目标位置
 
         // 2. 计算动画参数
         Vector3 startPos = GetLocalPosition(from.x, from.y);
         Vector3 endPos = GetLocalPosition(to.x, to.y);
-
-        // 3. 【核心修正】使用 'pc.PieceData.Type' 进行跳跃判断
         bool isJump = IsJumpingPiece(pc.PieceData.Type);
-        Debug.Log($"[Jumping-Check] 正在移动的棋子 {pc.name} (类型: {pc.PieceData.Type}) 的跳跃判断结果: {isJump}");
 
-        // 4. 启动协程，并包装 onComplete 回调以在动画结束后更新 pieceObjects 数组
+        // 3. 启动协程，并包装 onComplete 回调以在动画结束后更新 pieceObjects 数组
         StartCoroutine(MovePieceCoroutine(pc, startPos, endPos, isJump, onProgressUpdate,
             (completedPiece) => {
                 // 动画完成后，在目标位置记录 GameObject
-                if (completedPiece != null && !completedPiece.RTState.IsDead)
+                if (completedPiece != null && completedPiece.RTState != null && !completedPiece.RTState.IsDead)
                 {
                     pieceObjects[to.x, to.y] = completedPiece.gameObject;
                 }
@@ -95,32 +97,21 @@ public class BoardRenderer : MonoBehaviour
         ));
     }
 
-
     /// <summary>
     /// 移动动画的核心协程，负责驱动棋子平滑移动。
     /// </summary>
     private IEnumerator MovePieceCoroutine(PieceComponent piece, Vector3 startPos, Vector3 endPos, bool isJump, Action<PieceComponent, float> onProgressUpdate, Action<PieceComponent> onComplete)
     {
-        // 如果棋子对象在动画开始前就已失效，则直接退出
         if (piece == null) yield break;
 
         float journeyDuration = Vector3.Distance(startPos, endPos) / moveSpeed;
-        if (journeyDuration <= 0) journeyDuration = 0.01f; // 防止除零错误
+        if (journeyDuration <= 0) journeyDuration = 0.01f;
         float elapsedTime = 0f;
 
         while (elapsedTime < journeyDuration)
         {
             elapsedTime += Time.deltaTime;
             float percent = Mathf.Clamp01(elapsedTime / journeyDuration);
-            Vector3 currentPos = Vector3.Lerp(startPos, endPos, percent);
-
-            if (isJump)
-            {
-                currentPos.y += Mathf.Sin(percent * Mathf.PI) * jumpHeight;
-            }
-
-            // 调用回调，将当前进度传递给逻辑层（如RealTimeModeController）
-            onProgressUpdate?.Invoke(piece, percent);
 
             // 如果棋子在移动过程中被销毁，则安全退出协程
             if (piece == null || piece.gameObject == null)
@@ -128,36 +119,40 @@ public class BoardRenderer : MonoBehaviour
                 yield break;
             }
 
-            onProgressUpdate?.Invoke(piece, percent);
+            // 计算当前帧的位置
+            Vector3 currentPos = Vector3.Lerp(startPos, endPos, percent);
+            if (isJump)
+            {
+                currentPos.y += Mathf.Sin(percent * Mathf.PI) * jumpHeight;
+            }
             piece.transform.localPosition = currentPos;
+
+            // 调用回调，将当前进度传递给逻辑层
+            onProgressUpdate?.Invoke(piece, percent);
 
             yield return null;
         }
 
-
-        // 【重要】只有当协程正常完成（未被中途销毁）时，才执行以下逻辑
+        // 只有当协程正常完成（未被中途销毁）时，才执行收尾逻辑
         if (piece != null && piece.gameObject != null)
         {
-            // 确保动画结束时棋子精确在终点位置
             piece.transform.localPosition = endPos;
-            // 动画完成时，调用完成回调
             onComplete?.Invoke(piece);
         }
-
     }
 
-    #region Public Utility Methods
+    #endregion
+
+    #region Public Utility & Setup Methods
 
     /// <summary>
     /// 根据BoardState数据，完全重新绘制整个棋盘。通常只在游戏开始时调用。
     /// </summary>
     public void RenderBoard(BoardState boardState)
     {
-        // 清理旧的棋盘对象
         foreach (Transform child in transform) Destroy(child.gameObject);
         System.Array.Clear(pieceObjects, 0, pieceObjects.Length);
 
-        // 创建新的棋子对象
         for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
         {
             for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
@@ -180,7 +175,7 @@ public class BoardRenderer : MonoBehaviour
         foreach (var move in moves)
         {
             Piece targetPiece = boardState.GetPieceAt(move);
-            if (targetPiece.Type != PieceType.None) // 如果目标点有棋子
+            if (targetPiece.Type != PieceType.None) // 目标点有棋子
             {
                 if (targetPiece.Color != movingPieceColor) // 并且是敌方棋子
                 {
@@ -188,17 +183,9 @@ public class BoardRenderer : MonoBehaviour
                     if (pc != null) HighlightPiece(pc, attackHighlightColor);
                 }
             }
-            else // 如果目标点是空格
+            else // 目标点是空格
             {
-                Vector3 markerPos = GetLocalPosition(move.x, move.y);
-                markerPos.y += 0.001f; // 稍微抬高，防止与棋盘平面穿模
-                GameObject marker = Instantiate(moveMarkerPrefab, this.transform);
-                marker.transform.localPosition = markerPos;
-                var collider = marker.GetComponent<SphereCollider>() ?? marker.AddComponent<SphereCollider>();
-                collider.radius = 0.0175f;
-                var markerComp = marker.GetComponent<MoveMarkerComponent>() ?? marker.AddComponent<MoveMarkerComponent>();
-                markerComp.BoardPosition = move;
-                activeMarkers.Add(marker);
+                InstantiateMoveMarker(move);
             }
         }
     }
@@ -243,13 +230,13 @@ public class BoardRenderer : MonoBehaviour
         if (pieceGO != null)
         {
             activeSelectionMarker = Instantiate(selectionMarkerPrefab, this.transform);
-            Vector3 markerPosition = pieceGO.transform.localPosition + new Vector3(0, 0.03f, 0); // 在棋子正上方
+            Vector3 markerPosition = pieceGO.transform.localPosition + new Vector3(0, 0.03f, 0);
             activeSelectionMarker.transform.localPosition = markerPosition;
         }
     }
 
     /// <summary>
-    /// 在视觉上移除一个棋子（GameObject）。
+    /// 在视觉上移除一个棋子（销毁其GameObject）。
     /// </summary>
     public void RemovePieceAt(Vector2Int position)
     {
@@ -259,7 +246,8 @@ public class BoardRenderer : MonoBehaviour
             Debug.Log($"[Renderer] 正在从坐标 {position} 移除GameObject: {pieceToRemove.name}。");
             Destroy(pieceToRemove);
             pieceObjects[position.x, position.y] = null;
-        } else
+        }
+        else
         {
             Debug.LogWarning($"[Renderer] 尝试移除坐标 {position} 的棋子，但未找到GameObject。");
         }
@@ -327,6 +315,22 @@ public class BoardRenderer : MonoBehaviour
     }
 
     /// <summary>
+    /// 在指定坐标实例化一个移动标记。
+    /// </summary>
+    private void InstantiateMoveMarker(Vector2Int position)
+    {
+        Vector3 markerPos = GetLocalPosition(position.x, position.y);
+        markerPos.y += 0.001f; // 稍微抬高，防止与棋盘平面穿模
+        GameObject marker = Instantiate(moveMarkerPrefab, this.transform);
+        marker.transform.localPosition = markerPos;
+        var collider = marker.GetComponent<SphereCollider>() ?? marker.AddComponent<SphereCollider>();
+        collider.radius = 0.0175f;
+        var markerComp = marker.GetComponent<MoveMarkerComponent>() ?? marker.AddComponent<MoveMarkerComponent>();
+        markerComp.BoardPosition = position;
+        activeMarkers.Add(marker);
+    }
+
+    /// <summary>
     /// 高亮单个棋子，通过设置材质的自发光颜色实现。
     /// </summary>
     private void HighlightPiece(PieceComponent piece, Color color)
@@ -334,15 +338,13 @@ public class BoardRenderer : MonoBehaviour
         var renderer = piece.GetComponent<MeshRenderer>();
         var propBlock = new MaterialPropertyBlock();
         renderer.GetPropertyBlock(propBlock);
-        propBlock.SetColor("_EmissionColor", color * 2.0f); // 乘以系数让它更亮
+        propBlock.SetColor("_EmissionColor", color * 2.0f);
         renderer.SetPropertyBlock(propBlock);
         highlightedPieces.Add(piece);
     }
 
-
     /// <summary>
-    /// 【已修改】根据棋子类型判断是否应该执行跳跃动画。
-    /// 统一了马、象、炮的移动方式，它们总是跳跃。
+    /// 根据棋子类型判断是否应该执行跳跃动画。
     /// </summary>
     private bool IsJumpingPiece(PieceType type)
     {
@@ -350,9 +352,8 @@ public class BoardRenderer : MonoBehaviour
         {
             case PieceType.Horse:
             case PieceType.Elephant:
-            case PieceType.Cannon: 
+            case PieceType.Cannon:
                 return true;
-
             default:
                 return false;
         }
