@@ -141,9 +141,30 @@ public class VeryHardAIStrategy : HardAIStrategy, IAIStrategy
         if (openingBook != null) return;
         openingBook = new List<List<Vector2Int>>
         {
-            new List<Vector2Int> { new Vector2Int(1, 7), new Vector2Int(4, 7), new Vector2Int(1, 9), new Vector2Int(2, 7) },
-            new List<Vector2Int> { new Vector2Int(2, 9), new Vector2Int(4, 7), new Vector2Int(7, 9), new Vector2Int(6, 7) },
-            new List<Vector2Int> { new Vector2Int(1, 9), new Vector2Int(2, 7) },
+            //开局 当头炮 跳马 
+            new List<Vector2Int> {
+                new Vector2Int(1, 7), new Vector2Int(4, 7)
+                , new Vector2Int(1, 9), new Vector2Int(2, 7)
+                , new Vector2Int(2, 6), new Vector2Int(2, 5)
+            },
+            //开局 双跳马
+            new List<Vector2Int> {
+                new Vector2Int(2, 9), new Vector2Int(4, 7)
+                , new Vector2Int(7, 9), new Vector2Int(6, 7)
+                , new Vector2Int(2, 6), new Vector2Int(2, 5)
+                , new Vector2Int(7, 6), new Vector2Int(7, 5) },
+            //开局 单炮乱杀
+            new List<Vector2Int> {
+                new Vector2Int(1, 7), new Vector2Int(1, 0)
+                ,new Vector2Int(1, 0), new Vector2Int(3, 0)
+                ,new Vector2Int(3, 0), new Vector2Int(0, 0)
+                ,new Vector2Int(0, 0), new Vector2Int(5, 0) },
+            //开局 双炮出击
+            new List<Vector2Int> {
+                new Vector2Int(1, 7), new Vector2Int(1, 0)
+                ,new Vector2Int(8, 7), new Vector2Int(8, 0)
+                ,new Vector2Int(1, 0), new Vector2Int(4, 0)
+                ,new Vector2Int(8, 0), new Vector2Int(6, 0) },
             new List<Vector2Int>()
         };
     }
