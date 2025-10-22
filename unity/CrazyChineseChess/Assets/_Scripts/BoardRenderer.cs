@@ -59,7 +59,7 @@ public class BoardRenderer : MonoBehaviour
     /// <summary>
     /// 在视觉上启动一个棋子的移动动画。
     /// </summary>
-    public void MovePiece(Vector2Int from, Vector2Int to, BoardState boardState, Action<PieceComponent, float> onProgressUpdate = null, Action<PieceComponent> onComplete = null)
+    public void MovePiece(Vector2Int from, Vector2Int to, Action<PieceComponent, float> onProgressUpdate = null, Action<PieceComponent> onComplete = null)
     {
         GameObject pieceToMoveGO = GetPieceObjectAt(from);
         if (pieceToMoveGO == null)
@@ -85,6 +85,8 @@ public class BoardRenderer : MonoBehaviour
         bool isJump = IsJumpingPiece(pc.PieceData.Type);
 
         // 3. 启动协程，并包装 onComplete 回调以在动画结束后更新 pieceObjects 数组
+
+
         StartCoroutine(MovePieceCoroutine(pc, startPos, endPos, isJump, onProgressUpdate,
             (completedPiece) => {
                 // 动画完成后，在目标位置记录 GameObject
