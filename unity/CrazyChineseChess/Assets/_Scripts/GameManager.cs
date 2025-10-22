@@ -18,7 +18,7 @@ public class GameManager : MonoBehaviour
     private float maxEnergy = 4.0f;
     [SerializeField]
     [Tooltip("能量每秒恢复速率")]
-    private float energyRecoveryRate = 1.0f;
+    private float energyRecoveryRate = 0.3f;
     [SerializeField]
     [Tooltip("移动一次消耗的能量点数")]
     private int moveCost = 1;
@@ -102,18 +102,18 @@ public class GameManager : MonoBehaviour
 
             switch (GameModeSelector.SelectedAIDifficulty)
             {
-                case AIDifficulty.Hard:
-                    aiStrategy = new EasyAIStrategy();
-                    decisionTimeRange = new Vector2(0.5f, 4.0f); // 困难AI 1-5秒
-                    break;
                 case AIDifficulty.VeryHard:
                     aiStrategy = new VeryHardAIStrategy();
                     decisionTimeRange = new Vector2(0.5f, 2.0f); // 极难AI 1-4秒 (占位)
                     break;
+                case AIDifficulty.Hard:
+                    aiStrategy = new EasyAIStrategy();
+                    decisionTimeRange = new Vector2(0.5f, 3.0f); // 困难AI 1-5秒
+                    break;
                 case AIDifficulty.Easy:
                 default:
                     aiStrategy = new EasyAIStrategy();
-                    decisionTimeRange = new Vector2(0.5f, 6.0f); // 简单AI 1-6秒
+                    decisionTimeRange = new Vector2(0.5f, 4.0f); // 简单AI 1-6秒
                     break;
             }
             // 采用两步初始化AI控制器
