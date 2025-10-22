@@ -73,17 +73,23 @@ public static class RuleEngine
     /// <summary>
     /// 判断一个指定位置是否正被某一方攻击。
     /// </summary>
-    private static bool IsPositionUnderAttack(Vector2Int position, PlayerColor attackerColor, BoardState boardState)
+    /// <param name="position">要检查的位置</param>
+    /// <param name="attackerColor">攻击方的颜色</param>
+    /// <param name="boardState">当前的棋盘状态</param>
+    /// <returns>如果位置被攻击，则返回true</returns>
+    public static bool IsPositionUnderAttack(Vector2Int position, PlayerColor attackerColor, BoardState boardState)
     {
         for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
         {
             for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
             {
-                Piece piece = boardState.GetPieceAt(new Vector2Int(x, y));
+                Vector2Int currentPos = new Vector2Int(x, y);
+                Piece piece = boardState.GetPieceAt(currentPos);
                 if (piece.Color == attackerColor)
                 {
                     // 检查该攻击方棋子的合法移动点是否包含目标位置
-                    var moves = GetValidMoves(piece, new Vector2Int(x, y), boardState);
+                    // 注意：对于兵和将的特殊吃法，GetValidMoves已经包含了攻击范围
+                    var moves = GetValidMoves(piece, currentPos, boardState);
                     if (moves.Contains(position))
                     {
                         return true;

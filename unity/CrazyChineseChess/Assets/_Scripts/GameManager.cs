@@ -94,11 +94,31 @@ public class GameManager : MonoBehaviour
             playerController.Initialize(PlayerColor.Red, this);
             controllers.Add(PlayerColor.Red, playerController);
 
-            // 启用AI控制器
+            // AI控制器初始化逻辑调整
+
+            // 1. 选择策略
+            IAIStrategy aiStrategy;
+            switch (GameModeSelector.SelectedAIDifficulty)
+            {
+                case AIDifficulty.Hard:
+                    Debug.LogWarning("[GameManager] Hard AI 未实现，暂时使用 Easy AI 替代。");
+                    aiStrategy = new EasyAIStrategy();
+                    break;
+                case AIDifficulty.VeryHard:
+                    Debug.LogWarning("[GameManager] Very Hard AI 未实现，暂时使用 Easy AI 替代。");
+                    aiStrategy = new EasyAIStrategy();
+                    break;
+                case AIDifficulty.Easy:
+                default:
+                    aiStrategy = new EasyAIStrategy();
+                    break;
+            }
+
+            // 2. 创建AI控制器并进行两步式初始化
             AIController aiController = gameObject.AddComponent<AIController>();
-            aiController.Initialize(PlayerColor.Black, this);
+            aiController.Initialize(PlayerColor.Black, this); // 第一步：基础初始化
+            aiController.SetStrategy(aiStrategy);             // 第二步：注入策略
             controllers.Add(PlayerColor.Black, aiController);
-            Debug.Log("[GameManager] AI控制器已为黑方激活。");
 
         }
         else if (currentGameMode is TurnBasedModeController)

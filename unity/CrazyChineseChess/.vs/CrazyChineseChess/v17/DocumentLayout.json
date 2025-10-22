@@ -3,12 +3,52 @@
   "WorkspaceRootPath": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\GameManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\AIController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Controllers\\AIController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\RealTimeModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\GameModes\\RealTimeModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\BoardRenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\BoardRenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\GameManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\TurnBasedModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\GameModes\\TurnBasedModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\TurnBasedInputController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Controllers\\TurnBasedInputController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\GameModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\GameModes\\GameModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\PlayerInputController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Controllers\\PlayerInputController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\IPlayerController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Controllers\\IPlayerController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\CombatManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Core\\CombatManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\EnergySystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Core\\EnergySystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\BoardState.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Core\\BoardState.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\MoveMarkerComponent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -27,20 +67,8 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\PlayerInput.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\BoardState.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Core\\BoardState.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\CombatManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Core\\CombatManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\RuleEngine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Core\\RuleEngine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\EnergySystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Core\\EnergySystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\PieceData.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -53,18 +81,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\RealTimePieceState.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\Core\\RealTimePieceState.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\GameModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\GameModes\\GameModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\RealTimeModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\GameModes\\RealTimeModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\TurnBasedModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\_Scripts\\GameModes\\TurnBasedModeController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\UI\\EnergyBarSegmentsUI.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -86,11 +102,63 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 18,
+          "SelectedChildIndex": 21,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 1,
+              "Title": "AIController.cs",
+              "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\AIController.cs",
+              "RelativeDocumentMoniker": "Assets\\_Scripts\\Controllers\\AIController.cs",
+              "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\AIController.cs",
+              "RelativeToolTip": "Assets\\_Scripts\\Controllers\\AIController.cs",
+              "ViewState": "AgIAAHIAAAAAAAAAAAAIwIoAAAA+AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T03:59:37.856Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "TurnBasedInputController.cs",
+              "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\TurnBasedInputController.cs",
+              "RelativeDocumentMoniker": "Assets\\_Scripts\\Controllers\\TurnBasedInputController.cs",
+              "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\TurnBasedInputController.cs",
+              "RelativeToolTip": "Assets\\_Scripts\\Controllers\\TurnBasedInputController.cs",
+              "ViewState": "AgIAABoAAAAAAAAAAAAIwCUAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T03:38:19.473Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "PlayerInputController.cs",
+              "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\PlayerInputController.cs",
+              "RelativeDocumentMoniker": "Assets\\_Scripts\\Controllers\\PlayerInputController.cs",
+              "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\PlayerInputController.cs",
+              "RelativeToolTip": "Assets\\_Scripts\\Controllers\\PlayerInputController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T03:12:54.902Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "IPlayerController.cs",
+              "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\IPlayerController.cs",
+              "RelativeDocumentMoniker": "Assets\\_Scripts\\Controllers\\IPlayerController.cs",
+              "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Controllers\\IPlayerController.cs",
+              "RelativeToolTip": "Assets\\_Scripts\\Controllers\\IPlayerController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-22T03:11:11.878Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
               "Title": "MainMenuController.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\UI\\MainMenuController.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\UI\\MainMenuController.cs",
@@ -98,12 +166,11 @@
               "RelativeToolTip": "Assets\\_Scripts\\UI\\MainMenuController.cs",
               "ViewState": "AgIAAAIAAAAAAAAAAAAIwCgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T16:29:46.454Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T16:29:46.454Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 21,
               "Title": "GameUIManager.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\UI\\GameUIManager.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\UI\\GameUIManager.cs",
@@ -111,12 +178,11 @@
               "RelativeToolTip": "Assets\\_Scripts\\UI\\GameUIManager.cs",
               "ViewState": "AgIAAEUAAAAAAAAAAAAIwGsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T16:29:45.196Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T16:29:45.196Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 20,
               "Title": "EnergyBarSegmentsUI.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\UI\\EnergyBarSegmentsUI.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\UI\\EnergyBarSegmentsUI.cs",
@@ -124,51 +190,50 @@
               "RelativeToolTip": "Assets\\_Scripts\\UI\\EnergyBarSegmentsUI.cs",
               "ViewState": "AgIAABwAAAAAAAAAAAAIwEIAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T16:29:43.829Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T16:29:43.829Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 4,
               "Title": "TurnBasedModeController.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\TurnBasedModeController.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\GameModes\\TurnBasedModeController.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\TurnBasedModeController.cs",
               "RelativeToolTip": "Assets\\_Scripts\\GameModes\\TurnBasedModeController.cs",
-              "ViewState": "AgIAADEAAAAAAAAAAAAIwFcAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAFUAAAAAAAAAAAAIwHsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-21T16:29:40.851Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 2,
               "Title": "RealTimeModeController.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\RealTimeModeController.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\GameModes\\RealTimeModeController.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\RealTimeModeController.cs",
               "RelativeToolTip": "Assets\\_Scripts\\GameModes\\RealTimeModeController.cs",
-              "ViewState": "AgIAAFoBAAAAAAAAAAAIwIABAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAJ4AAAAAAAAAAAAIwMQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-21T16:29:39.617Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 6,
               "Title": "GameModeController.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\GameModeController.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\GameModes\\GameModeController.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameModes\\GameModeController.cs",
               "RelativeToolTip": "Assets\\_Scripts\\GameModes\\GameModeController.cs",
-              "ViewState": "AgIAACgAAAAAAAAAAAAIwE4AAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAAA4AAAAmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-21T16:29:38.349Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 16,
               "Title": "RuleEngine.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\RuleEngine.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\Core\\RuleEngine.cs",
@@ -176,12 +241,11 @@
               "RelativeToolTip": "Assets\\_Scripts\\Core\\RuleEngine.cs",
               "ViewState": "AgIAABEBAAAAAAAAAAAIwDcBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T16:29:34.254Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T16:29:34.254Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 19,
               "Title": "RealTimePieceState.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\RealTimePieceState.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\Core\\RealTimePieceState.cs",
@@ -189,12 +253,11 @@
               "RelativeToolTip": "Assets\\_Scripts\\Core\\RealTimePieceState.cs",
               "ViewState": "AgIAAAoAAAAAAAAAAAAIwDAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T16:29:31.262Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T16:29:31.262Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 18,
               "Title": "PieceValue.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\PieceValue.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\Core\\PieceValue.cs",
@@ -202,12 +265,11 @@
               "RelativeToolTip": "Assets\\_Scripts\\Core\\PieceValue.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T16:29:27.744Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T16:29:27.744Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 17,
               "Title": "PieceData.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\PieceData.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\Core\\PieceData.cs",
@@ -215,12 +277,11 @@
               "RelativeToolTip": "Assets\\_Scripts\\Core\\PieceData.cs",
               "ViewState": "AgIAAAMAAAAAAAAAAAAIwCkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T16:29:26.738Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T16:29:26.738Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 13,
               "Title": "GameModeSelector.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\GameModeSelector.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\Core\\GameModeSelector.cs",
@@ -228,51 +289,50 @@
               "RelativeToolTip": "Assets\\_Scripts\\Core\\GameModeSelector.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T16:29:25.604Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T16:29:25.604Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "EnergySystem.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\EnergySystem.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\Core\\EnergySystem.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\EnergySystem.cs",
               "RelativeToolTip": "Assets\\_Scripts\\Core\\EnergySystem.cs",
-              "ViewState": "AgIAADUAAAAAAAAAAAAIwFsAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAEAAAAAAAAAAAAAIwFoAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-21T16:29:24.344Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "CombatManager.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\CombatManager.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\Core\\CombatManager.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\CombatManager.cs",
               "RelativeToolTip": "Assets\\_Scripts\\Core\\CombatManager.cs",
-              "ViewState": "AgIAAHkAAAAAAAAAAAAIwJ8AAAABAAAAAAAAAA==",
+              "ViewState": "AgIAACIAAAAAAAAAAAAQwC4AAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-21T16:29:22.798Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 11,
               "Title": "BoardState.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\BoardState.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\Core\\BoardState.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\Core\\BoardState.cs",
               "RelativeToolTip": "Assets\\_Scripts\\Core\\BoardState.cs",
-              "ViewState": "AgIAAGgAAAAAAAAAAAAIwI4AAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAGgAAAAAAAAAAAAIwIEAAAASAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-21T16:29:21.369Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 15,
               "Title": "PlayerInput.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\PlayerInput.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\PlayerInput.cs",
@@ -280,12 +340,11 @@
               "RelativeToolTip": "Assets\\_Scripts\\PlayerInput.cs",
               "ViewState": "AgIAABYAAAAAAAAAAAAIwDwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T15:54:29.555Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T15:54:29.555Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 14,
               "Title": "PieceComponent.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\PieceComponent.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\PieceComponent.cs",
@@ -293,12 +352,11 @@
               "RelativeToolTip": "Assets\\_Scripts\\PieceComponent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T15:54:28.266Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T15:54:28.266Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 12,
               "Title": "MoveMarkerComponent.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\MoveMarkerComponent.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\MoveMarkerComponent.cs",
@@ -306,31 +364,30 @@
               "RelativeToolTip": "Assets\\_Scripts\\MoveMarkerComponent.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T15:54:27.048Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-21T15:54:27.048Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "GameManager.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameManager.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\GameManager.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\GameManager.cs",
               "RelativeToolTip": "Assets\\_Scripts\\GameManager.cs",
-              "ViewState": "AgIAAGcAAAAAAAAAAAAIwI0AAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAK4AAAAAAAAAAAD4v74AAAAOAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-21T15:54:25.792Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
               "Title": "BoardRenderer.cs",
               "DocumentMoniker": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\BoardRenderer.cs",
               "RelativeDocumentMoniker": "Assets\\_Scripts\\BoardRenderer.cs",
               "ToolTip": "D:\\projects\\chinese-chess\\unity\\CrazyChineseChess\\Assets\\_Scripts\\BoardRenderer.cs",
               "RelativeToolTip": "Assets\\_Scripts\\BoardRenderer.cs",
-              "ViewState": "AgIAAFUBAAAAAAAAAAAIwHsBAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAEIAAAAAAAAAAAD4v00AAAArAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-21T15:54:24.511Z",
               "EditorCaption": ""

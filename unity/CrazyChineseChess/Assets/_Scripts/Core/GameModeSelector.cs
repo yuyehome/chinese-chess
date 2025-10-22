@@ -9,6 +9,14 @@ public enum GameModeType
     RealTime
 }
 
+// --- 新增枚举 ---
+public enum AIDifficulty
+{
+    Easy,
+    Hard,
+    VeryHard
+}
+
 /// <summary>
 /// 一个简单的静态类，用于在场景之间传递玩家选择的游戏模式。
 /// </summary>
@@ -18,4 +26,7 @@ public static class GameModeSelector
     /// 存储玩家在主菜单选择的游戏模式。GameManager将根据此值来初始化对应的控制器。
     /// </summary>
     public static GameModeType SelectedMode { get; set; } = GameModeType.TurnBased; // 默认为回合制，以防直接从游戏场景启动
+
+    public static AIDifficulty SelectedAIDifficulty { get; set; } = AIDifficulty.Easy;
+
 }

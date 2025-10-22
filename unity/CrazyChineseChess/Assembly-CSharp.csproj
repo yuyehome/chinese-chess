@@ -67,6 +67,7 @@
     <Compile Include="Assets\_Scripts\Controllers\IPlayerController.cs" />
     <Compile Include="Assets\_Scripts\GameModes\GameModeController.cs" />
     <Compile Include="Assets\_Scripts\Core\CombatManager.cs" />
+    <Compile Include="Assets\_Scripts\Controllers\AI\EasyAIStrategy.cs" />
     <Compile Include="Assets\_Scripts\GameModes\RealTimeModeController.cs" />
     <Compile Include="Assets\_Scripts\Controllers\PlayerInputController.cs" />
     <Compile Include="Assets\_Scripts\Core\RuleEngine.cs" />
@@ -78,6 +79,7 @@
     <Compile Include="Assets\_Scripts\Core\PieceValue.cs" />
     <Compile Include="Assets\FishNet\Upgrading\UpgradeFromMirrorMenu.cs" />
     <Compile Include="Assets\_Scripts\UI\EnergyBarSegmentsUI.cs" />
+    <Compile Include="Assets\_Scripts\Controllers\AI\IAIStrategy.cs" />
     <Compile Include="Assets\_Scripts\Core\GameModeSelector.cs" />
     <Compile Include="Assets\_Scripts\BoardRenderer.cs" />
     <Compile Include="Assets\_Scripts\Core\EnergySystem.cs" />
