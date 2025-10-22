@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\_Scripts\Core\RealTimePieceState.cs" />
+    <Compile Include="Assets\_Scripts\Controllers\AI\BaseAIStrategy.cs" />
     <Compile Include="Assets\_Scripts\GameManager.cs" />
     <Compile Include="Assets\_Scripts\UI\MainMenuController.cs" />
     <Compile Include="Assets\_Scripts\Core\PieceData.cs" />
