@@ -67,6 +67,7 @@
     <Compile Include="Assets\_Scripts\Controllers\IPlayerController.cs" />
     <Compile Include="Assets\_Scripts\GameModes\GameModeController.cs" />
     <Compile Include="Assets\_Scripts\Core\CombatManager.cs" />
+    <Compile Include="Assets\_Scripts\Controllers\AI\HardAIStrategy.cs" />
     <Compile Include="Assets\_Scripts\Controllers\AI\EasyAIStrategy.cs" />
     <Compile Include="Assets\_Scripts\GameModes\RealTimeModeController.cs" />
     <Compile Include="Assets\_Scripts\Controllers\PlayerInputController.cs" />

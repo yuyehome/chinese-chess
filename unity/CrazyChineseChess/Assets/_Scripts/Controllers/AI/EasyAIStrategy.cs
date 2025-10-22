@@ -10,28 +10,82 @@ using System.Linq;
 /// </summary>
 public class EasyAIStrategy : IAIStrategy
 {
-    public AIController.MovePlan FindBestMove(PlayerColor assignedColor, BoardState logicalBoard, List<PieceComponent> myPieces)
+
+    public AIController.MovePlan FindBestMove(GameManager gameManager, PlayerColor assignedColor)
     {
-        // 1. 掷骰子，决定本回合的主要意图
+        BoardState logicalBoard = gameManager.GetLogicalBoardState();
+        List<PieceComponent> myPieces = gameManager.GetAllPiecesOfColor(assignedColor);
+        PlayerColor opponentColor = (assignedColor == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
+
+        // --- 第一层：危机检测 ---
+        Vector2Int kingPos = FindKingPosition(logicalBoard, assignedColor);
+        if (kingPos != new Vector2Int(-1, -1) && RuleEngine.IsPositionUnderAttack(kingPos, opponentColor, logicalBoard))
+        {
+            Debug.Log("[AI-Easy] 危机：王被将军！");
+            if (Random.Range(0f, 1f) < 0.8f) // 80%概率救驾
+            {
+                var savingMove = FindSavingMove(gameManager, assignedColor, logicalBoard, myPieces, kingPos);
+                if (savingMove != null)
+                {
+                    Debug.Log("[AI-Easy] 决策：执行救驾！");
+                    return savingMove;
+                }
+            }
+            else
+            {
+                Debug.Log("[AI-Easy] 决策：忽略了将军！(20%概率)");
+            }
+        }
+
+        // --- 第三层：常规策略 ---
         float intentionRoll = Random.Range(0f, 1f);
-
-        if (intentionRoll < 0.5f) // 50% 概率优先考虑进攻
+        if (intentionRoll < 0.5f)
         {
-            Debug.Log("[AI-Easy] 意图：进攻！");
-            var attackMove = FindAttackMove(assignedColor, logicalBoard, myPieces);
-            if (attackMove != null) return attackMove;
+            var move = FindAttackMove(assignedColor, logicalBoard, myPieces);
+            if (move != null) return move;
         }
-        else if (intentionRoll < 0.8f) // 30% 概率优先考虑躲避
+        else if (intentionRoll < 0.8f)
         {
-            Debug.Log("[AI-Easy] 意图：躲避！");
-            var evadeMove = FindEvadeMove(assignedColor, logicalBoard, myPieces);
-            if (evadeMove != null) return evadeMove;
+            var move = FindEvadeMove(assignedColor, logicalBoard, myPieces);
+            if (move != null) return move;
         }
 
-        // 20% 概率或以上意图失败时，执行随机移动
-        Debug.Log("[AI-Easy] 意图：随机移动。");
         return FindRandomMove(assignedColor, logicalBoard, myPieces);
     }
+
+    // --- 新增：救驾逻辑 ---
+    protected AIController.MovePlan FindSavingMove(GameManager gameManager, PlayerColor color, BoardState board, List<PieceComponent> pieces, Vector2Int kingPos)
+    {
+        // 简单AI的救驾逻辑：只考虑移动王来躲避
+        PieceComponent kingPiece = gameManager.BoardRenderer.GetPieceComponentAt(kingPos);
+        if (kingPiece == null) return null;
+
+        var validKingMoves = RuleEngine.GetValidMoves(kingPiece.PieceData, kingPos, board);
+        var safeKingMoves = validKingMoves.Where(move => !RuleEngine.IsPositionUnderAttack(move, (color == PlayerColor.Red ? PlayerColor.Black : PlayerColor.Red), board)).ToList();
+
+        if (safeKingMoves.Count > 0)
+        {
+            return new AIController.MovePlan(kingPiece, kingPos, safeKingMoves[Random.Range(0, safeKingMoves.Count)], 1000); // 救驾是最高优先级
+        }
+        return null; // 王无处可逃 (理论上是绝杀)
+    }
+
+    protected Vector2Int FindKingPosition(BoardState boardState, PlayerColor kingColor)
+    {
+        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
+        {
+            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
+            {
+                Piece piece = boardState.GetPieceAt(new Vector2Int(x, y));
+                if (piece.Type == PieceType.General && piece.Color == kingColor)
+                {
+                    return new Vector2Int(x, y);
+                }
+            }
+        }
+        return new Vector2Int(-1, -1);
+    }
+
 
     /// <summary>
     /// 查找所有可行的吃子移动，并随机选择一个。

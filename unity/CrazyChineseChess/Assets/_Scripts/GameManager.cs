@@ -96,28 +96,36 @@ public class GameManager : MonoBehaviour
 
             // AI控制器初始化逻辑调整
 
-            // 1. 选择策略
+            // AI控制器初始化
             IAIStrategy aiStrategy;
+            Vector2 decisionTimeRange;
+
             switch (GameModeSelector.SelectedAIDifficulty)
             {
                 case AIDifficulty.Hard:
                     Debug.LogWarning("[GameManager] Hard AI 未实现，暂时使用 Easy AI 替代。");
                     aiStrategy = new EasyAIStrategy();
+                    decisionTimeRange = new Vector2(0.5f, 4.0f); // 困难AI 1-5秒
                     break;
                 case AIDifficulty.VeryHard:
-                    Debug.LogWarning("[GameManager] Very Hard AI 未实现，暂时使用 Easy AI 替代。");
-                    aiStrategy = new EasyAIStrategy();
+                    // TODO: 实现 VeryHardAIStrategy
+                    Debug.LogWarning("[GameManager] Very Hard AI 未实现，暂时使用 Hard AI 替代。");
+                    aiStrategy = new HardAIStrategy();
+                    decisionTimeRange = new Vector2(0.5f, 2.0f); // 极难AI 1-4秒 (占位)
                     break;
                 case AIDifficulty.Easy:
                 default:
                     aiStrategy = new EasyAIStrategy();
+                    decisionTimeRange = new Vector2(0.5f, 6.0f); // 简单AI 1-6秒
                     break;
             }
-
-            // 2. 创建AI控制器并进行两步式初始化
+            // 采用两步初始化AI控制器
             AIController aiController = gameObject.AddComponent<AIController>();
-            aiController.Initialize(PlayerColor.Black, this); // 第一步：基础初始化
-            aiController.SetStrategy(aiStrategy);             // 第二步：注入策略
+            // 1. 标准初始化
+            aiController.Initialize(PlayerColor.Black, this);
+            // 2. AI专属配置
+            aiController.SetupAI(aiStrategy, decisionTimeRange);
+
             controllers.Add(PlayerColor.Black, aiController);
 
         }

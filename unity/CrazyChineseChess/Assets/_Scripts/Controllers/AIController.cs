@@ -12,7 +12,9 @@ public class AIController : MonoBehaviour, IPlayerController
     private PlayerColor assignedColor;
     private GameManager gameManager;
     private float decisionTimer;
-    private IAIStrategy strategy; // 持有决策策略的引用
+    private IAIStrategy strategy;
+    private Vector2 decisionTimeRange;
+    private bool isSetup = false; // 标记AI是否已配置完成
 
     /// <summary>
     /// 移动计划的数据结构，由策略类创建并返回。
@@ -33,38 +35,31 @@ public class AIController : MonoBehaviour, IPlayerController
         }
     }
 
-    // --- MODIFICATION START ---
     /// <summary>
-    /// 严格按照 IPlayerController 接口实现 Initialize 方法。
+    /// 实现了IPlayerController接口的标准初始化方法。
     /// </summary>
     public void Initialize(PlayerColor color, GameManager manager)
     {
         this.assignedColor = color;
         this.gameManager = manager;
-        ResetDecisionTimer();
-        Debug.Log($"[AIController] AI控制器已为 {assignedColor} 方初始化。");
     }
 
     /// <summary>
-    /// 设置该AI控制器使用的决策策略（大脑）。
+    /// AI特有的配置方法，用于注入决策策略和参数。
     /// </summary>
-    /// <param name="aiStrategy">要注入的策略实例</param>
-    public void SetStrategy(IAIStrategy aiStrategy)
+    public void SetupAI(IAIStrategy aiStrategy, Vector2 timeRange)
     {
         this.strategy = aiStrategy;
-        if (this.strategy != null)
-        {
-            Debug.Log($"[AIController] AI策略已设置为: {aiStrategy.GetType().Name}。");
-        }
+        this.decisionTimeRange = timeRange;
+        ResetDecisionTimer();
+        isSetup = true;
+        Debug.Log($"[AIController] AI控制器已为 {assignedColor} 方配置完成，使用策略: {aiStrategy.GetType().Name}，决策频率: {timeRange.x}-{timeRange.y}s。");
     }
-    // --- MODIFICATION END ---
 
     private void Update()
     {
-        // --- MODIFICATION START ---
-        // 增加对 strategy 是否为空的检查
-        if (gameManager == null || gameManager.IsGameEnded || strategy == null) return;
-        // --- MODIFICATION END ---
+        // 确保AI已配置完成且游戏正在进行
+        if (!isSetup || gameManager == null || gameManager.IsGameEnded) return;
 
         decisionTimer -= Time.deltaTime;
         if (decisionTimer <= 0)
@@ -76,7 +71,8 @@ public class AIController : MonoBehaviour, IPlayerController
 
     private void ResetDecisionTimer()
     {
-        decisionTimer = Random.Range(0.5f, 5.5f); // 随机决策间隔1-6秒
+        if (decisionTimeRange == Vector2.zero) return;
+        decisionTimer = Random.Range(decisionTimeRange.x, decisionTimeRange.y);
     }
 
     private void MakeDecision()
@@ -86,12 +82,7 @@ public class AIController : MonoBehaviour, IPlayerController
             return;
         }
 
-        BoardState logicalBoard = gameManager.GetLogicalBoardState();
-        List<PieceComponent> myPieces = gameManager.GetAllPiecesOfColor(assignedColor);
-
-        if (myPieces.Count == 0) return;
-
-        MovePlan bestMove = strategy.FindBestMove(assignedColor, logicalBoard, myPieces);
+        MovePlan bestMove = strategy.FindBestMove(gameManager, assignedColor);
 
         if (bestMove != null)
         {
