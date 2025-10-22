@@ -4,23 +4,16 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-/// <summary>
-/// ¼«ÄÑAIµÄ¾ö²ß²ßÂÔ¡£
-/// ÐÐÎªÄ£Ê½£º
-/// 1. ¿ª¾Ö½×¶Î£¬×ñÑ­Ô¤ÉèµÄ¿ª¾Ö¿â¡£
-/// 2. ÍÑÀë¿ª¾Ö¿âºó£¬ÓÅÏÈ´¦Àí½«¾üÍþÐ² (100% ¸ÅÂÊ)¡£
-/// 3. ³£¹æ¾ö²ßÊ¹ÓÃ Minimax Ëã·¨ÏòÇ°¿´Ò»²½£¬Ô¤ÅÐ¶ÔÊÖµÄ×î¼ÑÓ¦¶Ô¡£
-/// </summary>
-public class VeryHardAIStrategy : HardAIStrategy, IAIStrategy // ¼Ì³Ð×Ô HardAI ÒÔ¸´ÓÃÆÀ¹Àº¯Êý
+public class VeryHardAIStrategy : HardAIStrategy, IAIStrategy
 {
-    // --- ¿ª¾Ö¿â ---
+    public new Vector2 DecisionTimeRange => new Vector2(0.5f, 2.0f);
+    private System.Random _random = new System.Random();
+
     private static List<List<Vector2Int>> openingBook;
     private List<Vector2Int> currentOpening;
     private int openingMoveIndex = 0;
     private bool useOpeningBook = true;
-
-    // --- Minimax Ëã·¨Éî¶È ---
-    private const int SEARCH_DEPTH = 2; // ËÑË÷Éî¶È£º2´ú±í(AI×ßÒ»²½, Íæ¼Ò×ßÒ»²½)
+    private const int SEARCH_DEPTH = 2;
 
     public VeryHardAIStrategy()
     {
@@ -28,37 +21,47 @@ public class VeryHardAIStrategy : HardAIStrategy, IAIStrategy // ¼Ì³Ð×Ô HardAI Ò
         SelectRandomOpening();
     }
 
-    public override AIController.MovePlan FindBestMove(GameManager gameManager, PlayerColor assignedColor)
+    public AIController.MovePlan TryGetOpeningBookMove(GameManager gameManager, PlayerColor assignedColor)
     {
-        // --- 1. ¿ª¾Ö¿â½×¶Î ---
-        if (useOpeningBook && openingMoveIndex < currentOpening.Count)
-        {
-            return ExecuteOpeningBookMove(gameManager, assignedColor);
-        }
+        if (!useOpeningBook || currentOpening == null || openingMoveIndex >= currentOpening.Count) return null;
 
-        // --- ÍÑÀë¿ª¾Ö¿âºóµÄÂß¼­ ---
-        BoardState logicalBoard = gameManager.GetLogicalBoardState();
-        List<PieceComponent> myPieces = gameManager.GetAllPiecesOfColor(assignedColor);
+        Vector2Int from = currentOpening[openingMoveIndex];
+        Vector2Int to = currentOpening[openingMoveIndex + 1];
+        PieceComponent pieceToMove = gameManager.BoardRenderer.GetPieceComponentAt(from);
+
+        if (pieceToMove != null && pieceToMove.PieceData.Color == assignedColor && RuleEngine.GetValidMoves(pieceToMove.PieceData, from, gameManager.GetLogicalBoardState()).Contains(to))
+        {
+            openingMoveIndex += 2;
+            return new AIController.MovePlan(pieceToMove.PieceData, from, to, 0);
+        }
+        else
+        {
+            useOpeningBook = false;
+            return null;
+        }
+    }
+
+    public override AIController.MovePlan FindBestMove(PlayerColor assignedColor, BoardState logicalBoard,
+                                                        List<GameManager.SimulatedPiece> myPieces,
+                                                        List<GameManager.SimulatedPiece> opponentPieces)
+    {
         PlayerColor opponentColor = (assignedColor == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
 
-        // --- 2. Î£»ú¼ì²â (100% ¸ÅÂÊ) ---
         Vector2Int kingPos = FindKingPosition(logicalBoard, assignedColor);
         if (kingPos != new Vector2Int(-1, -1) && RuleEngine.IsPositionUnderAttack(kingPos, opponentColor, logicalBoard))
         {
-            Debug.Log("[AI-VeryHard] Î£»ú£ºÍõ±»½«¾ü£¡±ØÐë¾È¼Ý£¡");
-            // ¸´ÓÃ¸¸ÀàµÄ×îÓÅ¾È¼ÝÂß¼­
-            return FindBestSavingMove(gameManager, assignedColor, logicalBoard, myPieces, kingPos);
+            // 100% ¾È¼Ý
+            return FindSavingMove(assignedColor, logicalBoard, myPieces, kingPos);
         }
 
-        // --- 3. Minimax ³£¹æ¾ö²ß ---
-        return FindBestMoveWithMinimax(gameManager, assignedColor);
+        return FindBestMoveWithMinimax(assignedColor, logicalBoard, myPieces, opponentPieces);
     }
 
-    #region Minimax Implementation
-
-    private AIController.MovePlan FindBestMoveWithMinimax(GameManager gameManager, PlayerColor assignedColor)
+    private AIController.MovePlan FindBestMoveWithMinimax(PlayerColor assignedColor, BoardState logicalBoard,
+                                                           List<GameManager.SimulatedPiece> myPieces,
+                                                           List<GameManager.SimulatedPiece> opponentPieces)
     {
-        var allMoves = GetAllPossibleMoves(assignedColor, gameManager.GetLogicalBoardState(), gameManager.GetAllPiecesOfColor(assignedColor));
+        var allMoves = GetAllPossibleMovesFromSimulated(assignedColor, logicalBoard, myPieces);
         if (allMoves.Count == 0) return null;
 
         int bestScore = int.MinValue;
@@ -66,12 +69,9 @@ public class VeryHardAIStrategy : HardAIStrategy, IAIStrategy // ¼Ì³Ð×Ô HardAI Ò
 
         foreach (var move in allMoves)
         {
-            // Ä£ÄâÎÒ·½×ßÆå
-            BoardState futureBoard = gameManager.GetLogicalBoardState().Clone();
+            BoardState futureBoard = logicalBoard.Clone();
             futureBoard.MovePiece(move.From, move.To);
-
-            // ¼ÆËã¶ÔÊÖÔÚÎÒ·½×ßÆåºóµÄ×î¼ÑÓ¦¶ÔËùÄÜ´ïµ½µÄ¾ÖÃæ·ÖÊý£¨¶ÔÎÒÃÇ¶øÑÔÊÇ×îµÍ·Ö£©
-            int score = Minimax(gameManager, futureBoard, SEARCH_DEPTH - 1, false, assignedColor);
+            int score = Minimax(futureBoard, SEARCH_DEPTH - 1, false, assignedColor);
 
             if (score > bestScore)
             {
@@ -85,147 +85,78 @@ public class VeryHardAIStrategy : HardAIStrategy, IAIStrategy // ¼Ì³Ð×Ô HardAI Ò
             }
         }
 
-        if (bestMoves.Count > 0)
-        {
-            var chosenMove = bestMoves[Random.Range(0, bestMoves.Count)];
-            Debug.Log($"[AI-VeryHard] Minimax¾ö²ß£ºÑ¡ÔñÒÆ¶¯ {chosenMove.PieceToMove.name} -> {chosenMove.To} (Ô¤ÅÐµÃ·Ö: {bestScore})");
-            return chosenMove;
-        }
+        if (bestMoves.Count > 0) return bestMoves[_random.Next(0, bestMoves.Count)];
         return null;
     }
 
-    private int Minimax(GameManager gameManager, BoardState board, int depth, bool isMaximizingPlayer, PlayerColor myColor)
+    private int Minimax(BoardState board, int depth, bool isMaximizingPlayer, PlayerColor myColor)
     {
-        // »ù×¼Çé¿ö£º´ïµ½ËÑË÷Éî¶È»òÓÎÏ·½áÊø
-        if (depth == 0)
-        {
-            return EvaluateBoardState(board, myColor);
-        }
+        if (depth == 0) return EvaluateBoardState(board, myColor);
 
         PlayerColor currentColor = isMaximizingPlayer ? myColor : (myColor == PlayerColor.Red ? PlayerColor.Black : PlayerColor.Red);
-        var pieces = gameManager.GetAllPiecesOfColorFromBoard(currentColor, board); // ÐèÒªÒ»¸öÐÂµÄ¸¨Öú·½·¨
-        var allMoves = GetAllPossibleMoves(currentColor, board, pieces);
+        var pieces = GetSimulatedPiecesFromBoard(currentColor, board);
+        var allMoves = GetAllPossibleMovesFromSimulated(currentColor, board, pieces);
 
-        if (isMaximizingPlayer) // ÎÒ·½£¨AI£©£¬Ñ°Çó×î´ó·Ö
+        if (allMoves.Count == 0) return EvaluateBoardState(board, myColor);
+
+        int bestValue = isMaximizingPlayer ? int.MinValue : int.MaxValue;
+        foreach (var move in allMoves)
         {
-            int maxEval = int.MinValue;
-            foreach (var move in allMoves)
-            {
-                BoardState futureBoard = board.Clone();
-                futureBoard.MovePiece(move.From, move.To);
-                int eval = Minimax(gameManager, futureBoard, depth - 1, false, myColor);
-                maxEval = Mathf.Max(maxEval, eval);
-            }
-            return maxEval;
+            BoardState futureBoard = board.Clone();
+            futureBoard.MovePiece(move.From, move.To);
+            int eval = Minimax(futureBoard, depth - 1, !isMaximizingPlayer, myColor);
+            if (isMaximizingPlayer) bestValue = Mathf.Max(bestValue, eval);
+            else bestValue = Mathf.Min(bestValue, eval);
         }
-        else // µÐ·½£¨Íæ¼Ò£©£¬Ñ°Çó×îÐ¡·Ö
-        {
-            int minEval = int.MaxValue;
-            foreach (var move in allMoves)
-            {
-                BoardState futureBoard = board.Clone();
-                futureBoard.MovePiece(move.From, move.To);
-                int eval = Minimax(gameManager, futureBoard, depth - 1, true, myColor);
-                minEval = Mathf.Min(minEval, eval);
-            }
-            return minEval;
-        }
+        return bestValue;
     }
 
-    /// <summary>
-    /// ÆÀ¹ÀÕû¸öÆåÅÌµÄ¾ÖÃæ·ÖÊý£¬·ÖÊýÔ½¸ß¶ÔAIÔ½ÓÐÀû¡£
-    /// </summary>
     private int EvaluateBoardState(BoardState board, PlayerColor myColor)
     {
         int totalScore = 0;
-        PlayerColor opponentColor = (myColor == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
-
-        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
+        foreach (var pieceInfo in board.GetAllPieces())
         {
-            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
-            {
-                var pos = new Vector2Int(x, y);
-                Piece pieceData = board.GetPieceAt(pos);
-                if (pieceData.Type != PieceType.None)
-                {
-                    // ×¢Òâ£ºÕâÀïÐèÒªÒ»¸ö¼ÙµÄPieceComponentÀ´µ÷ÓÃGetPositionalValue£¬ÕâÊÇÒ»¸ö´ýÓÅ»¯µÄµã
-                    var tempPieceComp = new PieceComponent { PieceData = pieceData };
-                    int pieceScore = PieceValue.GetValue(pieceData.Type) + GetPositionalValue(tempPieceComp, pos, pieceData.Color);
-
-                    if (pieceData.Color == myColor)
-                        totalScore += pieceScore;
-                    else
-                        totalScore -= pieceScore;
-                }
-            }
+            int pieceScore = PieceValue.GetValue(pieceInfo.PieceData.Type) + GetPositionalValue(pieceInfo.PieceData, pieceInfo.Position, pieceInfo.PieceData.Color);
+            if (pieceInfo.PieceData.Color == myColor) totalScore += pieceScore;
+            else totalScore -= pieceScore;
         }
         return totalScore;
     }
 
-    #endregion
+    private List<GameManager.SimulatedPiece> GetSimulatedPiecesFromBoard(PlayerColor color, BoardState board)
+    {
+        var pieces = new List<GameManager.SimulatedPiece>();
+        foreach (var pieceInfo in board.GetAllPieces())
+        {
+            if (pieceInfo.PieceData.Color == color)
+            {
+                pieces.Add(new GameManager.SimulatedPiece { PieceData = pieceInfo.PieceData, BoardPosition = pieceInfo.Position });
+            }
+        }
+        return pieces;
+    }
 
-    #region Opening Book Implementation
     private void InitializeOpeningBook()
     {
-        if (openingBook != null) return; // ¾²Ì¬±äÁ¿£¬Ö»Ðè³õÊ¼»¯Ò»´Î
-
+        if (openingBook != null) return;
         openingBook = new List<List<Vector2Int>>
         {
-            // ¿ª¾Ö1: µ±Í·ÅÚ (ÖÐÅÚ) -> ÌøÂí
-            new List<Vector2Int>
-            {
-                new Vector2Int(1, 2), new Vector2Int(4, 2), // ºÚ·½ ÅÚ2Æ½5
-                new Vector2Int(1, 0), new Vector2Int(2, 2)  // ºÚ·½ Âí2½ø3
-            },
-            // ¿ª¾Ö2: ·ÉÏà¾Ö -> ÌøÂí
-            new List<Vector2Int>
-            {
-                new Vector2Int(2, 0), new Vector2Int(4, 2), // ºÚ·½ Ïà3½ø5
-                new Vector2Int(7, 0), new Vector2Int(6, 2)  // ºÚ·½ Âí8½ø7
-            },
-            // ¿ª¾Ö3: ÆðÂí¾Ö
-            new List<Vector2Int>
-            {
-                new Vector2Int(1, 0), new Vector2Int(2, 2)  // ºÚ·½ Âí2½ø3
-            }
-            // ¿ÉÒÔÁô¿Õ£¬»ò¼ÓÈëÒ»¸ö¿ÕÁÐ±íÀ´´ú±í¡°Ëæ»ú¿ª¾Ö¡±
-            // new List<Vector2Int>() 
+            new List<Vector2Int> { new Vector2Int(1, 7), new Vector2Int(4, 7), new Vector2Int(1, 9), new Vector2Int(2, 7) },
+            new List<Vector2Int> { new Vector2Int(2, 9), new Vector2Int(4, 7), new Vector2Int(7, 9), new Vector2Int(6, 7) },
+            new List<Vector2Int> { new Vector2Int(1, 9), new Vector2Int(2, 7) },
+            new List<Vector2Int>()
         };
     }
 
     private void SelectRandomOpening()
     {
-        if (openingBook.Count == 0)
+        if (openingBook == null || openingBook.Count == 0)
         {
             useOpeningBook = false;
             currentOpening = new List<Vector2Int>();
             return;
         }
-        currentOpening = openingBook[Random.Range(0, openingBook.Count)];
+        currentOpening = openingBook[_random.Next(0, openingBook.Count)];
         Debug.Log($"[AI-VeryHard] ÒÑÑ¡Ôñ¿ª¾Ö¿â£¬¹² {currentOpening.Count / 2} ²½¡£");
     }
-
-    private AIController.MovePlan ExecuteOpeningBookMove(GameManager gameManager, PlayerColor assignedColor)
-    {
-        Vector2Int from = currentOpening[openingMoveIndex];
-        Vector2Int to = currentOpening[openingMoveIndex + 1];
-
-        PieceComponent pieceToMove = gameManager.BoardRenderer.GetPieceComponentAt(from);
-
-        // ÑéÖ¤¿ª¾Ö¿âÒÆ¶¯ÊÇ·ñºÏ·¨ (ÀýÈç£¬Íæ¼Ò×ßÁË·ÇÖ÷Á÷¿ª¾Öµ²×¡ÁËÂ·)
-        if (pieceToMove != null && pieceToMove.PieceData.Color == assignedColor && RuleEngine.GetValidMoves(pieceToMove.PieceData, from, gameManager.GetLogicalBoardState()).Contains(to))
-        {
-            Debug.Log($"[AI-VeryHard] Ö´ÐÐ¿ª¾Ö¿âµÚ {(openingMoveIndex / 2) + 1} ²½: {from} -> {to}");
-            openingMoveIndex += 2;
-            return new AIController.MovePlan(pieceToMove, from, to, 0);
-        }
-        else
-        {
-            // Èç¹û¿ª¾Ö¿âÒÆ¶¯²»ºÏ·¨£¬ÔòÁ¢¼´ÇÐ»»µ½Ë¼¿¼Ä£Ê½
-            Debug.LogWarning("[AI-VeryHard] ¿ª¾Ö¿âÒÆ¶¯²»ºÏ·¨£¬ÍÑÀëÊé±¾£¬¿ªÊ¼×ÔÓÉË¼¿¼£¡");
-            useOpeningBook = false;
-            return FindBestMoveWithMinimax(gameManager, assignedColor);
-        }
-    }
-    #endregion
 }

@@ -98,30 +98,24 @@ public class GameManager : MonoBehaviour
 
             // AI控制器初始化
             IAIStrategy aiStrategy;
-            Vector2 decisionTimeRange;
 
             switch (GameModeSelector.SelectedAIDifficulty)
             {
                 case AIDifficulty.VeryHard:
                     aiStrategy = new VeryHardAIStrategy();
-                    decisionTimeRange = new Vector2(0.5f, 2.0f); // 极难AI 1-4秒 (占位)
                     break;
                 case AIDifficulty.Hard:
                     aiStrategy = new EasyAIStrategy();
-                    decisionTimeRange = new Vector2(0.5f, 3.0f); // 困难AI 1-5秒
                     break;
                 case AIDifficulty.Easy:
                 default:
                     aiStrategy = new EasyAIStrategy();
-                    decisionTimeRange = new Vector2(0.5f, 4.0f); // 简单AI 1-6秒
                     break;
             }
             // 采用两步初始化AI控制器
             AIController aiController = gameObject.AddComponent<AIController>();
-            // 1. 标准初始化
             aiController.Initialize(PlayerColor.Black, this);
-            // 2. AI专属配置
-            aiController.SetupAI(aiStrategy, decisionTimeRange);
+            aiController.SetupAI(aiStrategy);
 
             controllers.Add(PlayerColor.Black, aiController);
 
@@ -145,6 +139,34 @@ public class GameManager : MonoBehaviour
                 rtController.Tick();
             }
         }
+    }
+
+    // --- 新增一个轻量级结构体，用于在后台线程传递棋子信息 ---
+    public struct SimulatedPiece
+    {
+        public Piece PieceData;
+        public Vector2Int BoardPosition;
+    }
+
+    /// <summary>
+    /// [线程安全] 从一个给定的BoardState中，获取属于指定颜色的所有棋子的(模拟)信息列表。
+    /// </summary>
+    public List<SimulatedPiece> GetSimulatedPiecesOfColorFromBoard(PlayerColor color, BoardState board)
+    {
+        var pieces = new List<SimulatedPiece>();
+        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
+        {
+            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
+            {
+                var pos = new Vector2Int(x, y);
+                Piece pieceData = board.GetPieceAt(pos);
+                if (pieceData.Type != PieceType.None && pieceData.Color == color)
+                {
+                    pieces.Add(new SimulatedPiece { PieceData = pieceData, BoardPosition = pos });
+                }
+            }
+        }
+        return pieces;
     }
 
     #region Public Game Actions & Helpers

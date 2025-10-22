@@ -2,11 +2,8 @@
 
 using UnityEngine;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
-/// <summary>
-/// 负责驱动AI行为的控制器。
-/// 它作为AI的“身体”，管理决策时机；而具体的决策逻辑由注入的IAIStrategy策略（“大脑”）完成。
-/// </summary>
 public class AIController : MonoBehaviour, IPlayerController
 {
     private PlayerColor assignedColor;
@@ -14,58 +11,49 @@ public class AIController : MonoBehaviour, IPlayerController
     private float decisionTimer;
     private IAIStrategy strategy;
     private Vector2 decisionTimeRange;
-    private bool isSetup = false; // 标记AI是否已配置完成
+    private bool isSetup = false;
+    private bool isThinking = false;
 
-    /// <summary>
-    /// 移动计划的数据结构，由策略类创建并返回。
-    /// </summary>
     public class MovePlan
     {
-        public PieceComponent PieceToMove;
+        public Piece PieceToMoveData;
         public Vector2Int From;
         public Vector2Int To;
         public int TargetValue;
 
-        public MovePlan(PieceComponent piece, Vector2Int from, Vector2Int to, int value)
+        public MovePlan(Piece pieceData, Vector2Int from, Vector2Int to, int value)
         {
-            PieceToMove = piece;
-            From = from;
-            To = to;
-            TargetValue = value;
+            this.PieceToMoveData = pieceData;
+            this.From = from;
+            this.To = to;
+            this.TargetValue = value;
         }
     }
 
-    /// <summary>
-    /// 实现了IPlayerController接口的标准初始化方法。
-    /// </summary>
     public void Initialize(PlayerColor color, GameManager manager)
     {
         this.assignedColor = color;
         this.gameManager = manager;
     }
 
-    /// <summary>
-    /// AI特有的配置方法，用于注入决策策略和参数。
-    /// </summary>
-    public void SetupAI(IAIStrategy aiStrategy, Vector2 timeRange)
+    public void SetupAI(IAIStrategy aiStrategy)
     {
         this.strategy = aiStrategy;
-        this.decisionTimeRange = timeRange;
+        this.decisionTimeRange = aiStrategy.DecisionTimeRange;
         ResetDecisionTimer();
         isSetup = true;
-        Debug.Log($"[AIController] AI控制器已为 {assignedColor} 方配置完成，使用策略: {aiStrategy.GetType().Name}，决策频率: {timeRange.x}-{timeRange.y}s。");
+        Debug.Log($"[AIController] AI控制器已为 {assignedColor} 方配置完成，使用策略: {aiStrategy.GetType().Name}，决策频率: {decisionTimeRange.x}-{decisionTimeRange.y}s。");
     }
 
     private void Update()
     {
-        // 确保AI已配置完成且游戏正在进行
-        if (!isSetup || gameManager == null || gameManager.IsGameEnded) return;
+        if (!isSetup || gameManager == null || gameManager.IsGameEnded || isThinking) return;
 
         decisionTimer -= Time.deltaTime;
         if (decisionTimer <= 0)
         {
             ResetDecisionTimer();
-            MakeDecision();
+            MakeDecisionAsync();
         }
     }
 
@@ -75,19 +63,45 @@ public class AIController : MonoBehaviour, IPlayerController
         decisionTimer = Random.Range(decisionTimeRange.x, decisionTimeRange.y);
     }
 
-    private void MakeDecision()
+    private async void MakeDecisionAsync()
     {
-        if (!gameManager.EnergySystem.CanSpendEnergy(assignedColor))
+        if (!gameManager.EnergySystem.CanSpendEnergy(assignedColor)) return;
+
+        isThinking = true;
+        MovePlan bestMove = null;
+
+        if (strategy is VeryHardAIStrategy vhStrategy)
         {
+            bestMove = vhStrategy.TryGetOpeningBookMove(gameManager, assignedColor);
+        }
+
+        if (bestMove == null)
+        {
+            BoardState logicalBoard = gameManager.GetLogicalBoardState();
+            PlayerColor opponentColor = (assignedColor == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
+            List<GameManager.SimulatedPiece> myPieces = gameManager.GetSimulatedPiecesOfColorFromBoard(assignedColor, logicalBoard);
+            List<GameManager.SimulatedPiece> opponentPieces = gameManager.GetSimulatedPiecesOfColorFromBoard(opponentColor, logicalBoard);
+
+            Debug.Log("[AI] 开始在后台线程思考...");
+            bestMove = await Task.Run(() => strategy.FindBestMove(assignedColor, logicalBoard, myPieces, opponentPieces));
+        }
+        else
+        {
+            Debug.Log("[AI] 使用开局库移动，跳过深度思考。");
+        }
+
+        if (this == null || gameManager.IsGameEnded)
+        {
+            isThinking = false;
             return;
         }
 
-        MovePlan bestMove = strategy.FindBestMove(gameManager, assignedColor);
-
         if (bestMove != null)
         {
-            Debug.Log($"[AI] 决策完成: 移动 {bestMove.PieceToMove.name} 从 {bestMove.From} 到 {bestMove.To}。");
+            Debug.Log($"[AI] 思考完成: 移动 {bestMove.PieceToMoveData.Type} 从 {bestMove.From} 到 {bestMove.To}。");
             gameManager.RequestMove(assignedColor, bestMove.From, bestMove.To);
         }
+
+        isThinking = false;
     }
 }

@@ -1,6 +1,7 @@
 // File: _Scripts/Core/BoardState.cs
 
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// 游戏状态的唯一真实来源 (Single Source of Truth) for STATIONALY pieces.
@@ -140,4 +141,25 @@ public class BoardState
         }
         return newBoardState;
     }
+
+    /// <summary>
+    /// [线程安全] 获取当前棋盘上所有非空棋子的位置和数据。
+    /// </summary>
+    /// <returns>一个包含所有棋子信息的列表。</returns>
+    public List<(Piece PieceData, Vector2Int Position)> GetAllPieces()
+    {
+        var pieces = new List<(Piece, Vector2Int)>();
+        for (int x = 0; x < BOARD_WIDTH; x++)
+        {
+            for (int y = 0; y < BOARD_HEIGHT; y++)
+            {
+                if (board[x, y].Type != PieceType.None)
+                {
+                    pieces.Add((board[x, y], new Vector2Int(x, y)));
+                }
+            }
+        }
+        return pieces;
+    }
+
 }
