@@ -73,6 +73,7 @@
     <Compile Include="Assets\_Scripts\UI\GameUIManager.cs" />
     <Compile Include="Assets\_Scripts\GameModes\TurnBasedModeController.cs" />
     <Compile Include="Assets\_Scripts\MoveMarkerComponent.cs" />
+    <Compile Include="Assets\_Scripts\Controllers\AIController.cs" />
     <Compile Include="Assets\_Scripts\Core\BoardState.cs" />
     <Compile Include="Assets\_Scripts\Core\PieceValue.cs" />
     <Compile Include="Assets\FishNet\Upgrading\UpgradeFromMirrorMenu.cs" />

@@ -93,6 +93,13 @@ public class GameManager : MonoBehaviour
             PlayerInputController playerController = gameObject.AddComponent<PlayerInputController>();
             playerController.Initialize(PlayerColor.Red, this);
             controllers.Add(PlayerColor.Red, playerController);
+
+            // 启用AI控制器
+            AIController aiController = gameObject.AddComponent<AIController>();
+            aiController.Initialize(PlayerColor.Black, this);
+            controllers.Add(PlayerColor.Black, aiController);
+            Debug.Log("[GameManager] AI控制器已为黑方激活。");
+
         }
         else if (currentGameMode is TurnBasedModeController)
         {
@@ -116,6 +123,36 @@ public class GameManager : MonoBehaviour
     }
 
     #region Public Game Actions & Helpers
+
+    // --- NEW METHOD START ---
+    /// <summary>
+    /// 获取棋盘上属于指定颜色的所有存活棋子的列表。
+    /// 主要供AI控制器使用，以获取其可操作的单位。
+    /// </summary>
+    public List<PieceComponent> GetAllPiecesOfColor(PlayerColor color)
+    {
+        var pieces = new List<PieceComponent>();
+        if (BoardRenderer == null) return pieces;
+
+        // 遍历整个棋盘寻找棋子
+        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
+        {
+            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
+            {
+                PieceComponent pc = BoardRenderer.GetPieceComponentAt(new Vector2Int(x, y));
+                if (pc != null && pc.PieceData.Color == color && pc.RTState != null && !pc.RTState.IsDead)
+                {
+                    pieces.Add(pc);
+                }
+            }
+        }
+
+        // 注意：上面的循环只包含了静止的棋子。在实时模式下，AI也应该能获取到正在移动中的己方棋子。
+        // 但为了简单起见，当前AI策略是不操作移动中的棋子，所以暂时可以忽略。
+        // 如果未来需要更复杂的AI（如改变移动中棋子的目标），则需要从RealTimeModeController中获取movingPieces列表并筛选。
+
+        return pieces;
+    }
 
     public void RequestMove(PlayerColor color, Vector2Int from, Vector2Int to)
     {
@@ -154,11 +191,14 @@ public class GameManager : MonoBehaviour
         IsGameEnded = true;
         Debug.Log($"[GameFlow] 游戏结束！结果: {status}");
 
-        // 禁用玩家输入控制器
+        // 禁用玩家和AI输入控制器
         var playerInput = GetComponent<PlayerInputController>();
         if (playerInput != null) playerInput.enabled = false;
         var turnBasedInput = GetComponent<TurnBasedInputController>();
         if (turnBasedInput != null) turnBasedInput.enabled = false;
+        var aiInput = GetComponent<AIController>();
+        if (aiInput != null) aiInput.enabled = false;
+
     }
 
     private void HandlePieceKilled(PieceComponent killedPiece)
