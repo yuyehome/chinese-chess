@@ -36,19 +36,19 @@ public class EasyAIStrategy : BaseAIStrategy, IAIStrategy
         float intentionRoll = Random.Range(0f, 1f);
         AIController.MovePlan chosenMove = null;
 
-        if (intentionRoll < 0.5f) // 50% 概率优先考虑进攻
+        if (intentionRoll < 0.6f) // 60% 概率优先考虑进攻
         {
             Debug.Log("[AI-Easy] 意图：进攻！");
             chosenMove = FindAttackMove(assignedColor, logicalBoard, myPieces);
         }
 
-        if (chosenMove == null && intentionRoll < 0.8f) // 30% 概率或进攻失败时，考虑躲避
+        if (chosenMove == null && intentionRoll < 0.9f) // 30% 概率或进攻失败时，考虑躲避
         {
             Debug.Log("[AI-Easy] 意图：躲避！");
             chosenMove = FindEvadeMove(assignedColor, logicalBoard, myPieces);
         }
 
-        // 20% 概率或以上意图都失败时，执行随机移动
+        // 10% 概率或以上意图都失败时，执行随机移动
         if (chosenMove == null)
         {
             Debug.Log("[AI-Easy] 意图：随机移动。");

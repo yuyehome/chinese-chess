@@ -17,7 +17,10 @@ public class HardAIStrategy : BaseAIStrategy, IAIStrategy
     private const int CENTER_CONTROL_BONUS = 5;     // 占据中心位置的奖励
     private const int SAFE_MOVE_BONUS = 2;          // 移动到安全位置的奖励
 
-    public AIController.MovePlan FindBestMove(GameManager gameManager, PlayerColor assignedColor)
+    /// <summary>
+    /// 困难AI决策的主入口。
+    /// </summary>
+    public virtual AIController.MovePlan FindBestMove(GameManager gameManager, PlayerColor assignedColor)
     {
         BoardState logicalBoard = gameManager.GetLogicalBoardState();
         List<PieceComponent> myPieces = gameManager.GetAllPiecesOfColor(assignedColor);
@@ -79,9 +82,9 @@ public class HardAIStrategy : BaseAIStrategy, IAIStrategy
     }
 
     /// <summary>
-    /// 评估一个移动的综合得分。
+    /// 评估一个移动的综合得分。设为 protected virtual 以便子类复用和扩展。
     /// </summary>
-    private int EvaluateMove(AIController.MovePlan move, PlayerColor myColor, BoardState board, PlayerColor opponentColor)
+    protected virtual int EvaluateMove(AIController.MovePlan move, PlayerColor myColor, BoardState board, PlayerColor opponentColor)
     {
         int score = 0;
 
@@ -129,9 +132,9 @@ public class HardAIStrategy : BaseAIStrategy, IAIStrategy
     }
 
     /// <summary>
-    /// 获取一个棋子移动到特定位置的价值。
+    /// 获取一个棋子移动到特定位置的价值。设为 protected virtual 以便子类复用和扩展。
     /// </summary>
-    private int GetPositionalValue(PieceComponent piece, Vector2Int pos, PlayerColor myColor)
+    protected virtual int GetPositionalValue(PieceComponent piece, Vector2Int pos, PlayerColor myColor)
     {
         int value = 0;
 
@@ -158,19 +161,24 @@ public class HardAIStrategy : BaseAIStrategy, IAIStrategy
     }
 
     /// <summary>
-    /// (待实现) 困难AI的救驾逻辑：评估所有可能的救驾方式，选择最优解。
+    /// 困难AI的救驾逻辑：评估所有可能的救驾方式，选择最优解。
     /// </summary>
-    private AIController.MovePlan FindBestSavingMove(GameManager gameManager, PlayerColor color, BoardState board, List<PieceComponent> pieces, Vector2Int kingPos)
+    protected AIController.MovePlan FindBestSavingMove(GameManager gameManager, PlayerColor color, BoardState board, List<PieceComponent> pieces, Vector2Int kingPos)
     {
         // 目前暂时复用简单AI的救驾逻辑：只移动王
         // TODO: 未来可以增加格挡和反击的救驾方式评估
         PieceComponent kingPiece = gameManager.BoardRenderer.GetPieceComponentAt(kingPos);
-        if (kingPiece == null) return null;
+        if (kingPiece == null)
+        {
+            // 如果在BoardRenderer中找不到，可能是因为王正在移动中，这是一种边缘情况。
+            // 此时我们应该从传入的pieces列表中查找
+            kingPiece = pieces.FirstOrDefault(p => p.PieceData.Type == PieceType.General);
+            if (kingPiece == null) return null;
+        }
 
-        // --- MODIFICATION START ---
+        PlayerColor opponentColor = (color == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
         var validKingMoves = RuleEngine.GetValidMoves(kingPiece.PieceData, kingPos, board);
-        var safeKingMoves = validKingMoves.Where(move => !RuleEngine.IsPositionUnderAttack(move, (color == PlayerColor.Red ? PlayerColor.Black : PlayerColor.Red), board)).ToList();
-        // --- MODIFICATION END ---
+        var safeKingMoves = validKingMoves.Where(move => !RuleEngine.IsPositionUnderAttack(move, opponentColor, board)).ToList();
 
         if (safeKingMoves.Count > 0)
         {

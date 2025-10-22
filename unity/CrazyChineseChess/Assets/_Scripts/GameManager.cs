@@ -103,14 +103,11 @@ public class GameManager : MonoBehaviour
             switch (GameModeSelector.SelectedAIDifficulty)
             {
                 case AIDifficulty.Hard:
-                    Debug.LogWarning("[GameManager] Hard AI 未实现，暂时使用 Easy AI 替代。");
                     aiStrategy = new EasyAIStrategy();
                     decisionTimeRange = new Vector2(0.5f, 4.0f); // 困难AI 1-5秒
                     break;
                 case AIDifficulty.VeryHard:
-                    // TODO: 实现 VeryHardAIStrategy
-                    Debug.LogWarning("[GameManager] Very Hard AI 未实现，暂时使用 Hard AI 替代。");
-                    aiStrategy = new HardAIStrategy();
+                    aiStrategy = new VeryHardAIStrategy();
                     decisionTimeRange = new Vector2(0.5f, 2.0f); // 极难AI 1-4秒 (占位)
                     break;
                 case AIDifficulty.Easy:
@@ -181,6 +178,30 @@ public class GameManager : MonoBehaviour
 
         return pieces;
     }
+
+    /// <summary>
+    /// 从一个给定的BoardState中，获取属于指定颜色的所有棋子的(临时)PieceComponent列表。
+    /// 主要供Minimax算法在模拟棋盘上使用。
+    /// </summary>
+    public List<PieceComponent> GetAllPiecesOfColorFromBoard(PlayerColor color, BoardState board)
+    {
+        var pieces = new List<PieceComponent>();
+        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
+        {
+            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
+            {
+                var pos = new Vector2Int(x, y);
+                Piece pieceData = board.GetPieceAt(pos);
+                if (pieceData.Type != PieceType.None && pieceData.Color == color)
+                {
+                    // 创建一个临时的Component，只包含必要信息
+                    pieces.Add(new PieceComponent { PieceData = pieceData, BoardPosition = pos });
+                }
+            }
+        }
+        return pieces;
+    }
+
 
     public void RequestMove(PlayerColor color, Vector2Int from, Vector2Int to)
     {

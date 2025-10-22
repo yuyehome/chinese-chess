@@ -82,6 +82,7 @@
     <Compile Include="Assets\FishNet\Upgrading\UpgradeFromMirrorMenu.cs" />
     <Compile Include="Assets\_Scripts\UI\EnergyBarSegmentsUI.cs" />
     <Compile Include="Assets\_Scripts\Controllers\AI\IAIStrategy.cs" />
+    <Compile Include="Assets\_Scripts\Controllers\AI\VeryHardAIStrategy.cs" />
     <Compile Include="Assets\_Scripts\Core\GameModeSelector.cs" />
     <Compile Include="Assets\_Scripts\BoardRenderer.cs" />
     <Compile Include="Assets\_Scripts\Core\EnergySystem.cs" />
