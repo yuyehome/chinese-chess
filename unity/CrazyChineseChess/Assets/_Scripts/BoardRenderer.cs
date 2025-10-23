@@ -31,6 +31,15 @@ public class BoardRenderer : MonoBehaviour
     [Tooltip("棋子跳跃动画的高度")]
     [SerializeField] private float jumpHeight = 0.1f;
 
+    private int defaultLayer;
+    private int etherealLayer;
+
+    private void Awake()
+    {
+        // 在开始时缓存Layer的整数值，比每次用字符串查找更高效
+        defaultLayer = LayerMask.NameToLayer("Default");
+        etherealLayer = LayerMask.NameToLayer("EtherealPieces");
+    }
 
     // --- 内部状态 ---
     // 存储当前显示的所有移动标记
@@ -84,6 +93,9 @@ public class BoardRenderer : MonoBehaviour
         Vector3 endPos = GetLocalPosition(to.x, to.y);
         bool isJump = IsJumpingPiece(pc.PieceData.Type);
 
+        // 根据移动类型切换Layer
+        SetLayerRecursively(pieceToMoveGO, etherealLayer);
+
         // 3. 启动协程，并包装 onComplete 回调以在动画结束后更新 pieceObjects 数组
 
 
@@ -92,12 +104,27 @@ public class BoardRenderer : MonoBehaviour
                 // 动画完成后，在目标位置记录 GameObject
                 if (completedPiece != null && completedPiece.RTState != null && !completedPiece.RTState.IsDead)
                 {
+                    SetLayerRecursively(completedPiece.gameObject, defaultLayer);
                     pieceObjects[to.x, to.y] = completedPiece.gameObject;
                 }
                 // 调用原始的 onComplete 回调（例如，用于重置棋子状态）
                 onComplete?.Invoke(completedPiece);
             }
         ));
+    }
+
+    /// <summary>
+    /// 递归地设置一个GameObject及其所有子对象的Layer。
+    /// </summary>
+    private void SetLayerRecursively(GameObject obj, int layer)
+    {
+        if (obj == null) return;
+        obj.layer = layer;
+        foreach (Transform child in obj.transform)
+        {
+            if (child == null) continue;
+            SetLayerRecursively(child.gameObject, layer);
+        }
     }
 
     /// <summary>

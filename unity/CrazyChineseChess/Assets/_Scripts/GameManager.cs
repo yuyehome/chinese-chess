@@ -90,7 +90,11 @@ public class GameManager : MonoBehaviour
     {
         if (currentGameMode is RealTimeModeController)
         {
-            PlayerInputController playerController = gameObject.AddComponent<PlayerInputController>();
+            PlayerInputController playerController = GetComponent<PlayerInputController>();
+            if (playerController == null)
+            {
+                playerController = gameObject.AddComponent<PlayerInputController>();
+            }
             playerController.Initialize(PlayerColor.Red, this);
             controllers.Add(PlayerColor.Red, playerController);
 
@@ -122,7 +126,11 @@ public class GameManager : MonoBehaviour
         }
         else if (currentGameMode is TurnBasedModeController)
         {
-            TurnBasedInputController turnBasedInput = gameObject.AddComponent<TurnBasedInputController>();
+            TurnBasedInputController turnBasedInput = GetComponent<TurnBasedInputController>();
+            if (turnBasedInput == null)
+            {
+                turnBasedInput = gameObject.AddComponent<TurnBasedInputController>();
+            }
             turnBasedInput.Initialize(PlayerColor.Red, this);
         }
     }

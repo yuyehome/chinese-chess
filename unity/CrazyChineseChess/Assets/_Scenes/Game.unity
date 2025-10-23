@@ -1503,6 +1503,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54c2d41e4bcd77f4ea24b84eddcfb6d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  maxEnergy: 4
+  energyRecoveryRate: 0.3
+  moveCost: 1
+  startEnergy: 2
+  collisionDistance: 0.0175
 --- !u!4 &2073551038
 Transform:
   m_ObjectHideFlags: 0
@@ -1527,9 +1532,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 2073551036}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 138c8f05b7db7394b8cfc0edd4057b19, type: 3}
+  m_Script: {fileID: 11500000, guid: 22d0fa576496b724bb538725ad0a0b0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  clickableLayers:
+    serializedVersion: 2
+    m_Bits: 4353
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -10,6 +10,12 @@ using System.Linq;
 /// </summary>
 public class PlayerInputController : MonoBehaviour, IPlayerController
 {
+
+    // --- 新增：可点击层的LayerMask ---
+    [SerializeField]
+    [Tooltip("定义哪些层可以被玩家点击。在Inspector中，取消勾选'EtherealPieces'层。")]
+    private LayerMask clickableLayers;
+
     // --- 内部状态 ---
     private PlayerColor assignedColor;
     private GameManager gameManager;
@@ -47,7 +53,7 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
     private void HandleMouseClick()
     {
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit))
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f, clickableLayers))
         {
             PieceComponent clickedPiece = hit.collider.GetComponent<PieceComponent>();
             MoveMarkerComponent clickedMarker = hit.collider.GetComponent<MoveMarkerComponent>();

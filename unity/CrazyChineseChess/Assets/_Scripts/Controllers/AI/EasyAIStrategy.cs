@@ -102,8 +102,79 @@ public class EasyAIStrategy : IAIStrategy
     protected AIController.MovePlan FindRandomMove(PlayerColor color, BoardState board, List<GameManager.SimulatedPiece> pieces)
     {
         var allMoves = GetAllPossibleMovesFromSimulated(color, board, pieces);
-        if (allMoves.Count > 0) return allMoves[_random.Next(0, allMoves.Count)];
-        return null;
+        if (allMoves.Count == 0) return null;
+
+        var weightedMoves = new List<(AIController.MovePlan move, float weight)>();
+        float totalWeight = 0f;
+
+        foreach (var move in allMoves)
+        {
+            float weight = 2.0f; // 基础权重
+
+            // 1. 棋子类型权重：优先移动进攻性棋子
+            switch (move.PieceToMoveData.Type)
+            {
+                case PieceType.Chariot:
+                    weight += 6.0f;
+                    break;
+                case PieceType.Horse:
+                    weight += 5.0f;
+                    break;
+                case PieceType.Cannon:
+                    weight += 4.0f;
+                    break;
+                case PieceType.Soldier:
+                    weight += 3.0f;
+                    break;
+                    // 士、象、将的移动权重较低
+            }
+
+            // 2. 方向权重：优先向前移动（向敌方半场）
+            int moveDirectionY = move.To.y - move.From.y;
+            if (color == PlayerColor.Black && moveDirectionY < 0) // 黑方往下走是向前
+            {
+                weight += 3.0f;
+            }
+            else if (color == PlayerColor.Red && moveDirectionY > 0) // 红方往上走是向前
+            {
+                weight += 3.0f;
+            }
+
+            // 3. 避免在己方底线附近无意义移动 (特别是马)
+            if (move.PieceToMoveData.Type == PieceType.Horse)
+            {
+                bool isAtBottomForBlack = color == PlayerColor.Black && move.From.y >= 7;
+                bool isAtBottomForRed = color == PlayerColor.Red && move.From.y <= 2;
+                if (isAtBottomForBlack || isAtBottomForRed)
+                {
+                    // 如果马在己方底线附近，并且目标点仍然在底线附近，则降低权重
+                    bool targetIsAtBottomForBlack = color == PlayerColor.Black && move.To.y >= 7;
+                    bool targetIsAtBottomForRed = color == PlayerColor.Red && move.To.y <= 2;
+                    if (targetIsAtBottomForBlack || targetIsAtBottomForRed)
+                    {
+                        weight *= 0.1f; // 权重降为原来的10%
+                    }
+                }
+            }
+
+            weightedMoves.Add((move, weight));
+            totalWeight += weight;
+        }
+
+        // 4. 根据权重进行随机选择
+        float randomValue = (float)(_random.NextDouble() * totalWeight);
+        foreach (var weightedMove in weightedMoves)
+        {
+            randomValue -= weightedMove.weight;
+            if (randomValue <= 0)
+            {
+                return weightedMove.move;
+            }
+        }
+
+        // 如果因为浮点数精度问题没选到，就返回最后一个
+        return allMoves.LastOrDefault();
+
     }
 
     protected List<AIController.MovePlan> GetAllPossibleMovesFromSimulated(PlayerColor color, BoardState board, List<GameManager.SimulatedPiece> pieces)
