@@ -65,8 +65,8 @@
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\autogen\isteamgameserverhttp.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\Packsize.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamNetworking\SNetSocket_t.cs" />
-    <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\autogen\NativeMethods.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamNetworkingTypes\SteamNetworkingMicroseconds.cs" />
+    <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\autogen\NativeMethods.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\CallbackIdentity.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\autogen\isteamfriends.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\autogen\isteamgameservernetworkingutils.cs" />
@@ -159,15 +159,15 @@
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\autogen\isteamgameservernetworkingsockets.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamDatagramTickets\SteamDatagramHostedAddress.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamRemoteStorage\PublishedFileId_t.cs" />
-    <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamClientPublic\CSteamID.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\ISteamMatchmakingResponses.cs" />
+    <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamClientPublic\CSteamID.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\autogen\isteamnetworkingmessages.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\autogen\isteamgameserverclient.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamTimeline\TimelineEventHandle_t.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamInput\InputHandle_t.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamNetworkingTypes\HSteamNetConnection.cs" />
-    <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamNetworkingSockets\ISteamNetworkingConnectionSignaling.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamInput\InputActionSetHandle_t.cs" />
+    <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\types\SteamNetworkingSockets\ISteamNetworkingConnectionSignaling.cs" />
     <Compile Include="Assets\com.rlabrecque.steamworks.net\Runtime\autogen\isteamremotestorage.cs" />
   </ItemGroup>
   <ItemGroup>
