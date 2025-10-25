@@ -2,6 +2,7 @@
 
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 /// <summary>
 /// 主菜单场景的UI控制器。
@@ -9,9 +10,31 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public class MainMenuController : MonoBehaviour
 {
+    [Header("网络功能UI引用")]
+    [Tooltip("用于显示玩家Steam昵称的TextMeshPro文本框")]
+    public TextMeshProUGUI playerNameText; 
+
     [Tooltip("要加载的游戏场景的名称，必须与Build Settings中的场景名一致")]
     public string gameSceneName = "Game";
 
+    private void Start()
+    {
+        // 在菜单开始时，更新玩家昵称
+        UpdatePlayerNameDisplay();
+    }
+
+    private void UpdatePlayerNameDisplay()
+    {
+        if (SteamManager.Instance != null && SteamManager.Instance.IsSteamInitialized)
+        {
+            playerNameText.text = $"{SteamManager.Instance.PlayerName}";
+        }
+        else
+        {
+            playerNameText.text = "未连接到Steam";
+        }
+    }
+        
     // --- 假设这个方法由“对战AI”按钮调用，用于打开难度选择面板 ---
     public void OnAIGameButtonClicked(GameObject difficultyPanel)
     {
