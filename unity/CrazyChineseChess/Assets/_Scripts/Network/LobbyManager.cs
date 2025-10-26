@@ -2,6 +2,8 @@
 
 using UnityEngine;
 using Steamworks;
+using TMPro;
+using UnityEngine.UI;
 using FishNet.Managing; // 引入FishNet的NetworkManager
 using System.Collections.Generic; // 用于处理回调列表
 
@@ -19,6 +21,15 @@ public class LobbyManager : MonoBehaviour
     public const string GameModeKey = "game_mode";
     public const string RoomLevelKey = "room_level";
 
+    [Header("UI引用 (Lobby列表)")]
+    [Tooltip("Lobby列表项的Prefab")]
+    public GameObject lobbyItemPrefab;
+    [Tooltip("用于放置Lobby列表项的容器对象 (Content)")]
+    public Transform lobbyListContent;
+
+    // Steam回调句柄
+    protected Callback<LobbyMatchList_t> lobbyMatchList;
+
     // Steam回调句柄
     protected Callback<LobbyCreated_t> lobbyCreated;
     protected Callback<LobbyEnter_t> lobbyEntered;
@@ -31,6 +42,7 @@ public class LobbyManager : MonoBehaviour
     // 用于存储当前房间的属性，方便UI显示
     public Dictionary<string, string> CurrentLobbyData { get; private set; } = new Dictionary<string, string>();
 
+    private List<GameObject> currentLobbyListItems = new List<GameObject>();
 
     private void Awake()
     {
@@ -64,6 +76,7 @@ public class LobbyManager : MonoBehaviour
         lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
         lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
         lobbyDataUpdate = Callback<LobbyDataUpdate_t>.Create(OnLobbyDataUpdated);
+        lobbyMatchList = Callback<LobbyMatchList_t>.Create(OnLobbyMatchList);
     }
 
     #region Public Methods for UI
@@ -88,6 +101,24 @@ public class LobbyManager : MonoBehaviour
         CurrentLobbyData[LobbyNameKey] = lobbyName;
         CurrentLobbyData[GameModeKey] = gameMode;
         CurrentLobbyData[RoomLevelKey] = roomLevel;
+    }
+
+    /// <summary>
+    /// UI调用此方法来请求刷新Lobby列表
+    /// </summary>
+    public void RefreshLobbyList()
+    {
+        if (SteamManager.Instance.IsSteamInitialized)
+        {
+            Debug.Log("[LobbyManager] 正在请求Lobby列表...");
+            // 清空旧的列表显示
+            ClearLobbyList();
+
+            // 可选：添加过滤器，只显示我们自己游戏的Lobby
+            // SteamMatchmaking.AddRequestLobbyListStringFilter("game_id", "YourGameUniqueId", ELobbyComparison.k_ELobbyComparisonEqual);
+
+            SteamMatchmaking.RequestLobbyList();
+        }
     }
 
     #endregion
@@ -154,6 +185,50 @@ public class LobbyManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 当Steam返回Lobby列表后，由Steam自动调用
+    /// </summary>
+    private void OnLobbyMatchList(LobbyMatchList_t callback)
+    {
+        uint lobbyCount = callback.m_nLobbiesMatching;
+        Debug.Log($"[LobbyManager] 找到 {lobbyCount} 个匹配的Lobby。");
+
+        for (int i = 0; i < lobbyCount; i++)
+        {
+            CSteamID lobbyId = SteamMatchmaking.GetLobbyByIndex(i);
+
+            // 实例化Lobby列表项Prefab
+            GameObject lobbyItem = Instantiate(lobbyItemPrefab, lobbyListContent);
+
+            // 获取并设置显示信息
+            string lobbyName = SteamMatchmaking.GetLobbyData(lobbyId, LobbyNameKey);
+            int currentPlayers = SteamMatchmaking.GetNumLobbyMembers(lobbyId);
+            int maxPlayers = SteamMatchmaking.GetLobbyMemberLimit(lobbyId);
+
+            TMP_Text roomNameText = lobbyItem.transform.Find("RoomNameText").GetComponent<TMP_Text>();
+            TMP_Text playerCountText = lobbyItem.transform.Find("PlayerCountText").GetComponent<TMP_Text>();
+            Button joinButton = lobbyItem.transform.Find("JoinButton").GetComponent<Button>();
+
+            roomNameText.text = string.IsNullOrEmpty(lobbyName) ? $"Lobby {lobbyId}" : lobbyName;
+            playerCountText.text = $"{currentPlayers} / {maxPlayers}";
+
+            // 为加入按钮添加点击事件
+            // 重要: 使用一个Lambda表达式来捕获当前的lobbyId
+            joinButton.onClick.AddListener(() => {
+                OnClick_JoinLobby(lobbyId);
+            });
+
+            currentLobbyListItems.Add(lobbyItem);
+        }
+    }
+
+    // --- 这个方法我们将在下一步（加入Lobby）中实现 ---
+    private void OnClick_JoinLobby(CSteamID lobbyId)
+    {
+        Debug.Log($"准备加入Lobby: {lobbyId}");
+        // 这里将是调用 SteamMatchmaking.JoinLobby(lobbyId) 的地方
+    }
+
     #endregion
 
     #region Private Helpers
@@ -170,6 +245,18 @@ public class LobbyManager : MonoBehaviour
             SteamMatchmaking.GetLobbyDataByIndex(currentLobbyId, i, out string key, Constants.k_nMaxLobbyKeyLength, out string value, Constants.k_nMaxLobbyKeyLength);
             CurrentLobbyData[key] = value;
         }
+    }
+
+    /// <summary>
+    /// 清空当前显示的Lobby列表UI
+    /// </summary>
+    private void ClearLobbyList()
+    {
+        foreach (var item in currentLobbyListItems)
+        {
+            Destroy(item);
+        }
+        currentLobbyListItems.Clear();
     }
 
     #endregion
