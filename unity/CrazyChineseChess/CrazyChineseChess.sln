@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "com.rlabrecque.steamworks.n
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FishNet.Codegen.Cecil", "FishNet.Codegen.Cecil.csproj", "{7073E657-0097-474C-2059-9BD2B42C891C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FishNet.Demos", "FishNet.Demos.csproj", "{F217251A-8AD6-D115-E63A-C4C12CB6965C}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp.csproj", "{CE1A1688-7766-3882-1A69-098C58905133}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.FishNet.Codegen", "Unity.FishNet.Codegen.csproj", "{FE4222FA-7A7E-E23F-1798-3CA5E5657FAB}"
@@ -35,10 +33,6 @@ Global
 		{7073E657-0097-474C-2059-9BD2B42C891C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7073E657-0097-474C-2059-9BD2B42C891C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7073E657-0097-474C-2059-9BD2B42C891C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F217251A-8AD6-D115-E63A-C4C12CB6965C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F217251A-8AD6-D115-E63A-C4C12CB6965C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F217251A-8AD6-D115-E63A-C4C12CB6965C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F217251A-8AD6-D115-E63A-C4C12CB6965C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CE1A1688-7766-3882-1A69-098C58905133}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CE1A1688-7766-3882-1A69-098C58905133}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CE1A1688-7766-3882-1A69-098C58905133}.Release|Any CPU.ActiveCfg = Release|Any CPU

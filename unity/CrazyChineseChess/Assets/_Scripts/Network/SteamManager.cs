@@ -26,7 +26,6 @@ public class SteamManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
-
     private void Start()
     {
         // ≥¢ ‘≥ı ºªØSteam
