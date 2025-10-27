@@ -1752,7 +1752,7 @@ GameObject:
   - component: {fileID: 404131755}
   - component: {fileID: 404131760}
   m_Layer: 0
-  m_Name: NetworkManager
+  m_Name: '[NetworkManager]'
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1830,7 +1830,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _refreshDefaultPrefabs: 0
   _runInBackground: 1
-  _dontDestroyOnLoad: 1
+  _dontDestroyOnLoad: 0
   _objectPool: {fileID: 0}
   _persistence: 0
   _logging: {fileID: 0}
