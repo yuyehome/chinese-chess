@@ -166,6 +166,17 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
+    /// 显示主菜单面板，隐藏其他所有Lobby相关面板。
+    /// 由LobbyManager在离开房间后调用。
+    /// </summary>
+    public void ShowMainPanel()
+    {
+        mainPanel.SetActive(true);
+        createLobbyPanel.SetActive(false);
+        lobbyRoomPanel.SetActive(false);
+    }
+
+    /// <summary>
     /// 更新房间内等待界面的所有信息显示
     /// </summary>
     public void UpdateLobbyRoomUI()

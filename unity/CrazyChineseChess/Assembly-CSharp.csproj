@@ -67,6 +67,7 @@
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\Core\ServerSocket.cs" />
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\Core\LocalPacket.cs" />
     <Compile Include="Assets\_Scripts\UI\MainMenuController.cs" />
+    <Compile Include="Assets\_Scripts\UI\LobbyItem.cs" />
     <Compile Include="Assets\_Scripts\Core\PieceData.cs" />
     <Compile Include="Assets\_Scripts\Controllers\IPlayerController.cs" />
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\Core\ClientHostSocket.cs" />

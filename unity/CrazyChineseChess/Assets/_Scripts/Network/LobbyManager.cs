@@ -1,48 +1,57 @@
 // File: _Scripts/Network/LobbyManager.cs
-
 using UnityEngine;
 using Steamworks;
-using TMPro;
-using UnityEngine.UI;
-using FishNet.Managing; // 引入FishNet的NetworkManager
-using System.Collections.Generic; // 用于处理回调列表
+using FishNet.Managing;
+using System.Collections.Generic;
 
 /// <summary>
-/// 功能模块，负责所有与Steam Lobby相关的操作：创建、查找、加入、离开。
+/// 功能模块，负责所有与Steam Lobby相关的操作：创建、查找、加入、离开、状态管理。
 /// 并管理Lobby相关的UI面板切换。
 /// </summary>
 public class LobbyManager : MonoBehaviour
 {
     public static LobbyManager Instance { get; private set; }
 
+    #region Lobby Configuration
     [Header("Lobby配置")]
     // 定义Lobby元数据的Key，便于统一管理，避免手误写错字符串
+    public const string GameIdKey = "game_id";
+    public const string StatusKey = "status";
     public const string LobbyNameKey = "name";
     public const string GameModeKey = "game_mode";
     public const string RoomLevelKey = "room_level";
 
+    // 定义Lobby元数据的Value
+    public const string GameIdValue = "ChineseChessHonor"; // 你的游戏唯一标识
+    public const string StatusWaiting = "waiting";
+    public const string StatusInGame = "ingame";
+    #endregion
+
+    #region UI References
     [Header("UI引用 (Lobby列表)")]
     [Tooltip("Lobby列表项的Prefab")]
     public GameObject lobbyItemPrefab;
     [Tooltip("用于放置Lobby列表项的容器对象 (Content)")]
     public Transform lobbyListContent;
+    #endregion
 
-    // Steam回调句柄
-    protected Callback<LobbyMatchList_t> lobbyMatchList;
-
-    // Steam回调句柄
-    protected Callback<LobbyCreated_t> lobbyCreated;
-    protected Callback<LobbyEnter_t> lobbyEntered;
-    protected Callback<LobbyDataUpdate_t> lobbyDataUpdate;
-    // ... 未来还会添加其他回调，如玩家加入/离开房间等
-
+    #region Private State
     private NetworkManager _networkManager;
-    private CSteamID currentLobbyId;
-
-    // 用于存储当前房间的属性，方便UI显示
+    private CSteamID _currentLobbyId;
+    private List<GameObject> _currentLobbyListItems = new List<GameObject>();
     public Dictionary<string, string> CurrentLobbyData { get; private set; } = new Dictionary<string, string>();
+    #endregion
 
-    private List<GameObject> currentLobbyListItems = new List<GameObject>();
+    #region Steam Callbacks
+    // Steam回调句柄
+    protected Callback<LobbyCreated_t> _lobbyCreated;
+    protected Callback<LobbyEnter_t> _lobbyEntered;
+    protected Callback<LobbyDataUpdate_t> _lobbyDataUpdate;
+    protected Callback<LobbyMatchList_t> _lobbyMatchList;
+    protected Callback<GameLobbyJoinRequested_t> _gameLobbyJoinRequested; // 通过好友邀请加入
+    protected Callback<LobbyChatUpdate_t> _lobbyChatUpdate; // 玩家加入/离开/断开连接
+    #endregion
+
 
     private void Awake()
     {
@@ -52,11 +61,11 @@ public class LobbyManager : MonoBehaviour
             return;
         }
         Instance = this;
+        DontDestroyOnLoad(gameObject); // Lobby管理器在加载游戏场景后也应存在
     }
 
     private void Start()
     {
-        // 确保SteamManager已经初始化
         if (!SteamManager.Instance.IsSteamInitialized)
         {
             Debug.LogError("[LobbyManager] Steam尚未初始化！Lobby功能将不可用。");
@@ -64,7 +73,7 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
-        _networkManager = GetComponent<NetworkManager>();
+        _networkManager = FindObjectOfType<NetworkManager>();
         if (_networkManager == null)
         {
             Debug.LogError("[LobbyManager] 场景中找不到NetworkManager组件！");
@@ -72,62 +81,101 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
-        // 注册Steam回调
-        lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
-        lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
-        lobbyDataUpdate = Callback<LobbyDataUpdate_t>.Create(OnLobbyDataUpdated);
-        lobbyMatchList = Callback<LobbyMatchList_t>.Create(OnLobbyMatchList);
+        // 注册所有需要的Steam回调
+        _lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
+        _lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
+        _lobbyDataUpdate = Callback<LobbyDataUpdate_t>.Create(OnLobbyDataUpdated);
+        _lobbyMatchList = Callback<LobbyMatchList_t>.Create(OnLobbyMatchList);
+        _gameLobbyJoinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
+        _lobbyChatUpdate = Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
     }
 
-    #region Public Methods for UI
+    #region Public UI-facing Methods
 
     /// <summary>
-    /// UI调用此方法来请求创建一个Lobby
+    /// UI调用：请求创建一个Lobby
     /// </summary>
-    /// <param name="isPublic">Lobby是否公开</param>
-    /// <param name="lobbyName">房间名称</param>
-    /// <param name="gameMode">游戏模式</param>
-    /// <param name="roomLevel">房间等级</param>
     public void CreateLobby(bool isPublic, string lobbyName, string gameMode, string roomLevel)
     {
         Debug.Log($"[LobbyManager] 请求创建Lobby... 公开: {isPublic}, 名称: {lobbyName}");
         ELobbyType lobbyType = isPublic ? ELobbyType.k_ELobbyTypePublic : ELobbyType.k_ELobbyTypeFriendsOnly;
 
-        // Steam异步创建Lobby，结果将在OnLobbyCreated回调中处理
-        SteamMatchmaking.CreateLobby(lobbyType, 2); // 2表示房间最大人数
-
-        // 临时存储我们将要设置的数据，因为Lobby创建成功后才能设置
         CurrentLobbyData.Clear();
+        CurrentLobbyData[GameIdKey] = GameIdValue;
+        CurrentLobbyData[StatusKey] = StatusWaiting;
         CurrentLobbyData[LobbyNameKey] = lobbyName;
         CurrentLobbyData[GameModeKey] = gameMode;
         CurrentLobbyData[RoomLevelKey] = roomLevel;
+
+        SteamMatchmaking.CreateLobby(lobbyType, 2);
     }
 
     /// <summary>
-    /// UI调用此方法来请求刷新Lobby列表
+    /// UI调用：请求刷新Lobby列表
     /// </summary>
     public void RefreshLobbyList()
     {
-        if (SteamManager.Instance.IsSteamInitialized)
+        if (!SteamManager.Instance.IsSteamInitialized) return;
+
+        Debug.Log("[LobbyManager] 正在请求Lobby列表...");
+        ClearLobbyListUI();
+        SteamMatchmaking.AddRequestLobbyListStringFilter(GameIdKey, GameIdValue, ELobbyComparison.k_ELobbyComparisonEqual);
+        SteamMatchmaking.RequestLobbyList();
+    }
+
+    /// <summary>
+    /// 由LobbyItem或外部调用：加入一个指定的Lobby
+    /// </summary>
+    public void JoinLobby(CSteamID lobbyId)
+    {
+        Debug.Log($"[LobbyManager] 正在尝试加入Lobby: {lobbyId}");
+        SteamMatchmaking.JoinLobby(lobbyId);
+        // 后续逻辑在OnLobbyEntered回调中处理
+    }
+
+    /// <summary>
+    /// UI调用：离开当前Lobby
+    /// </summary>
+    public void LeaveLobby()
+    {
+        if (_currentLobbyId.IsValid())
         {
-            Debug.Log("[LobbyManager] 正在请求Lobby列表...");
-            // 清空旧的列表显示
-            ClearLobbyList();
+            Debug.Log($"[LobbyManager] 正在离开Lobby: {_currentLobbyId}");
+            SteamMatchmaking.LeaveLobby(_currentLobbyId);
+            _currentLobbyId = CSteamID.Nil;
 
-            // 可选：添加过滤器，只显示我们自己游戏的Lobby
-            // SteamMatchmaking.AddRequestLobbyListStringFilter("game_id", "YourGameUniqueId", ELobbyComparison.k_ELobbyComparisonEqual);
-
-            SteamMatchmaking.RequestLobbyList();
+            // 根据是Host还是Client，关闭网络连接
+            if (_networkManager.IsServer) _networkManager.ServerManager.StopConnection(true);
+            if (_networkManager.IsClient) _networkManager.ClientManager.StopConnection();
         }
+
+        // TODO: 引导UI返回主菜单
+        MainMenuController.Instance.ShowMainPanel();
+    }
+
+
+    /// <summary>
+    /// UI调用：房主点击开始游戏
+    /// </summary>
+    public void StartGame()
+    {
+        if (!_networkManager.IsServer) return; // 只有房主能开始游戏
+
+        Debug.Log("[LobbyManager] 房主开始游戏...");
+
+        // 1. 更新Lobby状态为“游戏中”，并设为不可加入
+        SteamMatchmaking.SetLobbyData(_currentLobbyId, StatusKey, StatusInGame);
+        SteamMatchmaking.SetLobbyJoinable(_currentLobbyId, false);
+
+        // 2. TODO: 通过FishNet的场景管理器加载游戏场景
+        // _networkManager.SceneManager.LoadGlobalScenes(new SceneLoadData("YourGameSceneName"));
+        Debug.LogWarning("[LobbyManager] TODO: 实现加载游戏场景的逻辑!");
     }
 
     #endregion
 
-    #region Steam Callbacks
+    #region Steam Callback Handlers
 
-    /// <summary>
-    /// 当Lobby创建成功后，由Steam自动调用
-    /// </summary>
     private void OnLobbyCreated(LobbyCreated_t callback)
     {
         if (callback.m_eResult != EResult.k_EResultOK)
@@ -137,47 +185,50 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
-        currentLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
-        Debug.Log($"[LobbyManager] Lobby创建成功! Lobby ID: {currentLobbyId}");
+        _currentLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
+        Debug.Log($"[LobbyManager] Lobby创建成功! Lobby ID: {_currentLobbyId}");
 
-        // 设置Lobby的元数据 (名称、模式等)
+        // 将之前缓存的数据设置到Lobby元数据中
         foreach (var dataPair in CurrentLobbyData)
         {
-            SteamMatchmaking.SetLobbyData(currentLobbyId, dataPair.Key, dataPair.Value);
+            SteamMatchmaking.SetLobbyData(_currentLobbyId, dataPair.Key, dataPair.Value);
         }
 
-        // 启动网络 - 房主同时是Server和Client
+        // 房主启动网络
         _networkManager.ServerManager.StartConnection();
         _networkManager.ClientManager.StartConnection();
-
-        Debug.Log("[LobbyManager] FishNet Server 和 Client 已启动 (Host模式)。");
-
-        // 注意：网络启动后，会自动触发OnLobbyEntered回调，我们在那里处理UI跳转
+        Debug.Log("[LobbyManager] FishNet Host模式已启动。");
     }
 
-    /// <summary>
-    /// 当成功进入一个Lobby后 (无论是自己创建还是加入别人的)，由Steam自动调用
-    /// </summary>
+    private void OnGameLobbyJoinRequested(GameLobbyJoinRequested_t callback)
+    {
+        Debug.Log($"[LobbyManager] 收到好友的游戏邀请，正在加入Lobby: {callback.m_steamIDLobby}");
+        JoinLobby(callback.m_steamIDLobby);
+    }
+
     private void OnLobbyEntered(LobbyEnter_t callback)
     {
-        currentLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
-        Debug.Log($"[LobbyManager] 已进入Lobby: {currentLobbyId}");
+        _currentLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
+        Debug.Log($"[LobbyManager] 已进入Lobby: {_currentLobbyId}");
 
-        // 重新获取一次完整的Lobby数据并存储
+        // 如果我们是客户端（不是房主），现在启动网络连接
+        if (!_networkManager.IsServer)
+        {
+            CSteamID hostId = SteamMatchmaking.GetLobbyOwner(_currentLobbyId);
+            // FishySteamworks Transport会自动从Lobby所有者获取连接信息
+            _networkManager.ClientManager.StartConnection();
+            Debug.Log($"[LobbyManager] FishNet Client已启动，正在连接到Host: {hostId}");
+        }
+
+        // 缓存最新Lobby数据并更新UI
         CacheLobbyData();
-
-        // 通知UI控制器跳转到房间等待界面
         MainMenuController.Instance.ShowLobbyRoomPanel();
-        MainMenuController.Instance.UpdateLobbyRoomUI(); // 更新房间内UI显示
+        MainMenuController.Instance.UpdateLobbyRoomUI();
     }
 
-    /// <summary>
-    /// 当Lobby的元数据被更新时调用
-    /// </summary>
     private void OnLobbyDataUpdated(LobbyDataUpdate_t callback)
     {
-        // 确保是我们当前所在Lobby的更新
-        if ((CSteamID)callback.m_ulSteamIDLobby == currentLobbyId)
+        if ((CSteamID)callback.m_ulSteamIDLobby == _currentLobbyId)
         {
             Debug.Log("[LobbyManager] 当前Lobby数据已更新。");
             CacheLobbyData();
@@ -185,9 +236,17 @@ public class LobbyManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 当Steam返回Lobby列表后，由Steam自动调用
-    /// </summary>
+    private void OnLobbyChatUpdate(LobbyChatUpdate_t callback)
+    {
+        // 当有玩家加入、离开、断开连接时触发
+        if ((CSteamID)callback.m_ulSteamIDLobby == _currentLobbyId)
+        {
+            Debug.Log("[LobbyManager] 房间内玩家状态变化。");
+            // TODO: 更新房间内玩家列表UI
+            MainMenuController.Instance.UpdateLobbyRoomUI();
+        }
+    }
+
     private void OnLobbyMatchList(LobbyMatchList_t callback)
     {
         uint lobbyCount = callback.m_nLobbiesMatching;
@@ -196,67 +255,44 @@ public class LobbyManager : MonoBehaviour
         for (int i = 0; i < lobbyCount; i++)
         {
             CSteamID lobbyId = SteamMatchmaking.GetLobbyByIndex(i);
+            GameObject lobbyItemGO = Instantiate(lobbyItemPrefab, lobbyListContent);
+            LobbyItem lobbyItem = lobbyItemGO.GetComponent<LobbyItem>();
 
-            // 实例化Lobby列表项Prefab
-            GameObject lobbyItem = Instantiate(lobbyItemPrefab, lobbyListContent);
-
-            // 获取并设置显示信息
-            string lobbyName = SteamMatchmaking.GetLobbyData(lobbyId, LobbyNameKey);
-            int currentPlayers = SteamMatchmaking.GetNumLobbyMembers(lobbyId);
-            int maxPlayers = SteamMatchmaking.GetLobbyMemberLimit(lobbyId);
-
-            TMP_Text roomNameText = lobbyItem.transform.Find("RoomNameText").GetComponent<TMP_Text>();
-            TMP_Text playerCountText = lobbyItem.transform.Find("PlayerCountText").GetComponent<TMP_Text>();
-            Button joinButton = lobbyItem.transform.Find("JoinButton").GetComponent<Button>();
-
-            roomNameText.text = string.IsNullOrEmpty(lobbyName) ? $"Lobby {lobbyId}" : lobbyName;
-            playerCountText.text = $"{currentPlayers} / {maxPlayers}";
-
-            // 为加入按钮添加点击事件
-            // 重要: 使用一个Lambda表达式来捕获当前的lobbyId
-            joinButton.onClick.AddListener(() => {
-                OnClick_JoinLobby(lobbyId);
-            });
-
-            currentLobbyListItems.Add(lobbyItem);
+            if (lobbyItem != null)
+            {
+                lobbyItem.Setup(lobbyId);
+                _currentLobbyListItems.Add(lobbyItemGO);
+            }
+            else
+            {
+                Debug.LogError("[LobbyManager] 实例化的LobbyItem Prefab上没有找到LobbyItem脚本！");
+                Destroy(lobbyItemGO);
+            }
         }
-    }
-
-    // --- 这个方法我们将在下一步（加入Lobby）中实现 ---
-    private void OnClick_JoinLobby(CSteamID lobbyId)
-    {
-        Debug.Log($"准备加入Lobby: {lobbyId}");
-        // 这里将是调用 SteamMatchmaking.JoinLobby(lobbyId) 的地方
     }
 
     #endregion
 
-    #region Private Helpers
+    #region Private Helper Methods
 
-    /// <summary>
-    /// 从Steam获取当前Lobby的所有元数据并缓存到字典中
-    /// </summary>
     private void CacheLobbyData()
     {
         CurrentLobbyData.Clear();
-        int dataCount = SteamMatchmaking.GetLobbyDataCount(currentLobbyId);
+        int dataCount = SteamMatchmaking.GetLobbyDataCount(_currentLobbyId);
         for (int i = 0; i < dataCount; i++)
         {
-            SteamMatchmaking.GetLobbyDataByIndex(currentLobbyId, i, out string key, Constants.k_nMaxLobbyKeyLength, out string value, Constants.k_nMaxLobbyKeyLength);
+            SteamMatchmaking.GetLobbyDataByIndex(_currentLobbyId, i, out string key, Constants.k_nMaxLobbyKeyLength, out string value, Constants.k_nMaxLobbyKeyLength);
             CurrentLobbyData[key] = value;
         }
     }
 
-    /// <summary>
-    /// 清空当前显示的Lobby列表UI
-    /// </summary>
-    private void ClearLobbyList()
+    private void ClearLobbyListUI()
     {
-        foreach (var item in currentLobbyListItems)
+        foreach (var item in _currentLobbyListItems)
         {
             Destroy(item);
         }
-        currentLobbyListItems.Clear();
+        _currentLobbyListItems.Clear();
     }
 
     #endregion
