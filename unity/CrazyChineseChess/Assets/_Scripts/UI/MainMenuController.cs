@@ -16,6 +16,17 @@ public class MainMenuController : MonoBehaviour
 {
     public static MainMenuController Instance { get; private set; }
 
+    // 在类的最上方（字段声明区域）添加这个内部类
+    [System.Serializable] // 让它能在Inspector中显示
+    public class PlayerPanelUI
+    {
+        public GameObject panelRoot; // 面板的根对象，用于控制显隐
+        public TextMeshProUGUI nameText;
+        public TextMeshProUGUI rankText;
+        public TextMeshProUGUI coinText;
+        public RawImage avatarImage; // 添加头像的引用
+    }
+
     [Header("网络功能UI引用")]
     [Tooltip("用于显示玩家Steam昵称的TextMeshPro文本框")]
     public TextMeshProUGUI playerNameText;
@@ -37,11 +48,9 @@ public class MainMenuController : MonoBehaviour
     public Button confirmCreateLobbyButton;
 
     [Header("Lobby房间面板的UI元素")]
-    public TextMeshProUGUI myNameText;
-    // public RawImage myAvatar; // 头像功能后续再做
-    public TextMeshProUGUI myRankText;
-    public TextMeshProUGUI myCoinText;
-    public TextMeshProUGUI opponentNameText;
+    public PlayerPanelUI hostPlayerPanel;   // 用于显示房主信息的UI面板
+    public PlayerPanelUI guestPlayerPanel;  // 用于显示客人信息的UI面板
+
     public TextMeshProUGUI roomNameText_InLobby; // 房间内的房间名显示
     public TextMeshProUGUI gameModeText_InLobby;
     public TextMeshProUGUI roomLevelText_InLobby;
@@ -205,95 +214,149 @@ public class MainMenuController : MonoBehaviour
     {
         if (!lobbyRoomPanel.activeInHierarchy || !LobbyManager.Instance._currentLobbyId.IsValid()) return;
 
-
         CSteamID lobbyId = LobbyManager.Instance._currentLobbyId;
+        CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(lobbyId);
 
         // 获取房间内的所有玩家
         int memberCount = SteamMatchmaking.GetNumLobbyMembers(lobbyId);
-        List<CSteamID> members = new List<CSteamID>();
+        CSteamID guestId = CSteamID.Nil; // 初始化客人ID为空
+
+        // 遍历所有成员，找到不是房主的那个人，他就是客人
         for (int i = 0; i < memberCount; i++)
         {
-            members.Add(SteamMatchmaking.GetLobbyMemberByIndex(lobbyId, i));
-        }
-
-        // 获取房主ID和我自己的ID
-        CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(lobbyId);
-        CSteamID myId = SteamManager.Instance.PlayerSteamId;
-
-        // 根据我是不是房主，来决定谁在左边，谁在右边
-        if (InstanceFinder.IsServer) // 更可靠的判断方式，判断当前客户端是不是Host
-        {
-            // 我是房主，我显示在左边
-            DisplayPlayerData(myNameText, myRankText, myCoinText, myId);
-
-            if (members.Count > 1)
+            CSteamID memberId = SteamMatchmaking.GetLobbyMemberByIndex(lobbyId, i);
+            if (memberId != ownerId)
             {
-                // 找到非房主的那个玩家，显示在右边
-                CSteamID opponentId = CSteamID.Nil;
-                foreach (var member in members)
-                {
-                    if (member != ownerId)
-                    {
-                        opponentId = member;
-                        break;
-                    }
-                }
-                DisplayPlayerData(opponentNameText, null, null, opponentId); // 对手只显示名字
-            }
-            else
-            {
-                // 只有我一个人
-                opponentNameText.text = "等待玩家加入...";
+                guestId = memberId;
+                break; // 找到一个就够了
             }
         }
-        else // 我是后加入的客户端
-        {
-            // 我是客户端，房主显示在左边
-            DisplayPlayerData(myNameText, null, null, ownerId);
 
-            // 我自己显示在右边
-            DisplayPlayerData(opponentNameText, myRankText, myCoinText, myId);
-        }
+        // 更新房主面板信息
+        DisplayPlayerData(hostPlayerPanel, ownerId);
+
+        // 更新客人面板信息
+        // 如果 guestId 是 CSteamID.Nil (即无效ID)，DisplayPlayerData 方法会自动处理“等待玩家”的逻辑
+        DisplayPlayerData(guestPlayerPanel, guestId);
+
 
         // 更新房间信息 (这部分逻辑不变)
         var lobbyData = LobbyManager.Instance.CurrentLobbyData;
         roomNameText_InLobby.text = lobbyData.GetValueOrDefault(LobbyManager.LobbyNameKey, "读取中...");
         gameModeText_InLobby.text = $"模式: {lobbyData.GetValueOrDefault(LobbyManager.GameModeKey, "N/A")}";
         roomLevelText_InLobby.text = $"等级: {lobbyData.GetValueOrDefault(LobbyManager.RoomLevelKey, "N/A")}";
-
     }
 
     /// <summary>
-    /// 一个辅助方法，用于将指定玩家的数据填充到指定的UI元素上
+    /// 一个辅助方法，用于将指定玩家的数据填充到指定的UI面板上
     /// </summary>
-    /// <param name="nameText">显示昵称的文本框</param>
-    /// <param name="rankText">显示段位的文本框 (可为null)</param>
-    /// <param name="coinText">显示金币的文本框 (可为null)</param>
+    /// <param name="panel">要填充的UI面板数据结构</param>
     /// <param name="steamId">玩家的SteamID</param>
-    private void DisplayPlayerData(TextMeshProUGUI nameText, TextMeshProUGUI rankText, TextMeshProUGUI coinText, CSteamID steamId)
+    private void DisplayPlayerData(PlayerPanelUI panel, CSteamID steamId)
     {
-        if (steamId == CSteamID.Nil || !steamId.IsValid())
+        // 如果steamId无效，则显示为等待状态
+        if (!steamId.IsValid() || steamId == CSteamID.Nil)
         {
-            nameText.text = "等待玩家...";
+            panel.panelRoot.SetActive(true); // 确保面板是可见的
+            panel.nameText.text = "等待玩家加入...";
+            panel.rankText.text = ""; // 清空不必要的信息
+            panel.coinText.text = "";
+            panel.avatarImage.texture = null; // 清空头像
+            panel.avatarImage.color = new Color(0, 0, 0, 0.5f); // 给个半透明的底色
             return;
         }
 
-        // 获取并显示昵称
-        nameText.text = SteamFriends.GetFriendPersonaName(steamId);
+        // 如果steamId有效，则获取并显示信息
+        panel.panelRoot.SetActive(true);
+        panel.nameText.text = SteamFriends.GetFriendPersonaName(steamId);
 
-        // 如果提供了段位和金币文本框，则填充假数据 (因为只有本地玩家才显示这些)
-        if (rankText != null)
+        // 只有本地玩家才显示段位和金币等详细信息
+        if (steamId == SteamManager.Instance.PlayerSteamId)
         {
+            panel.rankText.gameObject.SetActive(true);
+            panel.coinText.gameObject.SetActive(true);
+            panel.rankText.text = "段位: 黄金I"; // 假数据
+            panel.coinText.text = "金币: 8888"; // 假数据
+        }
+        else // 其他玩家不显示
+        {
+            panel.rankText.gameObject.SetActive(false);
+            panel.coinText.gameObject.SetActive(false);
+        }
 
-            rankText.text = "段位: 黄金I";
-        }
-        if (coinText != null)
-        {
-            coinText.text = "金币: 8888";
-        }
+        // --- 获取并显示Steam头像 ---
+        StartCoroutine(FetchAndDisplayAvatar(panel.avatarImage, steamId));
     }
 
     #endregion
+
+    private System.Collections.IEnumerator FetchAndDisplayAvatar(RawImage targetImage, CSteamID steamId)
+    {
+        // 1. 从Steam请求头像ID，这是一个快速的同步调用
+        int avatarId = SteamFriends.GetLargeFriendAvatar(steamId);
+
+        // 如果avatarId为-1，表示该用户的头像数据还没被Steam下载到本地
+        if (avatarId == -1)
+        {
+            // 在这种情况下，我们需要等待Steam下载完成。
+            // Steamworks.NET 提供了一个方便的回调来处理这个过程。
+            Callback<AvatarImageLoaded_t> avatarLoadedCallback = null;
+            bool isAvatarReady = false;
+
+            avatarLoadedCallback = Callback<AvatarImageLoaded_t>.Create(result =>
+            {
+                // 当头像下载完成时，这个回调会被触发
+                if (result.m_steamID == steamId)
+                {
+                    isAvatarReady = true;
+                    // 注销回调，避免内存泄漏
+                    if (avatarLoadedCallback != null)
+                    {
+                        avatarLoadedCallback.Dispose();
+                        avatarLoadedCallback = null;
+                    }
+                }
+            });
+
+            // 等待 isAvatarReady 变为 true，最多等待5秒
+            float timeout = 5f;
+            while (!isAvatarReady && timeout > 0)
+            {
+                timeout -= Time.deltaTime;
+                yield return null; // 等待下一帧
+            }
+
+            if (!isAvatarReady)
+            {
+                Debug.LogWarning($"[Avatar] 获取 {steamId} 的头像超时。");
+                yield break; // 超时则直接退出
+            }
+
+            // 下载完成后，再次获取ID
+            avatarId = SteamFriends.GetLargeFriendAvatar(steamId);
+        }
+
+        // 2. 如果avatarId有效 (不为0或-1)，则获取头像数据
+        if (avatarId > 0)
+        {
+            uint imageWidth, imageHeight;
+            if (SteamUtils.GetImageSize(avatarId, out imageWidth, out imageHeight))
+            {
+                byte[] imageData = new byte[imageWidth * imageHeight * 4];
+                if (SteamUtils.GetImageRGBA(avatarId, imageData, imageData.Length))
+                {
+                    // 创建Texture2D并加载像素数据
+                    Texture2D avatarTexture = new Texture2D((int)imageWidth, (int)imageHeight, TextureFormat.RGBA32, false);
+                    avatarTexture.LoadRawTextureData(imageData);
+                    avatarTexture.Apply();
+
+                    // 将Texture应用到RawImage上
+                    targetImage.texture = avatarTexture;
+                    targetImage.color = Color.white; // 恢复不透明
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// “退出游戏”按钮的点击事件处理函数。

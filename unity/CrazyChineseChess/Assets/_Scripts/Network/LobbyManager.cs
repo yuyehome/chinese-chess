@@ -3,14 +3,13 @@ using UnityEngine;
 using Steamworks;
 using FishNet.Managing;
 using System.Collections.Generic;
-using FishNet.Object;
 using System; // 引入System命名空间以使用Action
 
 /// <summary>
 /// 功能模块，负责所有与Steam Lobby相关的操作：创建、查找、加入、离开、状态管理。
 /// 并管理Lobby相关的UI面板切换。
 /// </summary>
-public class LobbyManager : NetworkBehaviour
+public class LobbyManager : MonoBehaviour
 {
     public static LobbyManager Instance { get; private set; }
 
@@ -73,6 +72,7 @@ public class LobbyManager : NetworkBehaviour
             return;
         }
         Instance = this;
+        DontDestroyOnLoad(gameObject); // 添加这一行，确保它在场景切换时不会被销毁
     }
 
     private void Start()
