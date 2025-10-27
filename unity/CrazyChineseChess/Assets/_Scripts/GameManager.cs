@@ -3,6 +3,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using FishNet; // 引入FishNet
 
 /// <summary>
 /// 游戏总管理器 (Singleton)，作为游戏核心逻辑的入口和协调者。
@@ -39,10 +40,15 @@ public class GameManager : MonoBehaviour
     // --- 控制器管理 ---
     private Dictionary<PlayerColor, IPlayerController> controllers = new Dictionary<PlayerColor, IPlayerController>();
 
+    private bool isPVPMode = false;
+
     private void Awake()
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
         else Instance = this;
+
+        isPVPMode = InstanceFinder.IsClient || InstanceFinder.IsServer;
+
     }
 
     void Start()
@@ -58,6 +64,28 @@ public class GameManager : MonoBehaviour
         CurrentBoardState.InitializeDefaultSetup();
         EnergySystem = new EnergySystem(maxEnergy, energyRecoveryRate, moveCost, startEnergy);
 
+        if (isPVPMode)
+        {
+            // 在PVP模式下，我们不再使用 GameModeSelector
+            // 模式固定为实时对战
+            Debug.Log("[System] 检测到PVP模式，初始化网络对战...");
+            InitializeForPVP();
+        }
+        else
+        {
+            // 保留原有的单机PVE逻辑
+            Debug.Log("[System] 检测到单机模式，初始化PVE对战...");
+            InitializeForPVE();
+        }
+
+    }
+
+
+    /// <summary>
+    /// 初始化单机PVE模式
+    /// </summary>
+    private void InitializeForPVE()
+    {
         switch (GameModeSelector.SelectedMode)
         {
             case GameModeType.TurnBased:
@@ -76,7 +104,7 @@ public class GameManager : MonoBehaviour
                 break;
         }
 
-        InitializeControllers();
+        InitializeControllers(); // 调用原有的控制器初始化方法
 
         BoardRenderer.RenderBoard(CurrentBoardState);
 
@@ -86,8 +114,51 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 初始化联网PVP模式
+    /// </summary>
+    private void InitializeForPVP()
+    {
+        // 在PVP模式下，游戏逻辑只在服务器上运行
+        if (InstanceFinder.IsServer)
+        {
+            Debug.Log("[Server] 服务器正在初始化游戏逻辑模块...");
+            // 1. 服务器创建逻辑控制器
+            float collisionDistanceSquared = collisionDistance * collisionDistance;
+            var rtController = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
+            rtController.CombatManager.OnPieceKilled += HandlePieceKilled;
+            currentGameMode = rtController;
+
+            // 2. 服务器渲染初始棋盘（客户端将通过状态同步获得）
+            BoardRenderer.RenderBoard(CurrentBoardState);
+            rtController.InitializeRealTimeStates();
+
+            // 3. 服务器初始化控制器（目前为空，后续添加）
+            // 注意：PVP的控制器初始化会不同
+        }
+
+        if (InstanceFinder.IsClient)
+        {
+            Debug.Log("[Client] 客户端正在等待服务器状态同步...");
+            // 客户端需要向服务器注册自己
+            if (SteamManager.Instance != null && SteamManager.Instance.IsSteamInitialized)
+            {
+                // 等待GameNetworkManager实例准备好
+                Invoke(nameof(RegisterPlayerWithServer), 0.5f);
+            }
+        }
+    }
+
+
+
     private void InitializeControllers()
     {
+        if (isPVPMode)
+        {
+            Debug.LogWarning("[GameManager] InitializeControllers 在PVP模式下被调用，这可能是个错误。PVP控制器初始化应有单独的逻辑。");
+            return;
+        }
+
         if (currentGameMode is RealTimeModeController)
         {
             PlayerInputController playerController = GetComponent<PlayerInputController>();
@@ -135,18 +206,49 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void RegisterPlayerWithServer()
+    {
+        if (GameNetworkManager.Instance != null)
+        {
+            GameNetworkManager.Instance.CmdRegisterPlayer(SteamManager.Instance.PlayerSteamId, SteamManager.Instance.PlayerName);
+            Debug.Log("[Client] 已向服务器发送注册请求。");
+        }
+        else
+        {
+            Debug.LogError("[Client] 无法找到 GameNetworkManager 实例！注册失败。");
+        }
+    }
+
+
     private void Update()
     {
         if (IsGameEnded) return;
 
-        if (GameModeSelector.SelectedMode == GameModeType.RealTime)
+        // 在PVP模式下，所有逻辑都只在服务器上Tick
+        if (InstanceFinder.IsServer)
         {
-            EnergySystem?.Tick();
+            // 实时模式的Tick逻辑
             if (currentGameMode is RealTimeModeController rtController)
             {
+                EnergySystem?.Tick();
                 rtController.Tick();
             }
+            // 如果未来有回合制网络版，在这里添加其服务器Tick逻辑
         }
+        else if (!isPVPMode) // 如果是单机模式
+        {
+            // 原有的单机Tick逻辑
+            if (GameModeSelector.SelectedMode == GameModeType.RealTime)
+            {
+                EnergySystem?.Tick();
+                if (currentGameMode is RealTimeModeController rtController)
+                {
+                    rtController.Tick();
+                }
+            }
+
+        }
+
     }
 
     // --- 新增一个轻量级结构体，用于在后台线程传递棋子信息 ---

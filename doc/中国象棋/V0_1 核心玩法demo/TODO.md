@@ -1,217 +1,217 @@
-# **《魔改中国象棋》技术交接文档 (v2.0)**
+### **《魔改中国象棋》网络化改造技术设计文档**
 
-### **1. 项目概述**
+#### **1. 核心原则与目标**
 
-#### **1.1 核心理念**
-
-本项目是一款将中国象棋的经典策略与即时战略(RTS)相结合的1v1在线竞技游戏。其核心是打破传统回合制，引入**实时行动点系统**和**动态棋子状态模型**，并支持**可插拔的AI策略**，为未来的网络对战和技能系统打下坚实基础。
-
-#### **1.2 技术目标**
-
-构建一个高性能、可扩展、易于维护的游戏框架，其特点是：
-
-- **逻辑与表现分离：** 核心游戏规则与Unity的视觉表现（MonoBehaviour）严格解耦。
+1. **服务器权威 (Server Authority):** 这是多人在线游戏的黄金法则。**所有**游戏逻辑（移动、碰撞、战斗、能量增减、技能效果）**必须**在服务器上计算和执行。客户端只负责发送玩家输入，并根据服务器广播的状态来“播放”游戏画面。这能从根本上杜绝作弊。
     
-- **事件驱动：** 关键的游戏事件（如棋子死亡）通过事件广播，降低模块间的耦合。
+2. **保留单机模式:** 改造必须兼容现有的单机AI对战模式。GameManager 将根据启动模式（PVP或PVE）来决定加载不同的控制器组合。
     
-- **策略模式驱动：** 游戏模式（回合制/实时）和AI难度（简单/困难/极难）都采用策略模式，易于扩展。
+3. **状态同步而非RPC轰炸:** 优先使用FishNet的状态同步机制（如 SyncVar, SyncObject）来同步游戏状态，而不是频繁地通过RPC（远程过程调用）来传递每一个小变化。这更高效，且能更好地处理新加入的观战者或断线重连。
     
-- **清晰的控制流：** 明确划分了**输入/决策层**、**游戏管理层**和**逻辑执行层**，为网络同步做好了准备。
+4. **清晰的职责划分:** 严格区分服务器逻辑、客户端逻辑和共享逻辑。
     
+
+#### **2. 需要的代码文件**
+
+根据您的文件列表和我的分析，为了完成核心PVP玩法的网络化，我需要您提供以下所有代码文件的当前版本。这些文件构成了游戏的核心循环，每一个都与网络化改造息息相关。
+
+- **_Scripts/Core/**
+    
+    - BoardState.cs
+        
+    - CombatManager.cs
+        
+    - EnergySystem.cs
+        
+    - GameModeSelector.cs
+        
+    - PieceData.cs
+        
+    - RealTimePieceState.cs
+        
+    - RuleEngine.cs
+        
+- **_Scripts/GameModes/**
+    
+    - GameModeController.cs
+        
+    - RealTimeModeController.cs
+        
+- **_Scripts/Controllers/**
+    
+    - IPlayerController.cs
+        
+    - PlayerInputController.cs
+        
+    - AIController.cs
+        
+- **_Scripts/UI/**
+    
+    - GameUIManager.cs
+        
+- **_Scripts/ (根目录)**
+    
+    - BoardRenderer.cs
+        
+    - GameManager.cs
+        
+    - PieceComponent.cs
+        
+
+请将这些文件提供给我，以便进行后续更具体的代码设计。
 
 ---
 
-### **2. 核心架构设计**
+#### **3. 改造方案概要设计**
 
-项目采用**模型-视图-控制器 (MVC)** 架构模式，并在此基础上扩展出了一个独立的**输入/决策控制器层 (Controller Layer)**。
+这是我们首先要实现的目标。
 
-#### **架构关系图**
-
-codeCode
-
-- **模型 (Model):** 纯粹的游戏数据和规则，与Unity引擎解耦。
+1. **LobbyManager.StartGame() 的改造:**
     
-    - BoardState: 存储**静止**棋子的二维数组，是棋盘逻辑状态的基础。
+    - 当房主点击“开始游戏”时，StartGame() 方法被调用。
         
-    - PieceData: 定义棋子“身份”（类型、颜色）的纯数据结构体。
+    - **服务器逻辑:**
         
-    - RealTimePieceState: 存储棋子在实时对战中的动态状态（是否移动、逻辑位置等）。
-        
-    - RuleEngine: 纯静态的中国象棋基础移动规则计算器。
-        
-- **视图 (View):** 负责将Model中的数据可视化为场景中的GameObject。
+        - 该方法将调用FishNet的 NetworkManager.SceneManager.LoadGlobalScenes() 来加载 Game.unity 场景。LoadGlobalScenes 会自动通知所有已连接的客户端同步加载该场景。
+            
+        - 在加载前，服务器需要决定并存储双方玩家的阵营信息。例如，创建一个Dictionary<int, PlayerNetData>，其中 int 是客户端的Connection ID，PlayerNetData 是一个结构体，包含SteamID, PlayerColor (红/黑)等信息。房主（Host）的连接ID总是1，可以默认为红方。
+            
+        - 这个玩家数据可以通过一个NetworkBehaviour脚本同步给所有客户端。
+            
+2. **GameManager.Start() 的改造:**
     
-    - BoardRenderer: 唯一的视觉渲染核心。负责创建/销毁棋子、播放动画、显示高亮。它只执行指令，不包含任何游戏逻辑。
+    - 当 Game.unity 场景加载后，GameManager 的 Start() 方法（或 Awake）会被调用。
         
-- **控制器 (Controller - 分为三层):**
+    - **关键改动:** GameManager 需要判断当前是PVP模式还是PVE模式。
+        
+        - **PVP模式判断:** if (InstanceFinder.IsServer || InstanceFinder.IsClient)，只要网络是激活的，就是PVP模式。
+            
+        - **PVE模式判断:** else，网络未激活，就是单机模式。
+            
+    - **PVP模式下的初始化:**
+        
+        - **服务器:** GameManager 将创建和初始化所有服务器端的逻辑模块，如 BoardState, RealTimeModeController, EnergySystem 等。然后，它需要为每个连接的玩家（包括自己）生成一个“玩家代理”。对于本地玩家（房主），它实例化一个 PlayerInputController；对于远程玩家，它实例化一个新的 NetworkPlayerController (我们稍后会创建它)。
+            
+        - **客户端:** 客户端的 GameManager 将会“等待”服务器同步游戏状态。它会禁用本地的所有逻辑计算模块（如RealTimeModeController），只保留表现层模块（如BoardRenderer）。它只会为自己实例化一个PlayerInputController。
+            
+
+这是网络化的心脏。我们需要将游戏的核心状态变为可同步的。
+
+1. **创建 NetworkGameState.cs:**
     
-    1. **输入/决策层 (IPlayerController):** 游戏的“玩家”或“代理”。
+    - 这是一个新的 NetworkBehaviour 脚本，场景中只需要一个实例（可以挂在 GameManager 上）。
         
-        - PlayerInputController: 监听鼠标点击，管理玩家的选择/高亮，并向GameManager**请求**移动。
-            
-        - AIController: AI的“身体”，管理决策时机，并将AI“大脑”（IAIStrategy）计算出的移动向GameManager**请求**移动。
-            
-        - IAIStrategy (Easy, Hard, VeryHard): AI的“大脑”，负责具体的决策算法，与Unity API完全解耦，可在后台线程运行。
-            
-    2. **游戏管理层 (GameManager):** 游戏的总指挥官和中央枢纽。
+    - **职责:** 作为所有核心游戏状态的“同步容器”。
         
-        - 作为单例存在，初始化所有系统。
-            
-        - 持有并管理所有IPlayerController。
-            
-        - 作为所有移动请求的**唯一入口 (RequestMove)**，负责校验（如能量）和分发。
-            
-        - 监听全局事件（如OnPieceKilled），并协调模型和视图进行更新。
-            
-    3. **游戏模式层 (GameModeController - 策略模式):** 定义特定模式下的“物理法则”。
+    - **伪代码:**
         
-        - RealTimeModeController: 接收GameManager的执行指令，驱动棋子的状态变化、碰撞检测，是所有实时逻辑的**最终执行者**。
+        codeC#
+        
+2. **改造 BoardState 和 RealTimePieceState:**
+    
+    - 在服务器上，BoardState 和 RealTimePieceState 依然是核心的逻辑数据源。
+        
+    - 服务器的 GameManager 或 RealTimeModeController 在每次逻辑更新后，需要将 BoardState 的数据**翻译**并更新到 NetworkGameState 的 AllPieces 列表中。
+        
+    - FishNet会自动检测到 AllPieces 的变化，并将其高效地广播给所有客户端。
+        
+3. **客户端的响应 (BoardRenderer.cs)**:
+    
+    - 客户端的 BoardRenderer 将不再监听本地的 GameManager 事件。
+        
+    - 取而代之，它将引用 NetworkGameState。它会订阅 AllPieces.OnChange 事件。
+        
+    - 当 AllPieces 列表发生变化时（棋子移动、死亡等），OnChange 事件被触发，BoardRenderer 就根据新的数据列表来更新棋子的视觉表现（移动GameObject，播放死亡特效等）。
+        
+
+这是将玩家操作网络化的关键。
+
+1. **改造 PlayerInputController.cs:**
+    
+    - 当玩家点击棋盘并选择一个合法的移动时，PlayerInputController 不再调用 GameManager.RequestMove()。
+        
+    - 取而代之，它将调用一个在服务器上执行的RPC方法。
+        
+    - **伪代码:**
+        
+        codeC#
+        
+2. **创建 NetworkPlayer.cs:**
+    
+    - 这是一个新的 NetworkBehaviour，代表一个网络中的玩家实体。当一个玩家连接到服务器时，服务器应该为他生成一个 NetworkPlayer 对象。
+        
+    - **职责:** 作为客户端向服务器发送指令的唯一通道。
+        
+    - **伪代码:**
+        
+        codeC#
+        
+    - 这样，点击操作就形成了一个闭环：**客户端输入 -> [ServerRpc] -> 服务器执行逻辑 -> 服务器更新 NetworkGameState -> 所有客户端同步状态 -> 客户端 BoardRenderer 刷新画面**。
+        
+
+处理好 “自己总在下方” 的体验。
+
+1. **阵营分配:**
+    
+    - 如阶段一所述，服务器在加载游戏场景前，就为每个连接分配好阵营（红/黑）。这个信息需要同步给所有客户端。
+        
+2. **视角相机控制:**
+    
+    - 在 Game.unity 场景中，创建一个 CameraRig 或 CameraController 脚本。
+        
+    - 在 Start() 方法中，它会获取本地玩家的阵营信息。
+        
+    - 如果本地玩家是红方（默认在下方），相机保持默认旋转。
+        
+    - 如果本地玩家是黑方（默认在上方），该脚本需要将相机绕棋盘中心旋转180度。这样，黑方玩家看到的棋盘就是“正”的，自己的棋子在下方。
+        
+3. **棋子文字朝向:**
+    
+    - 棋子上的文字（帅、車、馬...）通常是3D Text或TextMeshPro组件。
+        
+    - 默认情况下，它们会跟随棋子一起旋转。当相机旋转180度后，黑方玩家会看到自己的棋子文字是倒的。
+        
+    - **解决方案:** 创建一个 Billboard.cs 脚本，挂在每个棋子的文字组件上。
+        
+        - **伪代码:**
             
-        - TurnBasedModeController: 实现了传统回合制的轮转逻辑。
+            codeC#
+            
+        - 这样，无论棋盘怎么转，文字总是正对着玩家的屏幕。
             
 
 ---
 
-### **3. 关键数据流详解 (以极难AI执行一次移动为例)**
+#### **4. 开发路线图 (Roadmap)**
 
-1. **决策时机 (AIController.Update):**
-    
-    - AIController内部计时器触发，调用MakeDecisionAsync方法。
-        
-    - isThinking标志设为true，防止重复决策。
-        
-2. **主线程预处理 (MakeDecisionAsync - 主线程部分):**
-    
-    - AIController首先检查开局库 (vhStrategy.TryGetOpeningBookMove)。这是一个快速、需要在主线程执行的操作，因为它需要访问BoardRenderer。
-        
-    - 如果开局库未命中，AIController会从GameManager安全地获取所有纯数据（BoardState、SimulatedPiece列表）。
-        
-3. **后台线程深度思考 (MakeDecisionAsync - 后台线程部分):**
-    
-    - AIController调用await Task.Run(...)，将**纯数据**和FindBestMove的计算任务抛到后台线程。
-        
-    - VeryHardAIStrategy.FindBestMove在后台线程中执行耗时的**Minimax算法**，期间主线程**完全流畅**。
-        
-4. **返回结果 (MakeDecisionAsync - 主线程部分):**
-    
-    - await执行完毕，代码回到主线程。
-        
-    - AIController获得了后台计算出的最佳移动方案 bestMove (一个MovePlan对象)。
-        
-5. **提交请求 (AIController -> GameManager):**
-    
-    - AIController调用gameManager.RequestMove(color, bestMove.From, bestMove.To)。
-        
-6. **验证与执行 (GameManager -> RealTimeModeController):**
-    
-    - GameManager.RequestMove检查能量，如果足够则消耗能量，并调用realTimeModeController.ExecuteMoveCommand(from, to)。
-        
-7. **逻辑与动画 (RealTimeModeController -> Model & View):**
-    
-    - RealTimeModeController命令BoardState将棋子“提起”，并命令BoardRenderer开始播放移动动画。
-        
-    - 动画播放期间，BoardRenderer通过回调函数将进度报告给RealTimeModeController，后者实时更新棋子的RTState。
-        
-8. **战斗与死亡 (事件驱动):**
-    
-    - RealTimeModeController的Tick方法驱动CombatManager进行碰撞检测。
-        
-    - 如果发生击杀，CombatManager触发OnPieceKilled事件。
-        
-    - GameManager监听到此事件，并分别命令BoardState和BoardRenderer移除死亡棋子的数据和对象。
-        
+我建议将整个改造过程分为以下几个可交付的步骤：
 
----
-
-### **4. 文件结构与职责说明**
-
-|   |   |
-|---|---|
-|文件夹/文件名|核心职责|
-|**_Scripts/Core/**|**存放游戏核心数据结构与逻辑模块**|
-|BoardState.cs|**模型(M):** 存储和管理棋盘上**静止**棋子的逻辑数据。|
-|CombatManager.cs|**逻辑:** 实时模式下处理所有战斗碰撞，判定胜负，并触发OnPieceKilled事件。|
-|EnergySystem.cs|**逻辑:** 管理双方玩家的行动点（能量）。|
-|GameModeSelector.cs|在场景间传递玩家选择的游戏模式和AI难度。|
-|PieceData.cs|**模型(M):** 定义Piece结构体和相关枚举（颜色、类型）。|
-|PieceValue.cs|提供不同棋子类型的价值，用于AI评估。|
-|RealTimePieceState.cs|**模型(M):** 定义棋子在实时对战中的所有动态状态。|
-|RuleEngine.cs|纯静态类，计算中国象棋的基础移动和攻击规则。|
-|**_Scripts/GameModes/**|**存放不同游戏模式的具体实现 (策略模式)**|
-|GameModeController.cs|所有游戏模式控制器的抽象基类。|
-|RealTimeModeController.cs|**控制器(C-执行层):** 实时对战模式的**逻辑执行者**，驱动所有实时状态变化。|
-|TurnBasedModeController.cs|传统回合制模式的控制器。|
-|**_Scripts/Controllers/**|**存放输入/决策代理 (策略模式)**|
-|IPlayerController.cs|**接口:** 定义了所有“玩家”代理（人、AI、网络）的统一初始化规范。|
-|PlayerInputController.cs|**控制器(C-输入层):** 处理本地玩家的鼠标输入、选择高亮，并向GameManager**请求**移动。|
-|TurnBasedInputController.cs|回合制模式的专属输入处理器。|
-|AIController.cs|**控制器(C-AI代理):** AI的“身体”。负责管理决策时机，启动后台思考，并将AI的决策**请求**移动。|
-|**_Scripts/Controllers/AI/**|**存放AI的“大脑” (策略模式)**|
-|IAIStrategy.cs|**接口:** 定义了所有AI难度“大脑”的统一规范，核心是FindBestMove方法。|
-|EasyAIStrategy.cs|**AI策略:** 实现了基于概率（进攻/躲避/随机）的简单AI。|
-|HardAIStrategy.cs|**AI策略:** 继承自EasyAIStrategy，实现了基于单步评估函数（考虑威胁、位置等）的困难AI。|
-|VeryHardAIStrategy.cs|**AI策略:** 继承自HardAIStrategy，实现了开局库和Minimax浅层搜索的极难AI。|
-|**_Scripts/UI/**|**存放所有UI相关的控制脚本**|
-|EnergyBarSegmentsUI.cs|控制分段式能量条的视觉表现。|
-|GameUIManager.cs|管理游戏内UI的创建、布局和数据更新。|
-|MainMenuController.cs|主菜单场景的UI交互逻辑。|
-|**_Scripts/ (根目录)**|**存放与场景对象直接交互的组件**|
-|BoardRenderer.cs|**视图(V):** 视觉渲染核心，管理棋盘上所有GameObject。|
-|GameManager.cs|**控制器(C-管理层):** 游戏总管理器(Singleton)，协调所有模块，是移动请求的唯一入口。|
-|MoveMarkerComponent.cs|挂载在“移动标记”Prefab上的数据组件。|
-|PieceComponent.cs|挂载在棋子Prefab上的“身份证”，连接视觉与逻辑。|
-
----
-
-### **5. 后续开发建议**
-
-#### **5.1 技能系统开发**
-
-- **数据层:** 创建一个 SkillData.cs 并使用 ScriptableObject 来定义技能（名称、效果、冷却、消耗等），方便策划配置。
+1. **[Milestone 1] 联网启动与场景同步:**
     
-- **逻辑层:**
+    - **任务:** 实现 LobbyManager.StartGame()，让房主点击后，所有玩家能一同加载到 Game.unity 场景。
+        
+    - **验证:** 两个客户端都能进入游戏场景，并打印日志 "PVP mode started on [Server/Client]"。
+        
+2. **[Milestone 2] 静态棋盘同步:**
     
-    1. 创建一个 SkillManager.cs 单例，用于处理技能的释放和冷却。
+    - **任务:** 实现 NetworkGameState 和 NetworkPieceData。服务器在 Start 时初始化 BoardState，并将其状态同步到 NetworkGameState。客户端的 BoardRenderer 根据 NetworkGameState 来生成初始棋盘。
         
-    2. 创建一个 BuffSystem.cs，用于在 PieceComponent 或 RealTimePieceState 上附加/移除状态效果（如无敌、眩晕、加速）。
+    - **验证:** 游戏开始时，双方客户端都能看到一模一样的初始棋盘布局。
         
-- **集成点:**
+3. **[Milestone 3] 玩家输入与移动同步:**
     
-    1. 在 PieceComponent 中添加 List<SkillData> skills。
+    - **任务:** 实现 NetworkPlayer 和 PlayerInputController 的 CmdRequestMove 逻辑。完成从客户端输入到服务器执行，再到状态同步回所有客户端的完整流程。
         
-    2. PlayerInputController 检测到玩家选中带技能的棋子时，在UI上显示技能按钮。
+    - **验证:** 房主移动一个棋子，另一个客户端能平滑地看到该棋子移动到目标位置。反之亦然。
         
-    3. 点击技能按钮后，调用 SkillManager.ActivateSkill(piece, skill)。
-        
-    4. SkillManager 进而调用 BuffSystem，修改棋子的 RealTimePieceState（例如，rtState.IsVulnerable = false）。RealTimeModeController 和 CombatManager 会自然地响应这些状态变化，无需大的改动。
-        
-
-#### **5.2 网络功能开发 (Fish-Net)**
-
-当前架构对网络同步非常友好，因为**请求**和**执行**是分离的。
-
-- **核心原则:** **服务器权威**。客户端只发送输入请求，不执行任何游戏逻辑。
+4. **[Milestone 4] 核心逻辑（能量、战斗）同步:**
     
-- **实现步骤:**
+    - **任务:** 将 EnergySystem 和 CombatManager 的逻辑完全放到服务器上。将能量值通过 SyncVar 同步。战斗结果（棋子死亡）通过更新 NetworkGameState 中的 IsDead 标志来同步。
+        
+    - **验证:** 玩家移动消耗能量，双方UI同步显示。棋子发生碰撞，在双方屏幕上同时消失。
+        
+5. **[Milestone 5] 视角与游戏结束处理:**
     
-    1. **改造控制器:**
+    - **任务:** 实现相机旋转和文字Billboard。实现游戏结束逻辑的判断（服务器判断）和同步。
         
-        - 在客户端，PlayerInputController 的 gameManager.RequestMove 调用不再直接执行逻辑，而是调用一个 [ServerRpc] 方法，将移动指令 {from, to} 发送给服务器。
-            
-        - 在服务器上，为非本地玩家创建一个 NetworkController，它负责接收来自远程客户端的数据包，并调用服务器上的 GameManager.RequestMove。
-            
-    2. **服务器执行:** 服务器上的 GameManager 和 RealTimeModeController 像单机模式一样正常执行所有游戏逻辑。
-        
-    3. **状态同步:**
-        
-        - 服务器上的 BoardState 和所有棋子的 RealTimePieceState 是权威数据。
-            
-        - 将这些核心状态（特别是棋子的位置、IsMoving、IsDead等）通过Fish-Net的同步机制（SyncVar, SyncList, 或自定义序列化）广播给所有客户端。
-            
-        - 全局事件，如 OnPieceKilled，也应该由服务器触发一个 [ObserversRpc]，通知所有客户端某个棋子死亡。
-            
-    4. **客户端表现:**
-        
-        - 客户端的 RealTimeModeController 和 CombatManager **不运行**任何逻辑计算。
-            
-        - 客户端的 BoardRenderer 和其他视觉组件，完全根据从服务器同步来的状态数据来更新画面。例如，当一个棋子的同步状态变为 IsMoving=true 并且其目标位置更新时，客户端的 BoardRenderer 就播放相应的移动动画。客户端是一个忠实的“播放器”。
+    - **验证:** 黑方玩家进入游戏后，视角自动翻转，棋子文字正常。一方将死另一方后，双方都弹出胜负结算界面。

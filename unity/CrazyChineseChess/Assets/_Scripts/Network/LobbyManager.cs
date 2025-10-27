@@ -4,6 +4,8 @@ using Steamworks;
 using FishNet.Managing;
 using System.Collections.Generic;
 using System; // 引入System命名空间以使用Action
+using FishNet; // 引入FishNet
+using FishNet.Managing.Scened; // 引入场景管理
 
 /// <summary>
 /// 功能模块，负责所有与Steam Lobby相关的操作：创建、查找、加入、离开、状态管理。
@@ -170,7 +172,12 @@ public class LobbyManager : MonoBehaviour
     /// </summary>
     public void StartGame()
     {
-        if (!_networkManager.IsServer) return; // 只有房主能开始游戏
+
+        if (!InstanceFinder.IsServer)
+        {
+            Debug.LogWarning("[LobbyManager] 只有房主才能开始游戏。");
+            return;
+        }
 
         Debug.Log("[LobbyManager] 房主开始游戏...");
 
@@ -178,9 +185,12 @@ public class LobbyManager : MonoBehaviour
         SteamMatchmaking.SetLobbyData(_currentLobbyId, StatusKey, StatusInGame);
         SteamMatchmaking.SetLobbyJoinable(_currentLobbyId, false);
 
-        // 2. TODO: 通过FishNet的场景管理器加载游戏场景
-        // _networkManager.SceneManager.LoadGlobalScenes(new SceneLoadData("YourGameSceneName"));
-        Debug.LogWarning("[LobbyManager] TODO: 实现加载游戏场景的逻辑!");
+        // 2. 通过FishNet的场景管理器加载游戏场景
+        // 这个方法会通知所有已连接的客户端同步加载"Game"场景
+        var sld = new SceneLoadData("Game");
+        _networkManager.SceneManager.LoadGlobalScenes(sld);
+
+        Debug.Log("[LobbyManager] 已向所有客户端发送加载 'Game' 场景的指令。");
     }
 
     #endregion
