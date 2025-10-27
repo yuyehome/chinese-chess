@@ -4,6 +4,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using UnityEngine.UI;
+using Steamworks; // 引入Steamworks
+using System.Collections.Generic; // 引入List
+using FishNet; // 引入FishNet，用于访问 InstanceFinder
 
 /// <summary>
 /// 主菜单场景的UI控制器。
@@ -47,16 +50,35 @@ public class MainMenuController : MonoBehaviour
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
         else Instance = this;
+        // 在Awake中注册对LobbyManager事件的监听
+        LobbyManager.OnEnteredLobby += HandleEnterLobby;
+        LobbyManager.OnLobbyDataUpdatedEvent += UpdateLobbyRoomUI;
+    }
+
+    private void OnDestroy()
+    {
+        // 当此对象被销毁时（例如切换场景），必须取消监听以防内存泄漏
+        LobbyManager.OnEnteredLobby -= HandleEnterLobby;
+        LobbyManager.OnLobbyDataUpdatedEvent -= UpdateLobbyRoomUI;
     }
 
     private void Start()
     {
         // 在菜单开始时，更新玩家昵称
         UpdatePlayerNameDisplay();
+
         // 初始化时，只显示主面板
-        mainPanel.SetActive(true);
-        createLobbyPanel.SetActive(false);
-        lobbyRoomPanel.SetActive(false);
+        ShowMainPanel(); // 使用我们之前创建的方法，确保状态统一
+
+    }
+
+    /// <summary>
+    /// 这是一个事件处理函数，当LobbyManager的OnEnteredLobby事件触发时被调用
+    /// </summary>
+    private void HandleEnterLobby(CSteamID lobbyId)
+    {
+        ShowLobbyRoomPanel();
+        UpdateLobbyRoomUI();
     }
 
     private void UpdatePlayerNameDisplay()
@@ -181,38 +203,94 @@ public class MainMenuController : MonoBehaviour
     /// </summary>
     public void UpdateLobbyRoomUI()
     {
-        if (!lobbyRoomPanel.activeInHierarchy) return;
+        if (!lobbyRoomPanel.activeInHierarchy || !LobbyManager.Instance._currentLobbyId.IsValid()) return;
 
-        // 更新我方信息 (金币和段位暂时用假数据)
-        myNameText.text = SteamManager.Instance.PlayerName;
-        myRankText.text = "段位: 黄金I";
-        myCoinText.text = "金币: 8888";
 
-        // 更新房间信息
+        CSteamID lobbyId = LobbyManager.Instance._currentLobbyId;
+
+        // 获取房间内的所有玩家
+        int memberCount = SteamMatchmaking.GetNumLobbyMembers(lobbyId);
+        List<CSteamID> members = new List<CSteamID>();
+        for (int i = 0; i < memberCount; i++)
+        {
+            members.Add(SteamMatchmaking.GetLobbyMemberByIndex(lobbyId, i));
+        }
+
+        // 获取房主ID和我自己的ID
+        CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(lobbyId);
+        CSteamID myId = SteamManager.Instance.PlayerSteamId;
+
+        // 根据我是不是房主，来决定谁在左边，谁在右边
+        if (InstanceFinder.IsServer) // 更可靠的判断方式，判断当前客户端是不是Host
+        {
+            // 我是房主，我显示在左边
+            DisplayPlayerData(myNameText, myRankText, myCoinText, myId);
+
+            if (members.Count > 1)
+            {
+                // 找到非房主的那个玩家，显示在右边
+                CSteamID opponentId = CSteamID.Nil;
+                foreach (var member in members)
+                {
+                    if (member != ownerId)
+                    {
+                        opponentId = member;
+                        break;
+                    }
+                }
+                DisplayPlayerData(opponentNameText, null, null, opponentId); // 对手只显示名字
+            }
+            else
+            {
+                // 只有我一个人
+                opponentNameText.text = "等待玩家加入...";
+            }
+        }
+        else // 我是后加入的客户端
+        {
+            // 我是客户端，房主显示在左边
+            DisplayPlayerData(myNameText, null, null, ownerId);
+
+            // 我自己显示在右边
+            DisplayPlayerData(opponentNameText, myRankText, myCoinText, myId);
+        }
+
+        // 更新房间信息 (这部分逻辑不变)
         var lobbyData = LobbyManager.Instance.CurrentLobbyData;
+        roomNameText_InLobby.text = lobbyData.GetValueOrDefault(LobbyManager.LobbyNameKey, "读取中...");
+        gameModeText_InLobby.text = $"模式: {lobbyData.GetValueOrDefault(LobbyManager.GameModeKey, "N/A")}";
+        roomLevelText_InLobby.text = $"等级: {lobbyData.GetValueOrDefault(LobbyManager.RoomLevelKey, "N/A")}";
 
-        string roomName, gameMode, roomLevel;
+    }
 
-        // 使用 TryGetValue 安全地获取数据
-        if (!lobbyData.TryGetValue(LobbyManager.LobbyNameKey, out roomName))
+    /// <summary>
+    /// 一个辅助方法，用于将指定玩家的数据填充到指定的UI元素上
+    /// </summary>
+    /// <param name="nameText">显示昵称的文本框</param>
+    /// <param name="rankText">显示段位的文本框 (可为null)</param>
+    /// <param name="coinText">显示金币的文本框 (可为null)</param>
+    /// <param name="steamId">玩家的SteamID</param>
+    private void DisplayPlayerData(TextMeshProUGUI nameText, TextMeshProUGUI rankText, TextMeshProUGUI coinText, CSteamID steamId)
+    {
+        if (steamId == CSteamID.Nil || !steamId.IsValid())
         {
-            roomName = "读取中...";
-        }
-        if (!lobbyData.TryGetValue(LobbyManager.GameModeKey, out gameMode))
-        {
-            gameMode = "N/A";
-        }
-        if (!lobbyData.TryGetValue(LobbyManager.RoomLevelKey, out roomLevel))
-        {
-            roomLevel = "N/A";
+            nameText.text = "等待玩家...";
+            return;
         }
 
-        roomNameText_InLobby.text = roomName;
-        gameModeText_InLobby.text = $"模式: {gameMode}";
-        roomLevelText_InLobby.text = $"等级: {roomLevel}";
+        // 获取并显示昵称
+        nameText.text = SteamFriends.GetFriendPersonaName(steamId);
 
-        // 更新对手信息 (暂时为空)
-        opponentNameText.text = "等待玩家加入...";
+        // 如果提供了段位和金币文本框，则填充假数据 (因为只有本地玩家才显示这些)
+        if (rankText != null)
+        {
+
+            rankText.text = "段位: 黄金I";
+        }
+        if (coinText != null)
+        {
+            coinText.text = "金币: 8888";
+        }
     }
 
     #endregion

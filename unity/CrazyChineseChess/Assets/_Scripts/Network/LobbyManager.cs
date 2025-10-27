@@ -3,12 +3,14 @@ using UnityEngine;
 using Steamworks;
 using FishNet.Managing;
 using System.Collections.Generic;
+using FishNet.Object;
+using System; // 引入System命名空间以使用Action
 
 /// <summary>
 /// 功能模块，负责所有与Steam Lobby相关的操作：创建、查找、加入、离开、状态管理。
 /// 并管理Lobby相关的UI面板切换。
 /// </summary>
-public class LobbyManager : MonoBehaviour
+public class LobbyManager : NetworkBehaviour
 {
     public static LobbyManager Instance { get; private set; }
 
@@ -37,7 +39,7 @@ public class LobbyManager : MonoBehaviour
 
     #region Private State
     private NetworkManager _networkManager;
-    private CSteamID _currentLobbyId;
+    public CSteamID _currentLobbyId;
     private List<GameObject> _currentLobbyListItems = new List<GameObject>();
     public Dictionary<string, string> CurrentLobbyData { get; private set; } = new Dictionary<string, string>();
     #endregion
@@ -52,6 +54,16 @@ public class LobbyManager : MonoBehaviour
     protected Callback<LobbyChatUpdate_t> _lobbyChatUpdate; // 玩家加入/离开/断开连接
     #endregion
 
+    #region C# Events
+    /// <summary>
+    /// 当成功进入一个Lobby时触发（无论是创建还是加入）
+    /// </summary>
+    public static event Action<CSteamID> OnEnteredLobby;
+    /// <summary>
+    /// 当Lobby内数据更新时触发
+    /// </summary>
+    public static event Action OnLobbyDataUpdatedEvent;
+    #endregion
 
     private void Awake()
     {
@@ -61,7 +73,6 @@ public class LobbyManager : MonoBehaviour
             return;
         }
         Instance = this;
-        DontDestroyOnLoad(gameObject); // Lobby管理器在加载游戏场景后也应存在
     }
 
     private void Start()
@@ -222,8 +233,10 @@ public class LobbyManager : MonoBehaviour
 
         // 缓存最新Lobby数据并更新UI
         CacheLobbyData();
-        MainMenuController.Instance.ShowLobbyRoomPanel();
-        MainMenuController.Instance.UpdateLobbyRoomUI();
+
+        // 不再直接调用MainMenuController，而是触发一个全局事件
+        // 其他脚本（如MainMenuController）可以监听这个事件
+        OnEnteredLobby?.Invoke(_currentLobbyId);
     }
 
     private void OnLobbyDataUpdated(LobbyDataUpdate_t callback)
@@ -232,7 +245,8 @@ public class LobbyManager : MonoBehaviour
         {
             Debug.Log("[LobbyManager] 当前Lobby数据已更新。");
             CacheLobbyData();
-            MainMenuController.Instance.UpdateLobbyRoomUI();
+            // 同样，使用事件来通知UI更新
+            OnLobbyDataUpdatedEvent?.Invoke();
         }
     }
 
