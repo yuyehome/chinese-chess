@@ -175,6 +175,7 @@ public class LobbyManager : MonoBehaviour
 
         if (!InstanceFinder.IsServer)
         {
+            //Fishy Steamworks 需要勾选 Peer To Peer
             Debug.LogWarning("[LobbyManager] 只有房主才能开始游戏。");
             return;
         }

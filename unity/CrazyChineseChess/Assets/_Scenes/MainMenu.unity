@@ -1865,7 +1865,7 @@ MonoBehaviour:
   _serverBindAddress: 
   _port: 7770
   _maximumClients: 9001
-  _peerToPeer: 0
+  _peerToPeer: 1
   _clientAddress: 
 --- !u!1 &429494566
 GameObject:
