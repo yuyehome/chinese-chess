@@ -166,7 +166,6 @@ public class LobbyManager : MonoBehaviour
         MainMenuController.Instance.ShowMainPanel();
     }
 
-
     /// <summary>
     /// UI调用：房主点击开始游戏
     /// </summary>
