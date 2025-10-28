@@ -189,6 +189,7 @@ public class LobbyManager : MonoBehaviour
         // 2. 通过FishNet的场景管理器加载游戏场景
         // 这个方法会通知所有已连接的客户端同步加载"Game"场景
         var sld = new SceneLoadData("Game");
+        sld.ReplaceScenes = ReplaceOption.All;
         _networkManager.SceneManager.LoadGlobalScenes(sld);
 
         Debug.Log("[LobbyManager] 已向所有客户端发送加载 'Game' 场景的指令。");
