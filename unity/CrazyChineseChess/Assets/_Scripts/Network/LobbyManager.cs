@@ -100,6 +100,9 @@ public class LobbyManager : MonoBehaviour
         // 订阅服务器事件。只有当作为服务器时，这些事件才会被触发。
         _networkManager.ServerManager.OnRemoteConnectionState += ServerManager_OnRemoteConnectionState;
 
+        // 订阅客户端的状态变化事件
+        _networkManager.ClientManager.OnClientConnectionState += ClientManager_OnClientConnectionState;
+
         // 注册所有需要的Steam回调
         _lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
         _lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
@@ -115,6 +118,22 @@ public class LobbyManager : MonoBehaviour
         if (_networkManager != null)
         {
             _networkManager.ServerManager.OnRemoteConnectionState -= ServerManager_OnRemoteConnectionState;
+
+            _networkManager.ClientManager.OnClientConnectionState -= ClientManager_OnClientConnectionState;
+        }
+    }
+
+    /// <summary>
+    /// 当本地客户端的连接状态发生变化时，此方法会被调用。
+    /// </summary>
+    private void ClientManager_OnClientConnectionState(FishNet.Transporting.ClientConnectionStateArgs args)
+    {
+        Debug.Log($"[CLIENT-LOG] 本地客户端连接状态变化: {args.ConnectionState}");
+        if (args.ConnectionState == FishNet.Transporting.LocalConnectionState.Stopped)
+        {
+            // 如果连接停止，可能是因为连接失败或被服务器踢出
+            // 可以在这里添加UI提示，例如“连接主机失败”
+            Debug.LogError("[CLIENT-LOG] 连接已停止。可能原因：无法连接到主机、主机关闭、网络问题。");
         }
     }
 
@@ -123,6 +142,9 @@ public class LobbyManager : MonoBehaviour
     /// </summary>
     private void ServerManager_OnRemoteConnectionState(FishNet.Connection.NetworkConnection conn, FishNet.Transporting.RemoteConnectionStateArgs args)
     {
+        // 在服务器端增加更详细的日志
+        Debug.Log($"[SERVER-LOG] 远程客户端 {conn.ClientId} 连接状态变化: {args.ConnectionState}");
+
         if (args.ConnectionState == FishNet.Transporting.RemoteConnectionState.Started)
         {
             Debug.Log($"[Server] 客户端 {conn.ClientId} 已完全连接。");
@@ -297,7 +319,6 @@ public class LobbyManager : MonoBehaviour
         _currentLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
         Debug.Log($"[LobbyManager] Lobby创建成功! Lobby ID: {_currentLobbyId}");
 
-        // 将之前缓存的数据设置到Lobby元数据中
         Debug.Log($"[LobbyManager] 正在为Lobby {_currentLobbyId} 设置 {CurrentLobbyData.Count} 条元数据...");
         foreach (var dataPair in CurrentLobbyData)
         {
@@ -305,10 +326,9 @@ public class LobbyManager : MonoBehaviour
             SteamMatchmaking.SetLobbyData(_currentLobbyId, dataPair.Key, dataPair.Value);
         }
 
-        // 房主启动网络
-        _networkManager.ServerManager.StartConnection();
-        _networkManager.ClientManager.StartConnection();
-        Debug.Log("[LobbyManager] FishNet Host模式已启动。");
+        // 创建Lobby成功后，Steam会自动让创建者"进入"这个Lobby，
+        // 这会触发 OnLobbyEntered 回调。我们将把网络启动逻辑统一放到那里。
+        Debug.Log("[LobbyManager] Lobby已创建，等待OnLobbyEntered回调来启动网络...");
     }
 
     private void OnGameLobbyJoinRequested(GameLobbyJoinRequested_t callback)
@@ -323,21 +343,58 @@ public class LobbyManager : MonoBehaviour
         _currentLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
         Debug.Log($"[LobbyManager] 已进入Lobby: {_currentLobbyId}");
 
-        // 如果我们是客户端（不是房主），现在启动网络连接
-        if (!InstanceFinder.IsServer) // 使用InstanceFinder更可靠
+        // 判断当前进入Lobby的人是不是Lobby的创建者(Owner)
+        CSteamID lobbyOwner = SteamMatchmaking.GetLobbyOwner(_currentLobbyId);
+        CSteamID mySteamId = SteamManager.Instance.PlayerSteamId;
+
+        if (lobbyOwner == mySteamId)
         {
-            // ... (原有代码) ...
+            // 我是房主
+            Debug.Log("[LobbyManager] 身份确认：我是房主。正在启动Host模式...");
+            _networkManager.ServerManager.StartConnection();
+            _networkManager.ClientManager.StartConnection();
+            Debug.Log("[LobbyManager] FishNet Host模式已启动。");
         }
-        else // 如果是房主自己进入Lobby
+        else
         {
-            // 房主也需要检查一下自己是否准备好开始游戏
-            // 这处理了一种情况：客户端先加入Lobby，房主后启动游戏
-            CheckIfAllPlayersAreReadyAndStartGame();
+            // 我是客户端
+            Debug.Log($"[LobbyManager] [CLIENT-LOG] 身份确认：我是客户端。目标Host SteamID: {lobbyOwner}");
+
+            if (_networkManager.ClientManager.Started)
+            {
+                Debug.LogWarning("[LobbyManager] [CLIENT-LOG] 客户端网络已在运行，不再重复启动。");
+                // 这里可能需要考虑是否要断开重连，如果目标Host变了的话。
+                // 暂时先简单处理：如果已连接但不是连的这个Lobby Owner，可能需要处理。
+                return;
+            }
+
+            // 显式设置要连接的Steam ID地址
+            var fishy = _networkManager.TransportManager.GetTransport<FishySteamworks.FishySteamworks>();
+            if (fishy != null)
+            {
+                Debug.Log($"[LobbyManager] [CLIENT-LOG] 正在设置FishySteamworks的目标地址为: {lobbyOwner}");
+                fishy.SetClientAddress(lobbyOwner.ToString());
+            }
+            else
+            {
+                Debug.LogError("[LobbyManager] [CLIENT-LOG] 未找到 FishySteamworks Transport组件！无法设置目标地址。");
+            }
+
+            Debug.Log("[LobbyManager] [CLIENT-LOG] 正在调用 ClientManager.StartConnection()...");
+            // 现在StartConnection会使用我们刚刚设置的地址
+            bool success = _networkManager.ClientManager.StartConnection();
+
+            Debug.Log($"[LobbyManager] [CLIENT-LOG] ClientManager.StartConnection() 调用返回: {success}");
+            if (!success)
+            {
+                Debug.LogError("[LobbyManager] [CLIENT-LOG] ClientManager.StartConnection() 调用失败！");
+            }
         }
 
         // 缓存最新Lobby数据并更新UI
         CacheLobbyData();
         OnEnteredLobby?.Invoke(_currentLobbyId);
+
     }
     #endregion
 
