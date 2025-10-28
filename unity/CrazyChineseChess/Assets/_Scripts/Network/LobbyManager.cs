@@ -45,6 +45,9 @@ public class LobbyManager : MonoBehaviour
     public Dictionary<string, string> CurrentLobbyData { get; private set; } = new Dictionary<string, string>();
     #endregion
 
+    private bool _isTryingToStartGame = false; // 新增一个标志位
+    private bool _isLoadingScene = false; // 用这个来替代 IsLoading
+
     #region Steam Callbacks
     // Steam回调句柄
     protected Callback<LobbyCreated_t> _lobbyCreated;
@@ -94,6 +97,9 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
+        // 订阅服务器事件。只有当作为服务器时，这些事件才会被触发。
+        _networkManager.ServerManager.OnRemoteConnectionState += ServerManager_OnRemoteConnectionState;
+
         // 注册所有需要的Steam回调
         _lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
         _lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
@@ -101,6 +107,32 @@ public class LobbyManager : MonoBehaviour
         _lobbyMatchList = Callback<LobbyMatchList_t>.Create(OnLobbyMatchList);
         _gameLobbyJoinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
         _lobbyChatUpdate = Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
+    }
+
+    private void OnDestroy()
+    {
+        // 当LobbyManager被销毁时，取消订阅以防止内存泄漏
+        if (_networkManager != null)
+        {
+            _networkManager.ServerManager.OnRemoteConnectionState -= ServerManager_OnRemoteConnectionState;
+        }
+    }
+
+    /// <summary>
+    /// 当一个远程客户端的连接状态发生变化时，此方法会被服务器调用。
+    /// </summary>
+    private void ServerManager_OnRemoteConnectionState(FishNet.Connection.NetworkConnection conn, FishNet.Transporting.RemoteConnectionStateArgs args)
+    {
+        if (args.ConnectionState == FishNet.Transporting.RemoteConnectionState.Started)
+        {
+            Debug.Log($"[Server] 客户端 {conn.ClientId} 已完全连接。");
+            // 在这里，我们可以检查是否所有人都已到齐
+            CheckIfAllPlayersAreReadyAndStartGame();
+        }
+        else if (args.ConnectionState == FishNet.Transporting.RemoteConnectionState.Stopped)
+        {
+            Debug.Log($"[Server] 客户端 {conn.ClientId} 已断开连接。");
+        }
     }
 
     #region Public UI-facing Methods
@@ -164,6 +196,8 @@ public class LobbyManager : MonoBehaviour
     {
         if (_currentLobbyId.IsValid())
         {
+            _isLoadingScene = false; // 重置状态
+            _isTryingToStartGame = false; // 同样重置开始意图
             Debug.Log($"[LobbyManager] 正在离开Lobby: {_currentLobbyId}");
             SteamMatchmaking.LeaveLobby(_currentLobbyId);
             _currentLobbyId = CSteamID.Nil;
@@ -192,17 +226,59 @@ public class LobbyManager : MonoBehaviour
 
         Debug.Log("[LobbyManager] 房主开始游戏...");
 
-        // 1. 更新Lobby状态为“游戏中”，并设为不可加入
-        SteamMatchmaking.SetLobbyData(_currentLobbyId, StatusKey, StatusInGame);
-        SteamMatchmaking.SetLobbyJoinable(_currentLobbyId, false);
+        _isTryingToStartGame = true; // 1. 设置开始游戏的意图标志
 
-        // 2. 通过FishNet的场景管理器加载游戏场景
-        // 这个方法会通知所有已连接的客户端同步加载"Game"场景
-        var sld = new SceneLoadData("Game");
-        sld.ReplaceScenes = ReplaceOption.All;
-        _networkManager.SceneManager.LoadGlobalScenes(sld);
+        // 2. 调用检查方法。如果人已经齐了，它会立刻开始。如果人没齐，它什么也不做，等待客户端连接事件来触发。
+        CheckIfAllPlayersAreReadyAndStartGame();
 
-        Debug.Log("[LobbyManager] 已向所有客户端发送加载 'Game' 场景的指令。");
+    }
+
+
+    /// <summary>
+    /// 检查是否满足开始游戏的条件，如果满足则加载游戏场景。
+    /// </summary>
+    private void CheckIfAllPlayersAreReadyAndStartGame()
+    {
+        // 条件1: 必须是服务器才能执行此逻辑
+        // 条件2: 房主必须已经点击了开始按钮 (标志位为true)
+        // 条件3: 游戏不能已经开始 (避免重复加载)
+        if (!InstanceFinder.IsServer || !_isTryingToStartGame || _isLoadingScene) // 使用我们自己的标志位
+        {
+            return;
+        }
+
+        // 条件4: 检查人数是否足够。Lobby里有2个人，并且服务器也确认有1个远程连接(2-1=1)
+        int steamLobbyMemberCount = SteamMatchmaking.GetNumLobbyMembers(_currentLobbyId);
+        int connectedFishNetClients = _networkManager.ServerManager.Clients.Count; // 这包含了Host自己，所以是 (远程客户端数 + 1)
+
+        Debug.Log($"[StartCheck] 检查开始条件: Steam人数={steamLobbyMemberCount}, FishNet连接数={connectedFishNetClients}");
+
+        // 我们的游戏是2人对战
+        if (steamLobbyMemberCount == 2 && connectedFishNetClients == 2)
+        {
+            Debug.Log("[StartCheck] 条件满足！所有玩家已就绪，正在加载游戏场景...");
+
+            _isLoadingScene = true; // 在加载前，立刻设置标志位
+
+            // --- 这部分是原StartGame的核心逻辑 ---
+            // 1. 更新Lobby状态为“游戏中”，并设为不可加入
+            SteamMatchmaking.SetLobbyData(_currentLobbyId, StatusKey, StatusInGame);
+            SteamMatchmaking.SetLobbyJoinable(_currentLobbyId, false);
+
+            // 2. 通过FishNet的场景管理器加载游戏场景
+            var sld = new SceneLoadData("Game");
+            sld.ReplaceScenes = ReplaceOption.All;
+            _networkManager.SceneManager.LoadGlobalScenes(sld);
+
+            Debug.Log("[LobbyManager] 已向所有客户端发送加载 'Game' 场景的指令。");
+
+            // 3. 重置标志位，防止重复执行
+            _isTryingToStartGame = false;
+        }
+        else
+        {
+            Debug.Log($"[StartCheck] 条件未满足，等待更多玩家连接...");
+        }
     }
 
     #endregion
@@ -241,27 +317,29 @@ public class LobbyManager : MonoBehaviour
         JoinLobby(callback.m_steamIDLobby);
     }
 
+    #region Steam Callback Handlers
     private void OnLobbyEntered(LobbyEnter_t callback)
     {
         _currentLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
         Debug.Log($"[LobbyManager] 已进入Lobby: {_currentLobbyId}");
 
         // 如果我们是客户端（不是房主），现在启动网络连接
-        if (!_networkManager.IsServer)
+        if (!InstanceFinder.IsServer) // 使用InstanceFinder更可靠
         {
-            CSteamID hostId = SteamMatchmaking.GetLobbyOwner(_currentLobbyId);
-            // FishySteamworks Transport会自动从Lobby所有者获取连接信息
-            _networkManager.ClientManager.StartConnection();
-            Debug.Log($"[LobbyManager] FishNet Client已启动，正在连接到Host: {hostId}");
+            // ... (原有代码) ...
+        }
+        else // 如果是房主自己进入Lobby
+        {
+            // 房主也需要检查一下自己是否准备好开始游戏
+            // 这处理了一种情况：客户端先加入Lobby，房主后启动游戏
+            CheckIfAllPlayersAreReadyAndStartGame();
         }
 
         // 缓存最新Lobby数据并更新UI
         CacheLobbyData();
-
-        // 不再直接调用MainMenuController，而是触发一个全局事件
-        // 其他脚本（如MainMenuController）可以监听这个事件
         OnEnteredLobby?.Invoke(_currentLobbyId);
     }
+    #endregion
 
     private void OnLobbyDataUpdated(LobbyDataUpdate_t callback)
     {
