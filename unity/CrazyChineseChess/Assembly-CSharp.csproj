@@ -78,6 +78,7 @@
     <Compile Include="Assets\_Scripts\Controllers\AI\EasyAIStrategy.cs" />
     <Compile Include="Assets\_Scripts\GameModes\RealTimeModeController.cs" />
     <Compile Include="Assets\_Scripts\Controllers\PlayerInputController.cs" />
+    <Compile Include="Assets\_Scripts\Network\NetworkPieceData.cs" />
     <Compile Include="Assets\_Scripts\Core\RuleEngine.cs" />
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\Core\ClientSocket.cs" />
     <Compile Include="Assets\_Scripts\UI\GameUIManager.cs" />

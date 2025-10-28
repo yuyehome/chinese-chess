@@ -3,7 +3,8 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using FishNet; // 引入FishNet
+using FishNet; 
+using FishNet.Object.Synchronizing; 
 
 /// <summary>
 /// 游戏总管理器 (Singleton)，作为游戏核心逻辑的入口和协调者。
@@ -66,10 +67,14 @@ public class GameManager : MonoBehaviour
 
         if (isPVPMode)
         {
-            // 在PVP模式下，我们不再使用 GameModeSelector
-            // 模式固定为实时对战
-            Debug.Log("[System] 检测到PVP模式，初始化网络对战...");
-            InitializeForPVP();
+            Debug.Log("[System] 检测到PVP模式，正在等待GameNetworkManager就绪...");
+            // ----------------- CHANGE START -----------------
+            // 订阅事件。如果GameNetworkManager已经就绪，就直接调用
+            GameNetworkManager.OnInstanceReady += HandlePVPInitialization;
+            if (GameNetworkManager.Instance != null && GameNetworkManager.Instance.IsSpawned)
+            {
+                HandlePVPInitialization(GameNetworkManager.Instance);
+            }
         }
         else
         {
@@ -80,6 +85,24 @@ public class GameManager : MonoBehaviour
 
     }
 
+
+    private void OnDestroy()
+    {
+        // 在销毁时取消订阅，这是个好习惯
+        GameNetworkManager.OnInstanceReady -= HandlePVPInitialization;
+    }
+
+    /// <summary>
+    /// 当GameNetworkManager的网络功能准备就绪时，执行此方法
+    /// </summary>
+    private void HandlePVPInitialization(GameNetworkManager gnm)
+    {
+        // 取消订阅，防止重复执行
+        GameNetworkManager.OnInstanceReady -= HandlePVPInitialization;
+
+        Debug.Log("[GameManager] GameNetworkManager is ready. Starting PVP initialization.");
+        InitializeForPVP();
+    }
 
     /// <summary>
     /// 初始化单机PVE模式
@@ -130,8 +153,20 @@ public class GameManager : MonoBehaviour
             currentGameMode = rtController;
 
             // 2. 服务器渲染初始棋盘（客户端将通过状态同步获得）
-            BoardRenderer.RenderBoard(CurrentBoardState);
-            rtController.InitializeRealTimeStates();
+            //BoardRenderer.RenderBoard(CurrentBoardState);
+            //rtController.InitializeRealTimeStates();
+
+            // 新增：服务器初始化网络棋盘状态
+            if (GameNetworkManager.Instance != null)
+            {
+                // 让服务器根据逻辑棋盘填充同步列表
+                GameNetworkManager.Instance.Server_InitializeBoard(CurrentBoardState);
+            }
+            else
+            {
+                Debug.LogError("[Server] GameNetworkManager 实例为空，无法初始化网络棋盘！");
+            }
+
 
             // 3. 服务器初始化控制器（目前为空，后续添加）
             // 注意：PVP的控制器初始化会不同
@@ -139,16 +174,85 @@ public class GameManager : MonoBehaviour
 
         if (InstanceFinder.IsClient)
         {
+            // 客户端的currentGameMode初始化移到这里，确保它在订阅事件之前被创建
+            if (currentGameMode == null)
+            {
+                currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, 0);
+            }
             Debug.Log("[Client] 客户端正在等待服务器状态同步...");
-            // 客户端需要向服务器注册自己
+
+            // 删掉之前所有的Invoke调用，直接在这里订阅
+            if (GameNetworkManager.Instance != null)
+            {
+                GameNetworkManager.Instance.AllPieces.OnChange += OnNetworkBoardStateChanged;
+                Debug.Log("[Client] 已订阅网络棋盘状态变化事件。");
+                // 如果订阅时已经有数据了，立即渲染一次
+                if (GameNetworkManager.Instance.AllPieces.Count > 0)
+                {
+                    RenderBoardFromNetwork(GameNetworkManager.Instance.AllPieces);
+                }
+            }
+            else
+            {
+                // 理论上不应该再发生这种情况了
+                Debug.LogError("[Client] GameNetworkManager.Instance 为空，无法订阅事件。");
+            }
+
+            // 注册玩家
             if (SteamManager.Instance != null && SteamManager.Instance.IsSteamInitialized)
             {
-                // 等待GameNetworkManager实例准备好
-                Invoke(nameof(RegisterPlayerWithServer), 0.5f);
+                GameNetworkManager.Instance.CmdRegisterPlayer(SteamManager.Instance.PlayerSteamId, SteamManager.Instance.PlayerName);
+                Debug.Log("[Client] 已向服务器发送注册请求。");
             }
         }
+
+
     }
 
+    /// <summary>
+    /// [Client Only] 当网络棋盘状态列表发生变化时，此方法会被调用。
+    /// </summary>
+    private void OnNetworkBoardStateChanged(SyncListOperation op, int index, NetworkPieceData oldItem, NetworkPieceData newItem, bool asServer)
+    {
+        // 我们只关心客户端的渲染，并且在初次同步时，我们希望一次性渲染整个棋盘
+        if (asServer) return;
+
+        Debug.Log($"[Client] 收到网络棋盘更新: Operation={op}, Count={GameNetworkManager.Instance.AllPieces.Count}");
+
+        // 简单的实现：只要有任何变化，就完全重新渲染整个棋盘。
+        // 对于初始布局来说，这是最高效和最可靠的方式。
+        // 未来同步移动时，我们可以根据op的类型做更精细的更新。
+        RenderBoardFromNetwork(GameNetworkManager.Instance.AllPieces);
+    }
+
+    /// <summary>
+    /// [Client Only] 根据网络数据列表来渲染棋盘。
+    /// </summary>
+    private void RenderBoardFromNetwork(SyncList<NetworkPieceData> networkPieces)
+    {
+        // 1. 创建一个临时的、空的逻辑BoardState
+        BoardState tempBoardState = new BoardState(); // 它内部是空的
+
+        // 2. 根据网络数据填充这个临时的BoardState
+        foreach (var pieceData in networkPieces)
+        {
+            var piece = new Piece(pieceData.Type, pieceData.Color);
+            tempBoardState.SetPieceAt(pieceData.Position, piece);
+        }
+
+        // 3. 命令BoardRenderer根据这个临时状态来渲染棋盘
+        BoardRenderer.RenderBoard(tempBoardState);
+
+        // 4. 初始化客户端的棋子实时状态 (RTState)
+        if (currentGameMode is RealTimeModeController rtController)
+        {
+            // 注意：客户端的currentGameMode可能需要初始化
+            // 我们在InitializeForPVP中为客户端也创建一个空的rtController
+            rtController.InitializeRealTimeStates();
+        }
+
+        Debug.Log("[Client] 已根据网络数据完成棋盘渲染。");
+    }
 
 
     private void InitializeControllers()
@@ -205,20 +309,6 @@ public class GameManager : MonoBehaviour
             turnBasedInput.Initialize(PlayerColor.Red, this);
         }
     }
-
-    private void RegisterPlayerWithServer()
-    {
-        if (GameNetworkManager.Instance != null)
-        {
-            GameNetworkManager.Instance.CmdRegisterPlayer(SteamManager.Instance.PlayerSteamId, SteamManager.Instance.PlayerName);
-            Debug.Log("[Client] 已向服务器发送注册请求。");
-        }
-        else
-        {
-            Debug.LogError("[Client] 无法找到 GameNetworkManager 实例！注册失败。");
-        }
-    }
-
 
     private void Update()
     {

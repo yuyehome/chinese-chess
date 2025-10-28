@@ -5,6 +5,7 @@ using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using System.Collections.Generic;
 using Steamworks;
+using System; 
 
 /// <summary>
 /// 游戏网络逻辑的中心枢纽。
@@ -14,25 +15,75 @@ using Steamworks;
 public class GameNetworkManager : NetworkBehaviour
 {
     public static GameNetworkManager Instance { get; private set; }
+    public static event Action<GameNetworkManager> OnInstanceReady;
 
     // 使用SyncDictionary来同步所有玩家的数据
     // Key: 客户端的ConnectionId, Value: 玩家网络数据
     public readonly SyncDictionary<int, PlayerNetData> AllPlayers = new SyncDictionary<int, PlayerNetData>();
 
-    public override void OnStartNetwork()
+    // 使用SyncList来同步棋盘上所有棋子的数据
+    public readonly SyncList<NetworkPieceData> AllPieces = new SyncList<NetworkPieceData>();
+
+    private void Awake()
     {
-        base.OnStartNetwork();
+        // 使用Awake来设置单例，确保在OnStartNetwork之前Instance就有值
+        // 但要注意，此时网络功能还未准备好，不能调用RPC或使用SyncVar
         if (Instance == null)
         {
             Instance = this;
-            // 如果这是一个持久化的对象，可以在这里加上 DontDestroyOnLoad(gameObject);
-            Debug.Log("[GameNetworkManager] Instance registered.");
+            Debug.Log("[GameNetworkManager] Instance assigned in Awake.");
         }
         else if (Instance != this)
         {
             Debug.LogWarning($"[GameNetworkManager] Duplicate instance found. Destroying {gameObject.name}.");
             Destroy(gameObject);
         }
+    }
+
+    public override void OnStartNetwork()
+    {
+        base.OnStartNetwork();
+
+        // OnStartNetwork被调用，意味着网络已准备就绪
+        // 此时触发事件，通知其他脚本可以安全地使用网络功能了
+        Debug.Log("[GameNetworkManager] OnStartNetwork called. Firing OnInstanceReady event.");
+        OnInstanceReady?.Invoke(this);
+
+    }
+
+    /// <summary>
+    /// [Server Only] 根据权威的 BoardState 初始化并填充 AllPieces 同步列表。
+    /// </summary>
+    [Server]
+    public void Server_InitializeBoard(BoardState boardState)
+    {
+        if (!IsServer)
+        {
+            Debug.LogError("[GameNetworkManager] 只有服务器才能初始化棋盘状态！");
+            return;
+        }
+
+        AllPieces.Clear(); // 清空旧数据
+        byte currentId = 0;
+
+        // 遍历逻辑棋盘，为每个棋子创建网络数据并添加到同步列表中
+        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
+        {
+            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
+            {
+                var pos = new Vector2Int(x, y);
+                Piece piece = boardState.GetPieceAt(pos);
+
+                if (piece.Type != PieceType.None)
+                {
+                    var netPiece = new NetworkPieceData(currentId, piece.Type, piece.Color, pos);
+                    AllPieces.Add(netPiece);
+                    currentId++;
+                }
+            }
+        }
+
+        Debug.Log($"[Server] 棋盘状态已初始化，共 {AllPieces.Count} 个棋子被添加到同步列表。");
     }
 
     /// <summary>
@@ -44,15 +95,33 @@ public class GameNetworkManager : NetworkBehaviour
         // conn 参数是FishNet自动填充的，代表调用此RPC的客户端连接
         int connectionId = conn.ClientId;
 
-        // 决定玩家颜色：房主(ClientId=0 in FishySteamworks)是红方，其他人是黑方
-        // 注意：FishNet中Host的ClientId可能不是0，我们需要一个更可靠的方式。
-        // 一个简单可靠的方式是：第一个注册的玩家是红方。
-        PlayerColor color = (AllPlayers.Count == 0) ? PlayerColor.Red : PlayerColor.Black;
+        // 修正颜色分配逻辑：
+        // 查找是否已经有红方玩家了
+        bool redPlayerExists = false;
+        foreach (var player in AllPlayers.Values)
+        {
+            if (player.Color == PlayerColor.Red)
+            {
+                redPlayerExists = true;
+                break;
+            }
+        }
+
+        PlayerColor color = redPlayerExists ? PlayerColor.Black : PlayerColor.Red;
 
         var playerData = new PlayerNetData(steamId, playerName, color);
-        AllPlayers.Add(connectionId, playerData);
 
-        Debug.Log($"[Server] 玩家注册: Id={connectionId}, Name={playerName}, Color={color}");
+        // 使用 TryAdd 或直接赋值，防止因为重复注册导致错误
+        if (!AllPlayers.ContainsKey(connectionId))
+        {
+            AllPlayers.Add(connectionId, playerData);
+            Debug.Log($"[Server] 玩家注册: Id={connectionId}, Name={playerName}, Color={color}");
+        }
+        else
+        {
+            Debug.LogWarning($"[Server] 玩家 {connectionId} 尝试重复注册。");
+        }
+
     }
 
     /// <summary>
