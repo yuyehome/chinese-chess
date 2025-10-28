@@ -113,12 +113,15 @@ public class LobbyManager : MonoBehaviour
         Debug.Log($"[LobbyManager] 请求创建Lobby... 公开: {isPublic}, 名称: {lobbyName}");
         ELobbyType lobbyType = isPublic ? ELobbyType.k_ELobbyTypePublic : ELobbyType.k_ELobbyTypeFriendsOnly;
 
-        CurrentLobbyData.Clear();
-        CurrentLobbyData[GameIdKey] = GameIdValue;
-        CurrentLobbyData[StatusKey] = StatusWaiting;
-        CurrentLobbyData[LobbyNameKey] = lobbyName;
-        CurrentLobbyData[GameModeKey] = gameMode;
-        CurrentLobbyData[RoomLevelKey] = roomLevel;
+        // 确保每次创建时都是全新的数据
+        CurrentLobbyData = new Dictionary<string, string>
+        {
+            [GameIdKey] = GameIdValue,
+            [StatusKey] = StatusWaiting,
+            [LobbyNameKey] = lobbyName,
+            [GameModeKey] = gameMode,
+            [RoomLevelKey] = roomLevel
+        };
 
         SteamMatchmaking.CreateLobby(lobbyType, 2);
     }
@@ -132,7 +135,15 @@ public class LobbyManager : MonoBehaviour
 
         Debug.Log("[LobbyManager] 正在请求Lobby列表...");
         ClearLobbyListUI();
+
+        Debug.Log($"[LobbyManager] 添加搜索过滤器: Key='{GameIdKey}', Value='{GameIdValue}'");
+
         SteamMatchmaking.AddRequestLobbyListStringFilter(GameIdKey, GameIdValue, ELobbyComparison.k_ELobbyComparisonEqual);
+
+        // 强制将搜索距离过滤器设置为全球范围，排除地理位置因素
+        SteamMatchmaking.AddRequestLobbyListDistanceFilter(ELobbyDistanceFilter.k_ELobbyDistanceFilterWorldwide);
+        Debug.Log("[LobbyManager] 添加了 Worldwide 距离过滤器。");
+
         SteamMatchmaking.RequestLobbyList();
     }
 
@@ -211,8 +222,10 @@ public class LobbyManager : MonoBehaviour
         Debug.Log($"[LobbyManager] Lobby创建成功! Lobby ID: {_currentLobbyId}");
 
         // 将之前缓存的数据设置到Lobby元数据中
+        Debug.Log($"[LobbyManager] 正在为Lobby {_currentLobbyId} 设置 {CurrentLobbyData.Count} 条元数据...");
         foreach (var dataPair in CurrentLobbyData)
         {
+            Debug.Log($"[LobbyManager] -> SetData: '{dataPair.Key}' = '{dataPair.Value}'");
             SteamMatchmaking.SetLobbyData(_currentLobbyId, dataPair.Key, dataPair.Value);
         }
 
@@ -275,7 +288,7 @@ public class LobbyManager : MonoBehaviour
     private void OnLobbyMatchList(LobbyMatchList_t callback)
     {
         uint lobbyCount = callback.m_nLobbiesMatching;
-        Debug.Log($"[LobbyManager] 找到 {lobbyCount} 个匹配的Lobby。");
+        Debug.Log($"[LobbyManager] OnLobbyMatchList 回调被触发。找到 {lobbyCount} 个匹配的Lobby。");
 
         for (int i = 0; i < lobbyCount; i++)
         {
