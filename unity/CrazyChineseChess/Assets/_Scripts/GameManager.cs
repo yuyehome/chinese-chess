@@ -119,6 +119,7 @@ public class GameManager : MonoBehaviour
 
             gnm.OnLocalPlayerDataReady += InitializeLocalPlayerController;
             Debug.Log("[Client] 已订阅 OnLocalPlayerDataReady 事件，等待服务器分配阵营。");
+            Debug.Log($"[GameManager-DIAGNOSTIC] I am a client (IsHost: {InstanceFinder.IsHost}). Subscribed to OnLocalPlayerDataReady event.");
 
             // 注册玩家
             if (SteamManager.Instance != null && SteamManager.Instance.IsSteamInitialized)
@@ -134,6 +135,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void InitializeLocalPlayerController(PlayerNetData localPlayerData)
     {
+        Debug.Log($"[GameManager-DIAGNOSTIC] CALLBACK TRIGGERED: InitializeLocalPlayerController for color {localPlayerData.Color}.");
         // 安全起见，只执行一次
         GameNetworkManager.Instance.OnLocalPlayerDataReady -= InitializeLocalPlayerController;
 

@@ -79,6 +79,9 @@ public class GameNetworkManager : NetworkBehaviour
 
     private void OnPlayersDictionaryChanged(SyncDictionaryOperation op, int key, PlayerNetData item, bool asServer)
     {
+        // 这条日志会显示每一次SyncDict的变化
+        Debug.Log($"[GNM-DIAGNOSTIC] OnPlayersDictionaryChanged triggered. asServer: {asServer}, Op: {op}, Key: {key}, Color: {item.Color}, MyClientId: {base.ClientManager.Connection.ClientId}");
+
         // 我们只关心客户端的逻辑，并且只在新的键值对被添加到字典时处理
         // item 参数现在代表的是被添加/修改/删除的那个 PlayerNetData
         if (asServer || op != SyncDictionaryOperation.Add)
@@ -170,6 +173,7 @@ public class GameNetworkManager : NetworkBehaviour
         // 使用 TryAdd 或直接赋值，防止因为重复注册导致错误
         if (!AllPlayers.ContainsKey(connectionId))
         {
+            Debug.Log($"[GNM-DIAGNOSTIC-SERVER] Adding player to SyncDictionary. ConnectionId: {connectionId}, Color: {color}");
             AllPlayers.Add(connectionId, playerData);
             Debug.Log($"[Server] 玩家注册: Id={connectionId}, Name={playerName}, Color={color}");
         }
