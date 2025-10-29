@@ -26,13 +26,25 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
     private List<Vector2Int> currentValidMoves = new List<Vector2Int>();
     private List<Vector2Int> lastCalculatedValidMoves = new List<Vector2Int>();
 
+    private void Awake()
+    {
+        // 默认禁用自身，等待GameManager在正确的时机通过Initialize()来激活。
+        // 这样可以防止在未初始化完成时执行Update逻辑。
+        this.enabled = false;
+        Debug.Log("[InputController] PlayerInputController Awake: aelf-disabled, waiting for initialization.");
+    }
+
     public void Initialize(PlayerColor color, GameManager manager)
     {
         this.assignedColor = color;
         this.gameManager = manager;
-        this.boardRenderer = gameManager.BoardRenderer; // 从GameManager获取引用
+        this.boardRenderer = gameManager.BoardRenderer;
         this.mainCamera = Camera.main;
-        Debug.Log($"[InputController] 玩家输入控制器已为 {assignedColor} 方初始化。");
+
+        // 关键：在初始化完成后，启用此组件，使其Update()方法开始执行。
+        this.enabled = true;
+
+        Debug.Log($"[InputController] PlayerInputController has been initialized for {assignedColor} and is now enabled.");
     }
 
     private void Update()

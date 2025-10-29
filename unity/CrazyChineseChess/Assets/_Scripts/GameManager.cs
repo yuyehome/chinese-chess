@@ -155,7 +155,6 @@ public class GameManager : MonoBehaviour
         }
 
         playerController.Initialize(localPlayerData.Color, this);
-        playerController.enabled = true; // 确保组件是启用的
 
         // 将控制器存入字典
         controllers.Add(localPlayerData.Color, playerController);

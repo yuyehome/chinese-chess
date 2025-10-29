@@ -74,25 +74,22 @@ public class GameNetworkManager : NetworkBehaviour
     public override void OnStopClient()
     {
         base.OnStopClient();
-        // 良好习惯：断开连接时取消订阅
-        if (AllPlayers != null)
-        {
-            AllPlayers.OnChange -= OnPlayersDictionaryChanged;
-        }
+        AllPlayers.OnChange -= OnPlayersDictionaryChanged;
     }
 
-    private void OnPlayersDictionaryChanged(SyncDictionaryOperation op, int key, PlayerNetData oldItem, PlayerNetData newItem, bool asServer)
+    private void OnPlayersDictionaryChanged(SyncDictionaryOperation op, int key, PlayerNetData item, bool asServer)
     {
-        // 我们只关心客户端的逻辑，并且只关心有新玩家数据被添加或更新时
-        if (asServer || (op != SyncDictionaryOperation.Add && op != SyncDictionaryOperation.Set))
+        // 我们只关心客户端的逻辑，并且只在新的键值对被添加到字典时处理
+        // item 参数现在代表的是被添加/修改/删除的那个 PlayerNetData
+        if (asServer || op != SyncDictionaryOperation.Add)
             return;
 
         // 检查变化的key是否是自己的连接ID
         if (key == base.ClientManager.Connection.ClientId)
         {
-            Debug.Log($"[Client] 接收到自己的玩家数据更新! 颜色: {newItem.Color}");
+            Debug.Log($"[Client] 接收到自己的玩家数据更新! 颜色: {item.Color}");
             // 触发事件，通知GameManager初始化玩家控制器
-            OnLocalPlayerDataReady?.Invoke(newItem);
+            OnLocalPlayerDataReady?.Invoke(item);
         }
     }
 
