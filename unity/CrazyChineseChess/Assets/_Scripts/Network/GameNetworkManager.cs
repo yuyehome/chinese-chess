@@ -18,6 +18,11 @@ public class GameNetworkManager : NetworkBehaviour
     public static GameNetworkManager Instance { get; private set; }
     public static event Action<GameNetworkManager> OnInstanceReady;
 
+    /// <summary>
+    /// 当本地玩家的数据准备好时触发。参数是本地玩家的网络数据。
+    /// </summary>
+    public event Action<PlayerNetData> OnLocalPlayerDataReady;
+
     // 使用SyncDictionary来同步所有玩家的数据
     // Key: 客户端的ConnectionId, Value: 玩家网络数据
     public readonly SyncDictionary<int, PlayerNetData> AllPlayers = new SyncDictionary<int, PlayerNetData>();
@@ -61,6 +66,34 @@ public class GameNetworkManager : NetworkBehaviour
         base.OnStartClient();
         Debug.Log("[GameNetworkManager] OnStartClient: Firing OnInstanceReady.");
         OnInstanceReady?.Invoke(this);
+
+        // 订阅SyncDictionary的变化事件，这是接收到自己阵营信息的关键
+        AllPlayers.OnChange += OnPlayersDictionaryChanged;
+    }
+
+    public override void OnStopClient()
+    {
+        base.OnStopClient();
+        // 良好习惯：断开连接时取消订阅
+        if (AllPlayers != null)
+        {
+            AllPlayers.OnChange -= OnPlayersDictionaryChanged;
+        }
+    }
+
+    private void OnPlayersDictionaryChanged(SyncDictionaryOperation op, int key, PlayerNetData oldItem, PlayerNetData newItem, bool asServer)
+    {
+        // 我们只关心客户端的逻辑，并且只关心有新玩家数据被添加或更新时
+        if (asServer || (op != SyncDictionaryOperation.Add && op != SyncDictionaryOperation.Set))
+            return;
+
+        // 检查变化的key是否是自己的连接ID
+        if (key == base.ClientManager.Connection.ClientId)
+        {
+            Debug.Log($"[Client] 接收到自己的玩家数据更新! 颜色: {newItem.Color}");
+            // 触发事件，通知GameManager初始化玩家控制器
+            OnLocalPlayerDataReady?.Invoke(newItem);
+        }
     }
 
     /// <summary>

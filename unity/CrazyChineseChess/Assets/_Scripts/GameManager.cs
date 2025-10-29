@@ -117,6 +117,9 @@ public class GameManager : MonoBehaviour
             }
             Debug.Log("[Client] 客户端初始化完成。正在等待服务器生成棋子...");
 
+            gnm.OnLocalPlayerDataReady += InitializeLocalPlayerController;
+            Debug.Log("[Client] 已订阅 OnLocalPlayerDataReady 事件，等待服务器分配阵营。");
+
             // 注册玩家
             if (SteamManager.Instance != null && SteamManager.Instance.IsSteamInitialized)
             {
@@ -125,6 +128,39 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+
+    /// <summary>
+    /// 当从服务器接收到本地玩家的数据后，此方法被调用。
+    /// </summary>
+    private void InitializeLocalPlayerController(PlayerNetData localPlayerData)
+    {
+        // 安全起见，只执行一次
+        GameNetworkManager.Instance.OnLocalPlayerDataReady -= InitializeLocalPlayerController;
+
+        // 检查是否已经存在控制器
+        if (controllers.ContainsKey(localPlayerData.Color))
+        {
+            Debug.LogWarning($"[GameManager] 尝试为 {localPlayerData.Color} 方重复初始化控制器。");
+            return;
+        }
+
+        Debug.Log($"[GameManager] 正在为本地玩家初始化控制器，阵营: {localPlayerData.Color}");
+
+        // 添加并初始化 PlayerInputController
+        PlayerInputController playerController = GetComponent<PlayerInputController>();
+        if (playerController == null)
+        {
+            playerController = gameObject.AddComponent<PlayerInputController>();
+            Debug.Log("[GameManager] 已为GameObject添加 PlayerInputController 组件。");
+        }
+
+        playerController.Initialize(localPlayerData.Color, this);
+        playerController.enabled = true; // 确保组件是启用的
+
+        // 将控制器存入字典
+        controllers.Add(localPlayerData.Color, playerController);
+    }
+
 
     private void InitializeForPVE()
     {
