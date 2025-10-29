@@ -52,8 +52,9 @@ public class GameNetworkManager : NetworkBehaviour
     public override void OnStartServer()
     {
         base.OnStartServer();
-        Debug.Log("[GameNetworkManager] OnStartServer: Firing OnInstanceReady.");
+        Debug.Log("[DIAG-1A] GameNetworkManager.OnStartServer CALLED. Firing OnInstanceReady...");
         OnInstanceReady?.Invoke(this);
+        Debug.Log("[DIAG-1B] GameNetworkManager.OnInstanceReady FIRED.");
     }
 
     public override void OnStartClient()
@@ -142,11 +143,10 @@ public class GameNetworkManager : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void CmdRegisterPlayer(CSteamID steamId, string playerName, FishNet.Connection.NetworkConnection conn = null)
     {
-        // conn 参数是FishNet自动填充的，代表调用此RPC的客户端连接
+        Debug.Log($"[DIAG-4A] CmdRegisterPlayer EXECUTED on server. Called by ConnectionId: {conn.ClientId}. IsLocalClient: {conn.IsLocalClient}.");
+
         int connectionId = conn.ClientId;
 
-        // 修正颜色分配逻辑：
-        // 查找是否已经有红方玩家了
         bool redPlayerExists = false;
         foreach (var player in AllPlayers.Values)
         {
@@ -156,43 +156,39 @@ public class GameNetworkManager : NetworkBehaviour
                 break;
             }
         }
-
         PlayerColor color = redPlayerExists ? PlayerColor.Black : PlayerColor.Red;
-
         var playerData = new PlayerNetData(steamId, playerName, color);
 
-        // 使用 TryAdd 或直接赋值，防止因为重复注册导致错误
         if (!AllPlayers.ContainsKey(connectionId))
         {
-            Debug.Log($"[GNM-DIAGNOSTIC-SERVER] Adding player to SyncDictionary. ConnectionId: {connectionId}, Color: {color}");
             AllPlayers.Add(connectionId, playerData);
-            Debug.Log($"[Server] 玩家注册: Id={connectionId}, Name={playerName}, Color={color}");
+            Debug.Log($"[DIAG-4B] Player registered: Id={connectionId}, Name={playerName}, Color={color}.");
 
-            // --- 核心修复逻辑 ---
-            // 判断调用此RPC的连接是否是服务器本地的客户端 (即Host)
-            if (conn.IsLocalClient)
+            // --- 最终修复逻辑 ---
+            // 直接判断连接ID是否为0，这是Host更可靠的标识
+            // ServerManager.Clients[0] 是服务器/Host自己的连接
+            if (connectionId == 0)
             {
-                // 如果是Host，则直接在服务器上调用初始化方法，绕过网络RPC
-                Debug.Log($"[Server-Host] 检测到Host本地注册，直接初始化控制器...");
+                Debug.Log("[DIAG-4C-HOST] ConnectionId is 0. This is the Host. Attempting to initialize controller directly.");
                 if (GameManager.Instance != null)
                 {
+                    Debug.Log("[DIAG-4D-HOST] GameManager.Instance is NOT null. Calling InitializeLocalPlayerController...");
                     GameManager.Instance.InitializeLocalPlayerController(playerData);
                 }
                 else
                 {
-                    Debug.LogError("[Server-Host] 无法找到GameManager.Instance来初始化Host控制器！");
+                    Debug.LogError("[DIAG-4E-HOST-ERROR] FATAL: GameManager.Instance IS NULL here! Cannot initialize controller.");
                 }
             }
             else
             {
-                // 如果是远程客户端，则使用TargetRpc通知它
-                Debug.Log($"[Server-Remote] 检测到远程客户端注册，发送TargetRpc...");
+                Debug.Log($"[DIAG-4C-CLIENT] ConnectionId is {connectionId}. This is a remote client. Sending TargetRpc...");
                 Target_SetPlayerColor(conn, playerData);
             }
         }
         else
         {
-            Debug.LogWarning($"[Server] 玩家 {connectionId} 尝试重复注册。");
+            Debug.LogWarning($"[DIAG-4F] Player {connectionId} tried to register again.");
         }
     }
 
@@ -235,10 +231,20 @@ public class GameNetworkManager : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void CmdRequestMove(Vector2Int from, Vector2Int to, FishNet.Connection.NetworkConnection sender = null)
     {
-        // 1. 安全性检查：根据发送者ID，从已注册的玩家列表中查找数据
-        if (!AllPlayers.TryGetValue(sender.ClientId, out PlayerNetData playerData))
+        int connectionId = sender.ClientId;
+
+        // --- 核心修复逻辑 ---
+        // 如果ClientId是short.MaxValue (32767)，说明这是服务器/Host自己发起的调用。
+        // 在我们的逻辑中，Host注册时使用的ID是0。所以这里需要做一个ID转换。
+        if (connectionId == short.MaxValue)
         {
-            Debug.LogError($"[Server] 收到来自未注册玩家(ID: {sender.ClientId})的移动请求，已忽略。");
+            connectionId = 0;
+        }
+
+        // 1. 安全性检查：根据修正后的ID，从已注册的玩家列表中查找数据
+        if (!AllPlayers.TryGetValue(connectionId, out PlayerNetData playerData))
+        {
+            Debug.LogError($"[Server] 收到来自未注册玩家(ID: {sender.ClientId}, Mapped to: {connectionId})的移动请求，已忽略。");
             return;
         }
 

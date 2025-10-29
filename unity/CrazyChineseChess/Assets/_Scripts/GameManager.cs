@@ -70,10 +70,11 @@ public class GameManager : MonoBehaviour
 
         if (isPVPMode)
         {
-            Debug.Log("[System] 检测到PVP模式，正在等待GameNetworkManager就绪...");
+            Debug.Log("[DIAG-S1] GameManager.Start in PVP Mode. Subscribing to OnInstanceReady.");
             GameNetworkManager.OnInstanceReady += HandlePVPInitialization;
             if (GameNetworkManager.Instance != null && GameNetworkManager.Instance.IsSpawned)
             {
+                Debug.Log("[DIAG-S2] GameNetworkManager was already ready, calling HandlePVPInitialization directly.");
                 HandlePVPInitialization(GameNetworkManager.Instance);
             }
         }
@@ -91,11 +92,18 @@ public class GameManager : MonoBehaviour
 
     private void HandlePVPInitialization(GameNetworkManager gnm)
     {
-        if (pvpInitialized) return;
+        Debug.Log("[DIAG-2A] GameManager.HandlePVPInitialization CALLED.");
+
+        if (pvpInitialized)
+        {
+            Debug.LogWarning("[DIAG-2B] HandlePVPInitialization aborted: already initialized.");
+            return;
+        }
         pvpInitialized = true;
+
         GameNetworkManager.OnInstanceReady -= HandlePVPInitialization;
 
-        Debug.Log("[GameManager] GameNetworkManager is ready. Starting PVP initialization.");
+        Debug.Log("[DIAG-2C] GameManager is starting PVP initialization logic.");
 
         if (InstanceFinder.IsServer)
         {
@@ -122,8 +130,9 @@ public class GameManager : MonoBehaviour
             // 注册玩家
             if (SteamManager.Instance != null && SteamManager.Instance.IsSteamInitialized)
             {
+                Debug.Log("[DIAG-3A] GameManager is about to call CmdRegisterPlayer.");
                 gnm.CmdRegisterPlayer(SteamManager.Instance.PlayerSteamId, SteamManager.Instance.PlayerName);
-                Debug.Log("[Client] 已向服务器发送注册请求。");
+                Debug.Log("[DIAG-3B] GameManager has called CmdRegisterPlayer.");
             }
         }
     }
@@ -133,44 +142,37 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void InitializeLocalPlayerController(PlayerNetData localPlayerData)
     {
-        Debug.Log($"[GameManager-DIAGNOSTIC] CALLBACK TRIGGERED: InitializeLocalPlayerController for color {localPlayerData.Color}.");
+        Debug.Log($"[DIAG-5A] InitializeLocalPlayerController CALLED for color {localPlayerData.Color}.");
 
-        // 检查是否已经存在控制器
         if (controllers.ContainsKey(localPlayerData.Color))
         {
-            Debug.LogWarning($"[GameManager] 尝试为 {localPlayerData.Color} 方重复初始化控制器。");
+            Debug.LogWarning($"[DIAG-5B] Controller for {localPlayerData.Color} already exists. Aborting.");
             return;
         }
 
-        Debug.Log($"[GameManager] 正在为本地玩家初始化控制器，阵营: {localPlayerData.Color}");
-
-        // 添加并初始化 PlayerInputController
+        Debug.Log($"[DIAG-5C] Getting or adding PlayerInputController component...");
         PlayerInputController playerController = GetComponent<PlayerInputController>();
         if (playerController == null)
         {
             playerController = gameObject.AddComponent<PlayerInputController>();
-            Debug.Log("[GameManager] 已为GameObject添加 PlayerInputController 组件。");
+            Debug.Log("[DIAG-5D] PlayerInputController component was ADDED.");
         }
-
-        playerController.Initialize(localPlayerData.Color, this);
-
-        if (localPlayerData.Color == PlayerColor.Black)
+        else
         {
-            // 如果是黑方玩家，则旋转相机
-            Debug.Log("[Client Setup] 检测到本地玩家为黑方，正在调整视角...");
-            Camera mainCamera = Camera.main;
-            if (mainCamera != null)
-            {
-                // 获取相机当前父对象的旋转（如果有的话），或者直接旋转相机
-                // 假设相机没有父对象或者父对象无旋转
-                mainCamera.transform.rotation = Quaternion.Euler(0, 180f, 0);
-            }
+            Debug.Log("[DIAG-5E] PlayerInputController component was FOUND.");
         }
 
-        // 将控制器存入字典
-        controllers.Add(localPlayerData.Color, playerController);
+        if (playerController != null)
+        {
+            Debug.Log("[DIAG-5F] playerController is valid. Calling its Initialize method...");
+            playerController.Initialize(localPlayerData.Color, this);
+            controllers.Add(localPlayerData.Color, playerController);
+        }
+        else
+        {
+            Debug.LogError("[DIAG-5G-ERROR] FATAL: playerController is NULL after get/add! Cannot initialize.");
+        }
     }
-
 
     private void InitializeForPVE()
     {

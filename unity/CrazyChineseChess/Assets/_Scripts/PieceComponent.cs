@@ -92,7 +92,6 @@ public class PieceComponent : NetworkBehaviour
             this.RTState = new RealTimePieceState();
             // 使用 BoardPosition 作为初始的 LogicalPosition
             this.RTState.LogicalPosition = this.BoardPosition;
-            Debug.Log($"[{(IsServer ? "Server" : (IsClient ? "Client" : "Local"))}] 棋子 {gameObject.name} 的 RTState 已初始化。");
         }
 
         // 标记为已初始化，并取消订阅，因为我们只需要执行一次

@@ -36,36 +36,28 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
 
     public void Initialize(PlayerColor color, GameManager manager)
     {
+        Debug.Log($"[DIAG-6A] PlayerInputController.Initialize CALLED for color {color}.");
         this.assignedColor = color;
         this.gameManager = manager;
         this.boardRenderer = gameManager.BoardRenderer;
         this.mainCamera = Camera.main;
 
         // 关键：在初始化完成后，启用此组件，使其Update()方法开始执行。
+        Debug.Log("[DIAG-6B] About to set this.enabled = true...");
         this.enabled = true;
-
-        Debug.Log($"[InputController] PlayerInputController has been initialized for {assignedColor} and is now enabled.");
+        Debug.Log($"[DIAG-6C] PlayerInputController for {assignedColor} is now ENABLED. Is component enabled? {this.enabled}");
     }
 
     private void Update()
     {
-        Debug.Log($"update 1");
         if (gameManager == null)
         {
             // 这个日志不应该出现，如果出现说明Initialize完全没被调用
             Debug.LogError("[InputController-DIAGNOSTIC] GameManager is NULL in Update!");
             return;
         }
-        Debug.Log($"update 2");
 
         if (gameManager.IsGameEnded) return;
-
-        Debug.Log($"update 3");
-
-        // 日志 1: 检查Update是否在为正确的阵营运行
-        // 这个日志会每帧都刷，有点烦人，但在找到问题前很有用。找到问题后可以注释掉。
-        Debug.Log($"[InputController-DIAG-FRAME] Update running for color: {assignedColor}. IsMouseBtnDown: {Input.GetMouseButtonDown(0)}");
-        // ----- DIAGNOSTIC LOG END -----
 
         // 实时更新选中棋子的高亮（处理动态炮架等情况）
         UpdateSelectionHighlights();
