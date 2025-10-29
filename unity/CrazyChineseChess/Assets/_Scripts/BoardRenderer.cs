@@ -11,6 +11,8 @@ using System.Collections;
 /// </summary>
 public class BoardRenderer : MonoBehaviour
 {
+    public static BoardRenderer Instance { get; private set; }
+
     [Header("Prefabs & Materials")]
     [Tooltip("棋子的3D模型预制件")]
     public GameObject gamePiecePrefab;
@@ -36,6 +38,13 @@ public class BoardRenderer : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
         // 在开始时缓存Layer的整数值，比每次用字符串查找更高效
         defaultLayer = LayerMask.NameToLayer("Default");
         etherealLayer = LayerMask.NameToLayer("EtherealPieces");
@@ -52,7 +61,7 @@ public class BoardRenderer : MonoBehaviour
     private GameObject activeSelectionMarker = null;
 
     // UV坐标映射字典，用于从贴图集中选择正确的棋子文字
-    private readonly Dictionary<PieceType, Vector2> uvOffsets = new Dictionary<PieceType, Vector2>()
+    public readonly Dictionary<PieceType, Vector2> uvOffsets = new Dictionary<PieceType, Vector2>()
     {
         { PieceType.General,   new Vector2(0.0f, 0.5f) },
         { PieceType.Advisor,   new Vector2(0.25f, 0.5f) },
@@ -174,6 +183,35 @@ public class BoardRenderer : MonoBehaviour
     #endregion
 
     #region Public Utility & Setup Methods
+
+    /// <summary>
+    /// 公共方法，用于设置单个棋子的视觉表现（材质和UV）。
+    /// </summary>
+    public void SetupPieceVisuals(PieceComponent pc)
+    {
+        MeshRenderer renderer = pc.GetComponent<MeshRenderer>();
+        if (renderer == null) return;
+
+        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
+        renderer.GetPropertyBlock(propBlock);
+
+        // 1. 设置材质，通过 .Value 访问同步变量
+        renderer.material = (pc.Color.Value == PlayerColor.Red) ? redPieceMaterial : blackPieceMaterial;
+
+        // 2. 设置UV偏移，通过 .Value 访问同步变量
+        if (uvOffsets.ContainsKey(pc.Type.Value))
+        {
+            Vector2 offset = uvOffsets[pc.Type.Value];
+            propBlock.SetVector("_MainTex_ST", new Vector4(0.25f, 0.5f, offset.x, offset.y));
+        }
+
+        // 3. 重置高光
+        propBlock.SetColor("_EmissionColor", Color.black);
+        renderer.SetPropertyBlock(propBlock);
+
+        // 4. (重要) 在视觉数组中注册这个棋子
+        pieceObjects[pc.BoardPosition.x, pc.BoardPosition.y] = pc.gameObject;
+    }
 
     /// <summary>
     /// 根据BoardState数据，完全重新绘制整个棋盘。通常只在游戏开始时调用。
@@ -330,6 +368,7 @@ public class BoardRenderer : MonoBehaviour
 
     /// <summary>
     /// 创建单个棋子的GameObject并放置在棋盘上。
+    /// 这个方法现在【仅用于单机模式】的RenderBoard调用。
     /// </summary>
     private void CreatePieceObject(Piece piece, Vector2Int position)
     {
@@ -342,26 +381,24 @@ public class BoardRenderer : MonoBehaviour
         PieceComponent pc = pieceGO.GetComponent<PieceComponent>();
         if (pc != null)
         {
+            // 这是单机模式，我们直接设置PieceComponent的本地变量。
+            // 对于 SyncVar<T> 类型的字段，我们需要给其 .Value 属性赋值。
+            // 虽然在单机模式下网络同步不起作用，但为了保持组件状态的一致性，
+            // 这样做是正确的。
+            pc.Type.Value = piece.Type;
+            pc.Color.Value = piece.Color;
             pc.BoardPosition = position;
-            pc.PieceData = piece;
         }
 
-        // 设置材质和贴图
-        MeshRenderer renderer = pieceGO.GetComponent<MeshRenderer>();
-        if (renderer == null) return;
-        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
-        renderer.GetPropertyBlock(propBlock);
-        renderer.material = (piece.Color == PlayerColor.Red) ? redPieceMaterial : blackPieceMaterial;
-        if (uvOffsets.ContainsKey(piece.Type))
+        // 复用公共方法来设置视觉效果
+        if (pc != null)
         {
-            Vector2 offset = uvOffsets[piece.Type];
-            propBlock.SetVector("_MainTex_ST", new Vector4(0.25f, 0.5f, offset.x, offset.y));
+            // 注意：因为这是单机模式，我们不需要像网络模式那样延迟一帧。
+            // 直接调用即可。
+            SetupPieceVisuals(pc);
         }
-        propBlock.SetColor("_EmissionColor", Color.black);
-        renderer.SetPropertyBlock(propBlock);
 
-        // 存储对GameObject的引用
-        pieceObjects[position.x, position.y] = pieceGO;
+        // 存储对GameObject的引用 (这一步已移至SetupPieceVisuals中)
     }
 
     /// <summary>
@@ -412,7 +449,7 @@ public class BoardRenderer : MonoBehaviour
     /// <summary>
     /// 将棋盘格子坐标转换为相对于此对象的本地3D坐标。
     /// </summary>
-    private Vector3 GetLocalPosition(int x, int y)
+    public Vector3 GetLocalPosition(int x, int y)
     {
         const float boardLogicalWidth = 0.45f;
         const float boardLogicalHeight = 0.45f * (10f / 9f);
@@ -424,6 +461,25 @@ public class BoardRenderer : MonoBehaviour
         float zPos = y * cellHeight - zOffset;
         float pieceHeight = 0.0175f;
         return new Vector3(xPos, pieceHeight / 2f, zPos);
+    }
+
+    /// <summary>
+    /// 将本地3D坐标反向转换为棋盘格子坐标。
+    /// 主要供客户端在棋子生成时确定自己的逻辑位置。
+    /// </summary>
+    public Vector2Int GetBoardPosition(Vector3 localPosition)
+    {
+        const float boardLogicalWidth = 0.45f;
+        const float boardLogicalHeight = 0.45f * (10f / 9f);
+        float cellWidth = boardLogicalWidth / (BoardState.BOARD_WIDTH - 1);
+        float cellHeight = boardLogicalHeight / (BoardState.BOARD_HEIGHT - 1);
+        float xOffset = boardLogicalWidth / 2f;
+        float zOffset = boardLogicalHeight / 2f;
+
+        int x = Mathf.RoundToInt((localPosition.x + xOffset) / cellWidth);
+        int y = Mathf.RoundToInt((localPosition.z + zOffset) / cellHeight);
+
+        return new Vector2Int(x, y);
     }
 
     #endregion

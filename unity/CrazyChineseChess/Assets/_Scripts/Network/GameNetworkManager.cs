@@ -5,7 +5,8 @@ using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using System.Collections.Generic;
 using Steamworks;
-using System; 
+using System;
+using FishNet.Managing.Server;
 
 /// <summary>
 /// 游戏网络逻辑的中心枢纽。
@@ -21,8 +22,9 @@ public class GameNetworkManager : NetworkBehaviour
     // Key: 客户端的ConnectionId, Value: 玩家网络数据
     public readonly SyncDictionary<int, PlayerNetData> AllPlayers = new SyncDictionary<int, PlayerNetData>();
 
-    // 使用SyncList来同步棋盘上所有棋子的数据
-    public readonly SyncList<NetworkPieceData> AllPieces = new SyncList<NetworkPieceData>();
+    [Header("网络对象 Prefabs")]
+    [Tooltip("必须挂载了 NetworkObject 组件的棋子Prefab")]
+    public GameObject networkPiecePrefab; // 引用我们改造过的棋子Prefab
 
     private void Awake()
     {
@@ -62,7 +64,7 @@ public class GameNetworkManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// [Server Only] 根据权威的 BoardState 初始化并填充 AllPieces 同步列表。
+    /// [Server Only] 根据权威的 BoardState，在网络中生成所有棋子。
     /// </summary>
     [Server]
     public void Server_InitializeBoard(BoardState boardState)
@@ -73,10 +75,15 @@ public class GameNetworkManager : NetworkBehaviour
             return;
         }
 
-        AllPieces.Clear(); // 清空旧数据
-        byte currentId = 0;
+        if (networkPiecePrefab == null)
+        {
+            Debug.LogError("[Server] GameNetworkManager上的 NetworkPiecePrefab 未被指定！无法生成棋子。");
+            return;
+        }
 
-        // 遍历逻辑棋盘，为每个棋子创建网络数据并添加到同步列表中
+        Debug.Log("[Server] 开始在网络上生成棋子...");
+        int spawnedCount = 0;
+
         for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
         {
             for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
@@ -86,16 +93,25 @@ public class GameNetworkManager : NetworkBehaviour
 
                 if (piece.Type != PieceType.None)
                 {
-                    var netPiece = new NetworkPieceData(currentId, piece.Type, piece.Color, pos);
-                    AllPieces.Add(netPiece);
-                    currentId++;
+                    // 1. 在服务器上实例化Prefab
+                    GameObject pieceInstance = Instantiate(networkPiecePrefab, BoardRenderer.Instance.transform);
+                    pieceInstance.transform.localPosition = BoardRenderer.Instance.GetLocalPosition(x, y);
+
+                    // 2. 获取组件并调用本地方法设置[SyncVar]的初始值
+                    PieceComponent pc = pieceInstance.GetComponent<PieceComponent>();
+                    pc.Initialize(piece, pos);
+
+                    // 3. (核心) 在网络上生成该对象。
+                    // FishNet会自动将pc上的[SyncVar]值同步给客户端。
+                    base.ServerManager.Spawn(pieceInstance);
+
+                    spawnedCount++;
                 }
             }
         }
 
-        Debug.Log($"[Server] 棋盘状态已初始化，共 {AllPieces.Count} 个棋子被添加到同步列表。");
+        Debug.Log($"[Server] 棋盘初始化完成，共生成了 {spawnedCount} 个网络化棋子。");
     }
-
     /// <summary>
     /// [Server Rpc] 客户端在进入游戏场景后，调用此方法向服务器注册自己的信息。
     /// </summary>

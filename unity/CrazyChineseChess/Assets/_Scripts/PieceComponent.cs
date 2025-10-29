@@ -1,27 +1,70 @@
 // File: _Scripts/PieceComponent.cs
-
 using UnityEngine;
+using FishNet.Object;
+using FishNet.Object.Synchronizing;
 
 /// <summary>
-/// 挂载在棋子Prefab上的“身份证”组件。
-/// 它作为桥梁，连接了棋子的视觉表现(GameObject)和其背后的多种逻辑数据。
+/// 挂载在棋子Prefab上的网络化组件。
+/// 这是适用于最新版FishNet的最终正确实现。
 /// </summary>
-public class PieceComponent : MonoBehaviour
+public class PieceComponent : NetworkBehaviour
 {
-    /// <summary>
-    /// 棋子在棋盘逻辑坐标系中的位置。
-    /// 对于静止棋子，这是它在BoardState中的位置；对于移动中棋子，这是它的目标位置。
-    /// </summary>
+    // 【核心改动】将 readonly 关键字加回来！
+    // 这满足了 FishNet ILPP 的要求。
+    public readonly SyncVar<PieceType> Type = new SyncVar<PieceType>();
+    public readonly SyncVar<PlayerColor> Color = new SyncVar<PlayerColor>();
+
+    public Piece PieceData => new Piece(Type.Value, Color.Value);
+
     public Vector2Int BoardPosition { get; set; }
-
-    /// <summary>
-    /// 棋子的纯数据定义（类型、颜色）。
-    /// </summary>
-    public Piece PieceData { get; set; }
-
-    /// <summary>
-    /// 仅在实时模式下使用的棋子动态状态对象。
-    /// 在回合制模式下，这个值将保持为 null，从而实现模式隔离。
-    /// </summary>
     public RealTimePieceState RTState { get; set; }
+
+    private bool _visualsInitialized = false;
+
+    /// <summary>
+    /// [Server-Side Logic]
+    /// 初始化 [SyncVar] 的值。
+    /// 我们操作的是 .Value，而不是字段本身，所以这与 readonly 规则不冲突。
+    /// </summary>
+    public void Initialize(Piece piece, Vector2Int position)
+    {
+        Type.Value = piece.Type;
+        Color.Value = piece.Color;
+        BoardPosition = position;
+        gameObject.name = $"{piece.Color}_{piece.Type}_{position.x}_{position.y}";
+    }
+
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        if (_visualsInitialized) return;
+        SetupVisuals();
+    }
+
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+        SetupVisuals();
+    }
+
+    private void SetupVisuals()
+    {
+        if (_visualsInitialized) return;
+
+        if (!IsServer)
+        {
+            this.BoardPosition = BoardRenderer.Instance.GetBoardPosition(this.transform.localPosition);
+        }
+
+        if (BoardRenderer.Instance != null)
+        {
+            Debug.Log($"[{(IsServer ? "Server" : "Client")}] 棋子 {gameObject.name} (Type: {Type.Value}, Color: {Color.Value}) 已生成，正在设置视觉效果。坐标: {BoardPosition}");
+            BoardRenderer.Instance.SetupPieceVisuals(this);
+            _visualsInitialized = true;
+        }
+        else
+        {
+            Debug.LogError($"[{(IsServer ? "Server" : "Client")}] 棋子 {gameObject.name} 生成时，BoardRenderer.Instance 为空！视觉设置失败。");
+        }
+    }
 }
