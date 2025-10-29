@@ -34,38 +34,67 @@ public class PieceComponent : NetworkBehaviour
         gameObject.name = $"{piece.Color}_{piece.Type}_{position.x}_{position.y}";
     }
 
+
     public override void OnStartClient()
     {
         base.OnStartClient();
-        if (_visualsInitialized) return;
-        SetupVisuals();
+        // OnStartClient 可能在 BoardRenderer.Awake 之前被调用
+        // 所以我们不能在这里直接调用 SetupVisuals
+
+        // 尝试立即设置，如果 BoardRenderer 已经就绪，就直接完成
+        TrySetupVisuals();
     }
 
     public override void OnStartServer()
     {
         base.OnStartServer();
-        SetupVisuals();
+        // 服务器端通常不存在这个问题，但为了代码统一和健壮性，也使用同样逻辑
+        TrySetupVisuals();
     }
 
-    private void SetupVisuals()
+    private void OnEnable()
     {
-        if (_visualsInitialized) return;
+        // 订阅事件，以防我们在 BoardRenderer 就绪前就被激活
+        BoardRenderer.OnInstanceReady += TrySetupVisuals;
+    }
 
+    private void OnDisable()
+    {
+        // 良好习惯：在对象被禁用或销毁时取消订阅，防止内存泄漏
+        BoardRenderer.OnInstanceReady -= TrySetupVisuals;
+    }
+
+    /// <summary>
+    /// 尝试执行视觉设置。只有在 BoardRenderer 就绪且尚未初始化时才会执行。
+    /// </summary>
+    private void TrySetupVisuals()
+    {
+        // 如果已经初始化过，或者 BoardRenderer 还未准备好，则直接返回
+        if (_visualsInitialized || BoardRenderer.Instance == null)
+        {
+            return;
+        }
+
+        // --- 以下是原 SetupVisuals 的逻辑 ---
         if (!IsServer)
         {
             this.BoardPosition = BoardRenderer.Instance.GetBoardPosition(this.transform.localPosition);
         }
 
-        if (BoardRenderer.Instance != null)
-        {
-            Debug.Log($"[{(IsServer ? "Server" : "Client")}] 棋子 {gameObject.name} (Type: {Type.Value}, Color: {Color.Value}) 已生成，正在设置视觉效果。坐标: {BoardPosition}");
-            BoardRenderer.Instance.SetupPieceVisuals(this);
-            _visualsInitialized = true;
-        }
-        else
-        {
-            Debug.LogError($"[{(IsServer ? "Server" : "Client")}] 棋子 {gameObject.name} 生成时，BoardRenderer.Instance 为空！视觉设置失败。");
-        }
+        Debug.Log($"[{(IsServer ? "Server" : "Client")}] 棋子 {gameObject.name} (Type: {Type.Value}, Color: {Color.Value}) 已生成，正在设置视觉效果。坐标: {BoardPosition}");
+        BoardRenderer.Instance.SetupPieceVisuals(this);
+
+        // 标记为已初始化，并取消订阅，因为我们只需要执行一次
+        _visualsInitialized = true;
+        BoardRenderer.OnInstanceReady -= TrySetupVisuals;
+    }
+
+    public override void OnStartNetwork()
+    {
+        // 如果你的 FishNet 版本较新，有时 OnStartNetwork 会比 OnEnable 早，
+        // 我们可以在这里也进行一次尝试，确保万无一失。
+        base.OnStartNetwork();
+        TrySetupVisuals();
     }
 
     /// <summary>

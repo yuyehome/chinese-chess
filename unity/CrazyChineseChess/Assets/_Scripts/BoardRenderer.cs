@@ -13,6 +13,12 @@ public class BoardRenderer : MonoBehaviour
 {
     public static BoardRenderer Instance { get; private set; }
 
+    /// <summary>
+    /// 当BoardRenderer的单例Instance准备好时触发。
+    /// </summary>
+    public static event Action OnInstanceReady;
+
+
     [Header("Prefabs & Materials")]
     [Tooltip("棋子的3D模型预制件")]
     public GameObject gamePiecePrefab;
@@ -44,6 +50,9 @@ public class BoardRenderer : MonoBehaviour
             return;
         }
         Instance = this;
+
+        Debug.Log("[BoardRenderer] Instance is now set. Firing OnInstanceReady event.");
+        OnInstanceReady?.Invoke(); // 通知所有订阅者，我已经准备好了
 
         // 在开始时缓存Layer的整数值，比每次用字符串查找更高效
         defaultLayer = LayerMask.NameToLayer("Default");
