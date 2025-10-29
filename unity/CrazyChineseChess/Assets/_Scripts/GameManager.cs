@@ -1,5 +1,3 @@
-// File: _Scripts/Core/GameManager.cs
-
 using UnityEngine;
 using System;
 using System.Collections.Generic;
@@ -43,8 +41,6 @@ public class GameManager : MonoBehaviour
 
     private bool isPVPMode = false;
 
-    private bool pvpInitialized = false;
-
     private void Awake()
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
@@ -56,7 +52,6 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // BoardRenderer现在是一个单例，可以直接访问
         BoardRenderer = BoardRenderer.Instance;
         if (BoardRenderer == null)
         {
@@ -70,13 +65,10 @@ public class GameManager : MonoBehaviour
 
         if (isPVPMode)
         {
-            Debug.Log("[DIAG-S1] GameManager.Start in PVP Mode. Subscribing to OnInstanceReady.");
-            GameNetworkManager.OnInstanceReady += HandlePVPInitialization;
-            if (GameNetworkManager.Instance != null && GameNetworkManager.Instance.IsSpawned)
-            {
-                Debug.Log("[DIAG-S2] GameNetworkManager was already ready, calling HandlePVPInitialization directly.");
-                HandlePVPInitialization(GameNetworkManager.Instance);
-            }
+            Debug.Log("[GameManager] PVP模式已检测。正在订阅GameNetworkManager的启动事件...");
+            // 订阅来自GNM的事件，它将在服务器和客户端各自准备好时触发
+            GameNetworkManager.OnNetworkStart += HandleNetworkStart;
+            GameNetworkManager.OnLocalPlayerDataReceived += InitializeLocalPlayerController;
         }
         else
         {
@@ -87,55 +79,39 @@ public class GameManager : MonoBehaviour
 
     private void OnDestroy()
     {
-        GameNetworkManager.OnInstanceReady -= HandlePVPInitialization;
+        // 确保取消订阅所有事件
+        GameNetworkManager.OnNetworkStart -= HandleNetworkStart;
+        GameNetworkManager.OnLocalPlayerDataReceived -= InitializeLocalPlayerController;
     }
 
-    private void HandlePVPInitialization(GameNetworkManager gnm)
+    private void HandleNetworkStart(bool isServer)
     {
-        Debug.Log("[DIAG-2A] GameManager.HandlePVPInitialization CALLED.");
-
-        if (pvpInitialized)
+        Debug.Log($"[GameManager] 接到网络启动通知. IsServer: {isServer}");
+        if (isServer)
         {
-            Debug.LogWarning("[DIAG-2B] HandlePVPInitialization aborted: already initialized.");
-            return;
-        }
-        pvpInitialized = true;
-
-        GameNetworkManager.OnInstanceReady -= HandlePVPInitialization;
-
-        Debug.Log("[DIAG-2C] GameManager is starting PVP initialization logic.");
-
-        if (InstanceFinder.IsServer)
-        {
-            Debug.Log("[Server] 服务器正在初始化游戏逻辑模块...");
+            // 服务器端的初始化
+            if (currentGameMode != null) return;
+            Debug.Log("[GameManager-Server] 正在初始化服务器端游戏模式...");
             float collisionDistanceSquared = collisionDistance * collisionDistance;
             var rtController = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
             rtController.CombatManager.OnPieceKilled += HandlePieceKilled;
             currentGameMode = rtController;
 
-            // 在服务器上生成网络化棋盘
-            gnm.Server_InitializeBoard(CurrentBoardState);
+            // 命令GNM生成棋盘
+            if (GameNetworkManager.Instance != null)
+            {
+                GameNetworkManager.Instance.Server_InitializeBoard(CurrentBoardState);
+            }
         }
-
-        if (InstanceFinder.IsClient)
+        else
         {
-            if (currentGameMode == null)
-            {
-                currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, 0);
-            }
-            Debug.Log("[Client] 客户端初始化完成。正在等待服务器生成棋子...");
-
-            Debug.Log($"[GameManager-DIAGNOSTIC] I am a client (IsHost: {InstanceFinder.IsHost}). Subscribed to OnLocalPlayerDataReady event.");
-
-            // 注册玩家
-            if (SteamManager.Instance != null && SteamManager.Instance.IsSteamInitialized)
-            {
-                Debug.Log("[DIAG-3A] GameManager is about to call CmdRegisterPlayer.");
-                gnm.CmdRegisterPlayer(SteamManager.Instance.PlayerSteamId, SteamManager.Instance.PlayerName);
-                Debug.Log("[DIAG-3B] GameManager has called CmdRegisterPlayer.");
-            }
+            // 客户端端的初始化
+            if (currentGameMode != null) return;
+            Debug.Log("[GameManager-Client] 正在为客户端初始化游戏模式...");
+            currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, 0);
         }
     }
+
 
     /// <summary>
     /// 当从服务器接收到本地玩家的数据后，此方法被调用。
@@ -164,9 +140,19 @@ public class GameManager : MonoBehaviour
 
         if (playerController != null)
         {
-            Debug.Log("[DIAG-5F] playerController is valid. Calling its Initialize method...");
             playerController.Initialize(localPlayerData.Color, this);
             controllers.Add(localPlayerData.Color, playerController);
+
+            // 如果是黑方，旋转相机
+            if (localPlayerData.Color == PlayerColor.Black)
+            {
+                Debug.Log("[Client Setup] 检测到本地玩家为黑方，正在调整视角...");
+                Camera mainCamera = Camera.main;
+                if (mainCamera != null)
+                {
+                    mainCamera.transform.rotation = Quaternion.Euler(0, 180f, 0);
+                }
+            }
         }
         else
         {
@@ -323,13 +309,6 @@ public class GameManager : MonoBehaviour
                 if (pieceData.Type != PieceType.None && pieceData.Color == color)
                 {
                     var tempPc = new GameObject("TempPiece").AddComponent<PieceComponent>();
-                    // 这里不需要改，因为我们是给临时的本地对象赋值，而不是网络对象
-                    // tempPc.Type.Value = pieceData.Type; 
-                    // tempPc.Color.Value = pieceData.Color;
-                    // 上面的写法是错误的，因为SyncVar是readonly的，不能这样赋值。
-                    // 这个方法在网络模式下可能需要重新设计，但为了通过编译，我们暂时保持原样，
-                    // 假设它仅用于单机AI的模拟。
-                    // 为了让它编译通过，我们直接访问临时的PieceData
                     if (tempPc.PieceData.Color == color)
                     {
                         pieces.Add(tempPc);
@@ -346,7 +325,6 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void Client_RequestMove(Vector2Int from, Vector2Int to)
     {
-        // 客户端不执行任何游戏逻辑，而是通过GameNetworkManager向服务器发送RPC
         if (GameNetworkManager.Instance != null)
         {
             Debug.Log($"[Client] 发送移动请求到服务器: 从 {from} 到 {to}");
@@ -408,17 +386,12 @@ public class GameManager : MonoBehaviour
         {
             PieceComponent pieceToMove = rtController.ExecuteMoveCommand(from, to);
 
-            // 在单机模式下，我们直接调用棋子的 "RPC" 方法来播放动画，
-            // 因为它内部已经包含了动画播放和状态更新的完整逻辑。
             if (pieceToMove != null)
             {
-                // 这在单机模式下会安全地执行，因为 IsServer 会是 false，
-                // 所有的回调逻辑都会被正确地当作本地逻辑来处理。
                 pieceToMove.Observer_PlayMoveAnimation(from, to);
             }
         }
     }
-
 
     /// <summary>
     /// [统一入口] 请求移动棋子。
@@ -428,12 +401,10 @@ public class GameManager : MonoBehaviour
     {
         if (isPVPMode)
         {
-            // 在PVP模式下，调用客户端的请求方法
             Client_RequestMove(from, to);
         }
         else
         {
-            // 在单机模式下，直接执行本地逻辑
             Local_ProcessMoveRequest(color, from, to);
         }
     }
