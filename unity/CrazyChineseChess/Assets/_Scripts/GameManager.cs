@@ -154,6 +154,19 @@ public class GameManager : MonoBehaviour
 
         playerController.Initialize(localPlayerData.Color, this);
 
+        if (localPlayerData.Color == PlayerColor.Black)
+        {
+            // 如果是黑方玩家，则旋转相机
+            Debug.Log("[Client Setup] 检测到本地玩家为黑方，正在调整视角...");
+            Camera mainCamera = Camera.main;
+            if (mainCamera != null)
+            {
+                // 获取相机当前父对象的旋转（如果有的话），或者直接旋转相机
+                // 假设相机没有父对象或者父对象无旋转
+                mainCamera.transform.rotation = Quaternion.Euler(0, 180f, 0);
+            }
+        }
+
         // 将控制器存入字典
         controllers.Add(localPlayerData.Color, playerController);
     }

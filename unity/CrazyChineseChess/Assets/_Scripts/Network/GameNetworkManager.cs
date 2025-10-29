@@ -135,6 +135,7 @@ public class GameNetworkManager : NetworkBehaviour
 
         Debug.Log($"[Server] 棋盘初始化完成，共生成了 {spawnedCount} 个网络化棋子。");
     }
+
     /// <summary>
     /// [Server Rpc] 客户端在进入游戏场景后，调用此方法向服务器注册自己的信息。
     /// </summary>
@@ -166,14 +167,33 @@ public class GameNetworkManager : NetworkBehaviour
             Debug.Log($"[GNM-DIAGNOSTIC-SERVER] Adding player to SyncDictionary. ConnectionId: {connectionId}, Color: {color}");
             AllPlayers.Add(connectionId, playerData);
             Debug.Log($"[Server] 玩家注册: Id={connectionId}, Name={playerName}, Color={color}");
-            // 可靠地通知客户端它的阵营信息
-            Target_SetPlayerColor(conn, playerData);
+
+            // --- 核心修复逻辑 ---
+            // 判断调用此RPC的连接是否是服务器本地的客户端 (即Host)
+            if (conn.IsLocalClient)
+            {
+                // 如果是Host，则直接在服务器上调用初始化方法，绕过网络RPC
+                Debug.Log($"[Server-Host] 检测到Host本地注册，直接初始化控制器...");
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.InitializeLocalPlayerController(playerData);
+                }
+                else
+                {
+                    Debug.LogError("[Server-Host] 无法找到GameManager.Instance来初始化Host控制器！");
+                }
+            }
+            else
+            {
+                // 如果是远程客户端，则使用TargetRpc通知它
+                Debug.Log($"[Server-Remote] 检测到远程客户端注册，发送TargetRpc...");
+                Target_SetPlayerColor(conn, playerData);
+            }
         }
         else
         {
             Debug.LogWarning($"[Server] 玩家 {connectionId} 尝试重复注册。");
         }
-
     }
 
     /// <summary>
