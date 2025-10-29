@@ -33,6 +33,8 @@ public class LobbyManager : MonoBehaviour
 
     #region UI References
     [Header("UI引用 (Lobby列表)")]
+    [Header("Network Prefabs")]
+    public GameObject gameNetworkManagerPrefab; // 把你创建的 GameNetworkManager Prefab 拖到这里
     [Tooltip("Lobby列表项的Prefab")]
     public GameObject lobbyItemPrefab;
     [Tooltip("用于放置Lobby列表项的容器对象 (Content)")]
@@ -111,6 +113,8 @@ public class LobbyManager : MonoBehaviour
         _lobbyMatchList = Callback<LobbyMatchList_t>.Create(OnLobbyMatchList);
         _gameLobbyJoinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
         _lobbyChatUpdate = Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
+
+        _networkManager.SceneManager.OnLoadEnd += OnSceneLoadEnd;
     }
 
     private void OnDestroy()
@@ -121,7 +125,26 @@ public class LobbyManager : MonoBehaviour
             _networkManager.ServerManager.OnRemoteConnectionState -= ServerManager_OnRemoteConnectionState;
 
             _networkManager.ClientManager.OnClientConnectionState -= ClientManager_OnClientConnectionState;
+
+            _networkManager.SceneManager.OnLoadEnd -= OnSceneLoadEnd;
         }
+    }
+
+    private void OnSceneLoadEnd(SceneLoadEndEventArgs args)
+    {
+        // 我们只关心服务器端，并且只在 "Game" 场景加载完成后操作
+        if (!InstanceFinder.IsServer || args.LoadedScenes.Length == 0 || args.LoadedScenes[0].name != "Game")
+        {
+            return;
+        }
+
+        Debug.Log("[LobbyManager] 'Game' scene loaded on server. Spawning GameNetworkManager.");
+
+        // 实例化 GameNetworkManager Prefab
+        GameObject gnmInstance = Instantiate(gameNetworkManagerPrefab);
+
+        // 通过服务器生成这个实例，这样所有客户端都会同步创建它
+        InstanceFinder.ServerManager.Spawn(gnmInstance);
     }
 
     /// <summary>

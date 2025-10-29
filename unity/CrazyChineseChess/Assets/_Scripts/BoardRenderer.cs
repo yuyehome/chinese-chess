@@ -66,6 +66,82 @@ public class BoardRenderer : MonoBehaviour
     #region Public Action Methods
 
     /// <summary>
+    /// [Server-Only] 在服务器上生成所有网络化的棋子。
+    /// 此方法会实例化棋子Prefab，设置其SyncVar，然后通过FishNet的Spawn系统将其同步给所有客户端。
+    /// </summary>
+    public void Server_SpawnBoard(BoardState boardState)
+    {
+        if (!InstanceFinder.IsServer) return; // 服务器专属方法的安全检查
+
+        Debug.Log("[BoardRenderer] 服务器正在通过 Spawn 系统生成网络化棋盘...");
+
+        // 清理旧棋子 (用于游戏重开等情况)
+        foreach (Transform child in transform)
+        {
+            NetworkObject nob = child.GetComponent<NetworkObject>();
+            if (nob != null) InstanceFinder.ServerManager.Despawn(nob, DespawnType.Destroy);
+            else Destroy(child.gameObject);
+        }
+        System.Array.Clear(pieceObjects, 0, pieceObjects.Length);
+
+        // 遍历逻辑棋盘状态
+        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
+        {
+            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
+            {
+                var currentPos = new Vector2Int(x, y);
+                Piece piece = boardState.GetPieceAt(currentPos);
+                if (piece.Type != PieceType.None)
+                {
+                    GameObject pieceGO = Instantiate(gamePiecePrefab, this.transform);
+                    pieceGO.transform.localPosition = GetLocalPosition(x, y);
+
+                    // 设置视觉和组件数据
+                    SetupPieceVisuals(pieceGO, piece, currentPos);
+
+                    // 在服务器本地的数组中也记录下来
+                    pieceObjects[x, y] = pieceGO;
+
+                    // [核心] 在网络上生成此对象，这将自动在所有客户端创建它的克隆体
+                    InstanceFinder.ServerManager.Spawn(pieceGO);
+                }
+            }
+        }
+        Debug.Log($"[Server] {pieceObjects.Length}个棋格的棋盘生成完毕。");
+    }
+
+    /// <summary>
+    /// 辅助方法，用于设置棋子GameObject的视觉效果和组件数据(包括SyncVar)。
+    /// 在服务器Spawn前调用，以确保客户端收到的初始数据是正确的。
+    /// </summary>
+    private void SetupPieceVisuals(GameObject pieceGO, Piece piece, Vector2Int position)
+    {
+        pieceGO.name = $"{piece.Color}_{piece.Type}_{position.x}_{position.y}";
+
+        PieceComponent pc = pieceGO.GetComponent<PieceComponent>();
+        if (pc != null)
+        {
+            // 在服务器上设置 SyncVar 的值
+            pc.PieceData = piece;
+            pc.BoardPosition = position;
+        }
+
+        // --- 以下是纯视觉设置，仅在本地有效 ---
+        MeshRenderer renderer = pieceGO.GetComponent<MeshRenderer>();
+        if (renderer == null) return;
+        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
+        renderer.GetPropertyBlock(propBlock);
+        renderer.material = (piece.Color == PlayerColor.Red) ? redPieceMaterial : blackPieceMaterial;
+        if (uvOffsets.ContainsKey(piece.Type))
+        {
+            Vector2 offset = uvOffsets[piece.Type];
+            propBlock.SetVector("_MainTex_ST", new Vector4(0.25f, 0.5f, offset.x, offset.y));
+        }
+        propBlock.SetColor("_EmissionColor", Color.black);
+        renderer.SetPropertyBlock(propBlock);
+    }
+
+    /// <summary>
     /// 在视觉上启动一个棋子的移动动画。
     /// </summary>
     public void MovePiece(Vector2Int from, Vector2Int to, Action<PieceComponent, float> onProgressUpdate = null, Action<PieceComponent> onComplete = null)
@@ -174,25 +250,37 @@ public class BoardRenderer : MonoBehaviour
     #endregion
 
     #region Public Utility & Setup Methods
-
     /// <summary>
-    /// 根据BoardState数据，完全重新绘制整个棋盘。通常只在游戏开始时调用。
+    /// 根据BoardState数据，绘制整个棋盘。
+    /// 在网络模式下，此方法只负责清空旧棋子，因为新棋子由服务器Spawn。
+    /// 在单机模式下，此方法负责清空并创建所有棋子。
     /// </summary>
     public void RenderBoard(BoardState boardState)
     {
+        // 无论何种模式，都先清空棋盘
         foreach (Transform child in transform) Destroy(child.gameObject);
         System.Array.Clear(pieceObjects, 0, pieceObjects.Length);
 
-        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
+        // 如果是单机模式，则执行原有的渲染逻辑
+        if (!InstanceFinder.IsClient && !InstanceFinder.IsServer)
         {
-            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
+            Debug.Log("[BoardRenderer] 单机模式: 正在通过 Instantiate 创建棋盘...");
+            for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
             {
-                Piece piece = boardState.GetPieceAt(new Vector2Int(x, y));
-                if (piece.Type != PieceType.None)
+                for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
                 {
-                    CreatePieceObject(piece, new Vector2Int(x, y));
+                    Piece piece = boardState.GetPieceAt(new Vector2Int(x, y));
+                    if (piece.Type != PieceType.None)
+                    {
+                        CreatePieceObject(piece, new Vector2Int(x, y));
+                    }
                 }
             }
+        }
+        else
+        {
+            // 在网络模式下，此方法仅用于清场
+            Debug.Log("[BoardRenderer] 网络模式: RenderBoard 只负责清场，等待服务器Spawn棋子。");
         }
     }
 
@@ -329,38 +417,38 @@ public class BoardRenderer : MonoBehaviour
     #region Private Helper Methods
 
     /// <summary>
-    /// 创建单个棋子的GameObject并放置在棋盘上。
+    /// 创建单个棋子的GameObject并放置在棋盘上 (仅用于单机模式)。
     /// </summary>
     private void CreatePieceObject(Piece piece, Vector2Int position)
     {
         Vector3 localPosition = GetLocalPosition(position.x, position.y);
         GameObject pieceGO = Instantiate(gamePiecePrefab, this.transform);
         pieceGO.transform.localPosition = localPosition;
-        pieceGO.name = $"{piece.Color}_{piece.Type}_{position.x}_{position.y}";
 
-        // 关联组件和数据
-        PieceComponent pc = pieceGO.GetComponent<PieceComponent>();
-        if (pc != null)
-        {
-            pc.BoardPosition = position;
-            pc.PieceData = piece;
-        }
-
-        // 设置材质和贴图
-        MeshRenderer renderer = pieceGO.GetComponent<MeshRenderer>();
-        if (renderer == null) return;
-        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
-        renderer.GetPropertyBlock(propBlock);
-        renderer.material = (piece.Color == PlayerColor.Red) ? redPieceMaterial : blackPieceMaterial;
-        if (uvOffsets.ContainsKey(piece.Type))
-        {
-            Vector2 offset = uvOffsets[piece.Type];
-            propBlock.SetVector("_MainTex_ST", new Vector4(0.25f, 0.5f, offset.x, offset.y));
-        }
-        propBlock.SetColor("_EmissionColor", Color.black);
-        renderer.SetPropertyBlock(propBlock);
+        // 调用辅助方法来设置视觉和数据
+        SetupPieceVisuals(pieceGO, piece, position);
 
         // 存储对GameObject的引用
+        pieceObjects[position.x, position.y] = pieceGO;
+    }
+
+
+    /// <summary>
+    /// 当一个网络化的棋子在客户端被创建时，由该棋子调用来将自己注册到 pieceObjects 数组中。
+    /// </summary>
+    public void RegisterNetworkedPiece(GameObject pieceGO, Vector2Int position)
+    {
+        if (position.x < 0 || position.x >= BoardState.BOARD_WIDTH || position.y < 0 || position.y >= BoardState.BOARD_HEIGHT)
+        {
+            Debug.LogError($"[BoardRenderer] 接收到无效的棋子注册坐标: {position} for {pieceGO.name}");
+            return;
+        }
+
+        if (pieceObjects[position.x, position.y] != null && pieceObjects[position.x, position.y] != pieceGO)
+        {
+            Debug.LogWarning($"[BoardRenderer] 注册位置 {position} 已被占用，销毁旧对象。");
+            Destroy(pieceObjects[position.x, position.y]);
+        }
         pieceObjects[position.x, position.y] = pieceGO;
     }
 
