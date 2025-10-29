@@ -18,11 +18,6 @@ public class GameNetworkManager : NetworkBehaviour
     public static GameNetworkManager Instance { get; private set; }
     public static event Action<GameNetworkManager> OnInstanceReady;
 
-    /// <summary>
-    /// 当本地玩家的数据准备好时触发。参数是本地玩家的网络数据。
-    /// </summary>
-    public event Action<PlayerNetData> OnLocalPlayerDataReady;
-
     // 使用SyncDictionary来同步所有玩家的数据
     // Key: 客户端的ConnectionId, Value: 玩家网络数据
     public readonly SyncDictionary<int, PlayerNetData> AllPlayers = new SyncDictionary<int, PlayerNetData>();
@@ -67,14 +62,11 @@ public class GameNetworkManager : NetworkBehaviour
         Debug.Log("[GameNetworkManager] OnStartClient: Firing OnInstanceReady.");
         OnInstanceReady?.Invoke(this);
 
-        // 订阅SyncDictionary的变化事件，这是接收到自己阵营信息的关键
-        AllPlayers.OnChange += OnPlayersDictionaryChanged;
     }
 
     public override void OnStopClient()
     {
         base.OnStopClient();
-        AllPlayers.OnChange -= OnPlayersDictionaryChanged;
     }
 
     private void OnPlayersDictionaryChanged(SyncDictionaryOperation op, int key, PlayerNetData item, bool asServer)
@@ -91,8 +83,6 @@ public class GameNetworkManager : NetworkBehaviour
         if (key == base.ClientManager.Connection.ClientId)
         {
             Debug.Log($"[Client] 接收到自己的玩家数据更新! 颜色: {item.Color}");
-            // 触发事件，通知GameManager初始化玩家控制器
-            OnLocalPlayerDataReady?.Invoke(item);
         }
     }
 
@@ -176,12 +166,32 @@ public class GameNetworkManager : NetworkBehaviour
             Debug.Log($"[GNM-DIAGNOSTIC-SERVER] Adding player to SyncDictionary. ConnectionId: {connectionId}, Color: {color}");
             AllPlayers.Add(connectionId, playerData);
             Debug.Log($"[Server] 玩家注册: Id={connectionId}, Name={playerName}, Color={color}");
+            // 可靠地通知客户端它的阵营信息
+            Target_SetPlayerColor(conn, playerData);
         }
         else
         {
             Debug.LogWarning($"[Server] 玩家 {connectionId} 尝试重复注册。");
         }
 
+    }
+
+    /// <summary>
+    /// [Target Rpc] 由服务器调用，专门用于通知一个特定的客户端它的玩家数据。
+    /// </summary>
+    [TargetRpc]
+    private void Target_SetPlayerColor(FishNet.Connection.NetworkConnection target, PlayerNetData data)
+    {
+        Debug.Log($"[Client] 收到服务器指定的阵营信息! 我的颜色是: {data.Color}");
+        // 直接通知 GameManager 初始化控制器
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.InitializeLocalPlayerController(data);
+        }
+        else
+        {
+            Debug.LogError("[Client] Target_SetPlayerColor 无法找到 GameManager.Instance！");
+        }
     }
 
     /// <summary>

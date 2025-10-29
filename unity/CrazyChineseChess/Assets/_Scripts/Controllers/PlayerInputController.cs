@@ -50,7 +50,6 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
     private void Update()
     {
         Debug.Log($"update 1");
-        // ----- DIAGNOSTIC LOG START (添加诊断日志) -----
         if (gameManager == null)
         {
             // 这个日志不应该出现，如果出现说明Initialize完全没被调用

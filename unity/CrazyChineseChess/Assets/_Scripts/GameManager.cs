@@ -117,8 +117,6 @@ public class GameManager : MonoBehaviour
             }
             Debug.Log("[Client] 客户端初始化完成。正在等待服务器生成棋子...");
 
-            gnm.OnLocalPlayerDataReady += InitializeLocalPlayerController;
-            Debug.Log("[Client] 已订阅 OnLocalPlayerDataReady 事件，等待服务器分配阵营。");
             Debug.Log($"[GameManager-DIAGNOSTIC] I am a client (IsHost: {InstanceFinder.IsHost}). Subscribed to OnLocalPlayerDataReady event.");
 
             // 注册玩家
@@ -133,11 +131,9 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// 当从服务器接收到本地玩家的数据后，此方法被调用。
     /// </summary>
-    private void InitializeLocalPlayerController(PlayerNetData localPlayerData)
+    public void InitializeLocalPlayerController(PlayerNetData localPlayerData)
     {
         Debug.Log($"[GameManager-DIAGNOSTIC] CALLBACK TRIGGERED: InitializeLocalPlayerController for color {localPlayerData.Color}.");
-        // 安全起见，只执行一次
-        GameNetworkManager.Instance.OnLocalPlayerDataReady -= InitializeLocalPlayerController;
 
         // 检查是否已经存在控制器
         if (controllers.ContainsKey(localPlayerData.Color))
