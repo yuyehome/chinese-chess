@@ -1,6 +1,7 @@
 // File: _Scripts/UI/GameUIManager.cs
 
 using UnityEngine;
+using FishNet; 
 
 /// <summary>
 /// 游戏内主UI的管理器。
@@ -105,4 +106,41 @@ public class GameUIManager : MonoBehaviour
         }
         // 如果是横屏，则UI会保持其在编辑器中通过锚点设置的默认布局，无需代码干预。
     }
+
+    /// <summary>
+    /// 公共方法，用于响应UI按钮的点击事件来退出游戏。
+    /// </summary>
+    public void OnClick_ExitGame()
+    {
+        Debug.Log("[GameUIManager] 玩家点击了退出游戏按钮。");
+
+        // 在网络游戏中，退出不是简单地关闭程序，而是要先断开网络连接。
+        // FishNet的InstanceFinder可以方便地找到NetworkManager实例。
+        if (InstanceFinder.IsHost)
+        {
+            // 如果是主机，需要同时关闭服务器和客户端。
+            Debug.Log("主机正在关闭连接...");
+            InstanceFinder.ServerManager.StopConnection(true);
+            InstanceFinder.ClientManager.StopConnection();
+        }
+        else if (InstanceFinder.IsClient)
+        {
+            // 如果只是客户端，只需关闭客户端连接。
+            Debug.Log("客户端正在断开连接...");
+            InstanceFinder.ClientManager.StopConnection();
+        }
+
+        // 这里的逻辑可以扩展，比如返回主菜单场景
+        // UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+
+        // 如果只是简单地关闭游戏程序：
+        // 注意：这在Unity编辑器中不起作用，只在构建出的游戏中生效。
+        #if UNITY_EDITOR
+                    UnityEditor.EditorApplication.isPlaying = false;
+        #else
+                Application.Quit();
+        #endif
+    }
+
+
 }
