@@ -70,6 +70,12 @@ public class LobbyManager : MonoBehaviour
     public static event Action OnLobbyDataUpdatedEvent;
     #endregion
 
+    [Header("网络Prefabs")]
+    [Tooltip("GameNetworkManager的Prefab")]
+    public GameObject gameNetworkManagerPrefab; // 在Inspector中指定
+
+    private bool _gameNetworkManagerSpawned = false; // 防止重复生成
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -111,6 +117,9 @@ public class LobbyManager : MonoBehaviour
         _lobbyMatchList = Callback<LobbyMatchList_t>.Create(OnLobbyMatchList);
         _gameLobbyJoinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
         _lobbyChatUpdate = Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
+
+        // 订阅场景加载事件
+        _networkManager.SceneManager.OnLoadEnd += SceneManager_OnLoadEnd;
     }
 
     private void OnDestroy()
@@ -121,6 +130,41 @@ public class LobbyManager : MonoBehaviour
             _networkManager.ServerManager.OnRemoteConnectionState -= ServerManager_OnRemoteConnectionState;
 
             _networkManager.ClientManager.OnClientConnectionState -= ClientManager_OnClientConnectionState;
+        }
+        // 取消订阅
+        if (_networkManager != null && _networkManager.SceneManager != null)
+        {
+            _networkManager.SceneManager.OnLoadEnd -= SceneManager_OnLoadEnd;
+        }
+    }
+
+    /// <summary>
+    /// 当任何场景加载完成时，此回调被触发。
+    /// </summary>
+    private void SceneManager_OnLoadEnd(SceneLoadEndEventArgs args)
+    {
+        // 我们只关心服务器，并且只在Game场景加载完毕后操作
+        if (!InstanceFinder.IsServer) return;
+
+        // args.LoadedScenes 包含了所有加载完成的场景
+        foreach (var scene in args.LoadedScenes)
+        {
+            if (scene.name == "Game" && !_gameNetworkManagerSpawned)
+            {
+                _gameNetworkManagerSpawned = true;
+                Debug.Log("[Server] Game场景加载完成，正在生成GameNetworkManager...");
+
+                if (gameNetworkManagerPrefab == null)
+                {
+                    Debug.LogError("[Server] GameNetworkManager Prefab未在LobbyManager中指定！");
+                    return;
+                }
+
+                GameObject gnmInstance = Instantiate(gameNetworkManagerPrefab);
+                InstanceFinder.ServerManager.Spawn(gnmInstance);
+
+                Debug.Log("[Server] GameNetworkManager已生成并Spawn。");
+            }
         }
     }
 
@@ -228,6 +272,10 @@ public class LobbyManager : MonoBehaviour
             // 根据是Host还是Client，关闭网络连接
             if (_networkManager.IsServer) _networkManager.ServerManager.StopConnection(true);
             if (_networkManager.IsClient) _networkManager.ClientManager.StopConnection();
+
+            // 重置状态，以便下次能重新生成
+            _gameNetworkManagerSpawned = false;
+
         }
 
         // TODO: 引导UI返回主菜单

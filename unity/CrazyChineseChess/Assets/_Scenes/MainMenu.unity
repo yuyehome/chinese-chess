@@ -549,11 +549,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e321bfa66d45c2e46b69505dacfffffe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameNetworkManagerPrefab: {fileID: 694643037849171877, guid: 873e1e9879c795946a8cc8a02a5f7f02, type: 3}
   lobbyItemPrefab: {fileID: 4546461109488648020, guid: 476ff72a020aa01418932473ec1cff06, type: 3}
   lobbyListContent: {fileID: 1720494572}
   _currentLobbyId:
     m_SteamID: 0
+  gameNetworkManagerPrefab: {fileID: 3681506028548552890, guid: 40203806d59f5c84a864556daa7f88d0, type: 3}
 --- !u!114 &62433978
 MonoBehaviour:
   m_ObjectHideFlags: 0
