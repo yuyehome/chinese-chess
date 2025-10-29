@@ -43,12 +43,22 @@ public class GameNetworkManager : NetworkBehaviour
     public override void OnStartNetwork()
     {
         base.OnStartNetwork();
+        Instance = this;
+        Debug.Log("[GameNetworkManager] OnStartNetwork called, Instance is set.");
+    }
 
-        // OnStartNetwork被调用，意味着网络已准备就绪
-        // 此时触发事件，通知其他脚本可以安全地使用网络功能了
-        Debug.Log("[GameNetworkManager] OnStartNetwork called. Firing OnInstanceReady event.");
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+        Debug.Log("[GameNetworkManager] OnStartServer: Firing OnInstanceReady.");
         OnInstanceReady?.Invoke(this);
+    }
 
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        Debug.Log("[GameNetworkManager] OnStartClient: Firing OnInstanceReady.");
+        OnInstanceReady?.Invoke(this);
     }
 
     /// <summary>

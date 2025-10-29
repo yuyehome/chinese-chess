@@ -43,6 +43,8 @@ public class GameManager : MonoBehaviour
 
     private bool isPVPMode = false;
 
+    private bool pvpInitialized = false; // 新增一个标志位，防止重复初始化
+
     private void Awake()
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
@@ -97,14 +99,16 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 当GameNetworkManager的网络功能准备就绪时，执行此方法
-    /// </summary>
     private void HandlePVPInitialization(GameNetworkManager gnm)
     {
-        // 取消订阅，防止重复执行
+        // 因为Host会触发两次，用一个标志位确保只执行一次
+        if (pvpInitialized) return;
+        pvpInitialized = true;
+
+        //取消订阅，防止重复执行
         GameNetworkManager.OnInstanceReady -= HandlePVPInitialization;
 
+        // 此时，我们保证在 Game 场景中，且 GNM 网络功能已就绪
         Debug.Log("[GameManager] GameNetworkManager is ready. Starting PVP initialization.");
 
         if (InstanceFinder.IsServer)
@@ -116,30 +120,26 @@ public class GameManager : MonoBehaviour
             rtController.CombatManager.OnPieceKilled += HandlePieceKilled;
             currentGameMode = rtController;
 
-            // 2. 服务器渲染自己的棋盘
-            BoardRenderer.RenderBoard(CurrentBoardState);
-            rtController.InitializeRealTimeStates();
-
-            // 3. 填充同步列表
+            // 2. 填充同步列表
             gnm.Server_InitializeBoard(CurrentBoardState);
         }
 
         if (InstanceFinder.IsClient)
         {
-            // 客户端的currentGameMode初始化
             if (currentGameMode == null)
             {
                 currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, 0);
             }
-
             Debug.Log("[Client] 客户端正在等待服务器状态同步...");
+
 
             gnm.AllPieces.OnChange += OnNetworkBoardStateChanged;
             Debug.Log("[Client] 已订阅网络棋盘状态变化事件。");
 
-            // 检查初始数据，如果已经存在就立刻渲染
+            // 增加这个检查
             if (gnm.AllPieces.Count > 0)
             {
+                Debug.Log("[Client] 订阅时数据已存在，手动触发渲染。");
                 OnNetworkBoardStateChanged(SyncListOperation.Complete, 0, default, default, false);
             }
 
@@ -151,6 +151,7 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+
 
     /// <summary>
     /// 初始化单机PVE模式
@@ -185,41 +186,41 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// [Client Only] 当网络棋盘状态列表发生变化时，此方法会被调用。
-    /// </summary>
     private void OnNetworkBoardStateChanged(SyncListOperation op, int index, NetworkPieceData oldItem, NetworkPieceData newItem, bool asServer)
     {
-        // 我们只关心客户端的渲染，并且在初次同步时，我们希望一次性渲染整个棋盘
-        if (asServer) return;
-        
-        Debug.Log($"[Client Render Check] BoardRenderer is {(BoardRenderer == null ? "NULL" : "OK")}. Network piece count: {GameNetworkManager.Instance.AllPieces.Count}");
+        // Host现在通过这个回调来渲染，因为它也是一个Client
+        // if (asServer) return; // 移除这行
 
-        Debug.Log($"[Client] 收到网络棋盘更新: Operation={op}, Count={GameNetworkManager.Instance.AllPieces.Count}");
+        // 我们只在第一次收到完整列表时重绘
+        if (op != SyncListOperation.Complete)
+        {
+            // 对于Host，第一次操作是Add，但我们也需要渲染
+            // 我们需要一个更可靠的方式来只渲染一次
+            // 我们可以在Render后取消订阅
+            if (GameNetworkManager.Instance.AllPieces.Count < 32) return;
+        }
 
-        // --- RenderBoardFromNetwork 的逻辑移到这里 ---
+        // 取消订阅，确保这个昂贵的操作只执行一次
+        GameNetworkManager.Instance.AllPieces.OnChange -= OnNetworkBoardStateChanged;
+
+        Debug.Log($"[Client/Host] 收到网络棋盘完整数据，准备渲染: Count={GameNetworkManager.Instance.AllPieces.Count}");
+
         var networkPieces = GameNetworkManager.Instance.AllPieces;
-
-        // 1. 创建一个临时的、空的逻辑BoardState
         BoardState tempBoardState = new BoardState();
-
-        // 2. 根据网络数据填充这个临时的BoardState
         foreach (var pieceData in networkPieces)
         {
             var piece = new Piece(pieceData.Type, pieceData.Color);
             tempBoardState.SetPieceAt(pieceData.Position, piece);
         }
 
-        // 3. 命令BoardRenderer根据这个临时状态来渲染棋盘
         BoardRenderer.RenderBoard(tempBoardState);
 
-        // 4. 初始化客户端的棋子实时状态 (RTState)
         if (currentGameMode is RealTimeModeController rtController)
         {
             rtController.InitializeRealTimeStates();
         }
 
-        Debug.Log("[Client] 已根据网络数据完成棋盘渲染。");
+        Debug.Log("[Client/Host] 已根据网络数据完成棋盘渲染。");
     }
 
     private void InitializeControllers()

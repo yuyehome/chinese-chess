@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System; // 引入System命名空间以使用Action
 using FishNet; // 引入FishNet
 using FishNet.Managing.Scened; // 引入场景管理
+using FishNet.Object; // 需要这个来访问 NetworkObject
 
 /// <summary>
 /// 功能模块，负责所有与Steam Lobby相关的操作：创建、查找、加入、离开、状态管理。

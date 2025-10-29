@@ -1,217 +1,123 @@
-### **《魔改中国象棋》网络化改造技术设计文档**
+### **《魔改中国象棋》网络化改造技术交接文档 (v2.0)**
 
-#### **1. 核心原则与目标**
+#### **1. 核心原则与目标 (无变化)**
 
-1. **服务器权威 (Server Authority):** 这是多人在线游戏的黄金法则。**所有**游戏逻辑（移动、碰撞、战斗、能量增减、技能效果）**必须**在服务器上计算和执行。客户端只负责发送玩家输入，并根据服务器广播的状态来“播放”游戏画面。这能从根本上杜绝作弊。
-    
-2. **保留单机模式:** 改造必须兼容现有的单机AI对战模式。GameManager 将根据启动模式（PVP或PVE）来决定加载不同的控制器组合。
-    
-3. **状态同步而非RPC轰炸:** 优先使用FishNet的状态同步机制（如 SyncVar, SyncObject）来同步游戏状态，而不是频繁地通过RPC（远程过程调用）来传递每一个小变化。这更高效，且能更好地处理新加入的观战者或断线重连。
-    
-4. **清晰的职责划分:** 严格区分服务器逻辑、客户端逻辑和共享逻辑。
-    
+本项目网络化改造遵循以下四大核心原则：
 
-#### **2. 需要的代码文件**
-
-根据您的文件列表和我的分析，为了完成核心PVP玩法的网络化，我需要您提供以下所有代码文件的当前版本。这些文件构成了游戏的核心循环，每一个都与网络化改造息息相关。
-
-- **_Scripts/Core/**
+1. **服务器权威 (Server Authority):** 所有游戏逻辑**必须**在服务器上执行。客户端只负责发送输入并渲染状态。
     
-    - BoardState.cs
-        
-    - CombatManager.cs
-        
-    - EnergySystem.cs
-        
-    - GameModeSelector.cs
-        
-    - PieceData.cs
-        
-    - RealTimePieceState.cs
-        
-    - RuleEngine.cs
-        
-- **_Scripts/GameModes/**
+2. **兼容单机模式 (PVE/PVP Coexistence):** 网络化改造后，原有的单机AI对战功能必须完整保留。GameManager 会在启动时自动检测网络状态以区分PVP和PVE模式。
     
-    - GameModeController.cs
-        
-    - RealTimeModeController.cs
-        
-- **_Scripts/Controllers/**
+3. **状态同步为主 (State Synchronization):** 优先使用FishNet的状态同步机制（SyncList, SyncVar）来同步游戏状态，而非依赖大量的RPC调用。
     
-    - IPlayerController.cs
-        
-    - PlayerInputController.cs
-        
-    - AIController.cs
-        
-- **_Scripts/UI/**
+4. **职责清晰 (Clear Separation):** 严格区分服务器、客户端及共享代码的职责。
     
-    - GameUIManager.cs
-        
-- **_Scripts/ (根目录)**
-    
-    - BoardRenderer.cs
-        
-    - GameManager.cs
-        
-    - PieceComponent.cs
-        
-
-请将这些文件提供给我，以便进行后续更具体的代码设计。
 
 ---
 
-#### **3. 改造方案概要设计**
+#### **2. 核心网络架构**
 
-这是我们首先要实现的目标。
+本项目的网络架构围绕一个核心理念：**由LobbyManager在游戏开始前启动网络会话，并在Game场景中通过一个权威的GameNetworkManager来同步所有游戏状态。**
 
-1. **LobbyManager.StartGame() 的改造:**
+1. **房间与连接 (LobbyManager):**
     
-    - 当房主点击“开始游戏”时，StartGame() 方法被调用。
+    - LobbyManager (位于MainMenu场景) 负责通过Steamworks处理大厅的创建、加入和玩家连接。
         
-    - **服务器逻辑:**
+    - 当房主（Host）点击"开始游戏"，LobbyManager验证所有玩家到齐后，**不会**生成任何持久化对象。
         
-        - 该方法将调用FishNet的 NetworkManager.SceneManager.LoadGlobalScenes() 来加载 Game.unity 场景。LoadGlobalScenes 会自动通知所有已连接的客户端同步加载该场景。
-            
-        - 在加载前，服务器需要决定并存储双方玩家的阵营信息。例如，创建一个Dictionary<int, PlayerNetData>，其中 int 是客户端的Connection ID，PlayerNetData 是一个结构体，包含SteamID, PlayerColor (红/黑)等信息。房主（Host）的连接ID总是1，可以默认为红方。
-            
-        - 这个玩家数据可以通过一个NetworkBehaviour脚本同步给所有客户端。
-            
-2. **GameManager.Start() 的改造:**
+    - 它只负责调用 NetworkManager.SceneManager.LoadGlobalScenes()，命令所有客户端同步加载Game场景。
+        
+2. **游戏状态同步枢纽 (GameNetworkManager):**
     
-    - 当 Game.unity 场景加载后，GameManager 的 Start() 方法（或 Awake）会被调用。
+    - GameNetworkManager 是一个**场景对象 (Scene Object)**，唯一存在于Game.unity场景中。它继承自NetworkBehaviour。
         
-    - **关键改动:** GameManager 需要判断当前是PVP模式还是PVE模式。
+    - **职责:**
         
-        - **PVP模式判断:** if (InstanceFinder.IsServer || InstanceFinder.IsClient)，只要网络是激活的，就是PVP模式。
+        - 作为所有**核心游戏状态**的权威同步容器。
             
-        - **PVE模式判断:** else，网络未激活，就是单机模式。
+        - 通过 SyncList<NetworkPieceData> AllPieces 同步整个棋盘的布局。
             
-    - **PVP模式下的初始化:**
-        
-        - **服务器:** GameManager 将创建和初始化所有服务器端的逻辑模块，如 BoardState, RealTimeModeController, EnergySystem 等。然后，它需要为每个连接的玩家（包括自己）生成一个“玩家代理”。对于本地玩家（房主），它实例化一个 PlayerInputController；对于远程玩家，它实例化一个新的 NetworkPlayerController (我们稍后会创建它)。
+        - 通过 SyncDictionary<int, PlayerNetData> AllPlayers 同步所有玩家的身份信息（SteamID、阵营颜色等）。
             
-        - **客户端:** 客户端的 GameManager 将会“等待”服务器同步游戏状态。它会禁用本地的所有逻辑计算模块（如RealTimeModeController），只保留表现层模块（如BoardRenderer）。它只会为自己实例化一个PlayerInputController。
+        - 提供 OnInstanceReady 静态事件，这是**整个PVP初始化流程的关键信号**。它在 OnStartServer 和 OnStartClient 中触发，确保只有当该对象的网络功能完全激活时，其他脚本才能开始执行网络相关操作。
             
-
-这是网络化的心脏。我们需要将游戏的核心状态变为可同步的。
-
-1. **创建 NetworkGameState.cs:**
+3. **游戏逻辑与模式切换 (GameManager):**
     
-    - 这是一个新的 NetworkBehaviour 脚本，场景中只需要一个实例（可以挂在 GameManager 上）。
+    - GameManager 在Start()方法中检测网络状态 (InstanceFinder.IsClient/IsServer)。
         
-    - **职责:** 作为所有核心游戏状态的“同步容器”。
+    - **PVP模式下:** 它**订阅** GameNetworkManager.OnInstanceReady 事件。在事件触发前，它处于“等待”状态。
         
-    - **伪代码:**
+    - **事件触发后 (HandlePVPInitialization):**
         
-        codeC#
-        
-2. **改造 BoardState 和 RealTimePieceState:**
+        - **服务器 (Server):** 初始化所有游戏逻辑模块 (RealTimeModeController, EnergySystem等)，并调用GameNetworkManager.Server_InitializeBoard()，将初始棋盘状态填充到AllPieces同步列表中。
+            
+        - **客户端 (Client):** 初始化一个**不执行逻辑**的 RealTimeModeController 实例（用于访问方法），然后订阅GameNetworkManager.AllPieces.OnChange事件，等待服务器的数据。
+            
+4. **客户端渲染 (GameManager & BoardRenderer):**
     
-    - 在服务器上，BoardState 和 RealTimePieceState 依然是核心的逻辑数据源。
+    - 当客户端的 GameNetworkManager.AllPieces 列表第一次从服务器接收到完整的棋盘数据时，会触发 OnChange 事件（带有Complete操作）。
         
-    - 服务器的 GameManager 或 RealTimeModeController 在每次逻辑更新后，需要将 BoardState 的数据**翻译**并更新到 NetworkGameState 的 AllPieces 列表中。
+    - GameManager 的 OnNetworkBoardStateChanged 回调方法被调用。
         
-    - FishNet会自动检测到 AllPieces 的变化，并将其高效地广播给所有客户端。
+    - 该方法根据收到的网络数据 (List<NetworkPieceData>)，构建一个临时的 BoardState 对象。
         
-3. **客户端的响应 (BoardRenderer.cs)**:
-    
-    - 客户端的 BoardRenderer 将不再监听本地的 GameManager 事件。
-        
-    - 取而代之，它将引用 NetworkGameState。它会订阅 AllPieces.OnChange 事件。
-        
-    - 当 AllPieces 列表发生变化时（棋子移动、死亡等），OnChange 事件被触发，BoardRenderer 就根据新的数据列表来更新棋子的视觉表现（移动GameObject，播放死亡特效等）。
+    - 最后，调用 BoardRenderer.RenderBoard()，使用这个临时BoardState来**一次性渲染**出完整的棋盘视觉效果。
         
 
-这是将玩家操作网络化的关键。
-
-1. **改造 PlayerInputController.cs:**
-    
-    - 当玩家点击棋盘并选择一个合法的移动时，PlayerInputController 不再调用 GameManager.RequestMove()。
-        
-    - 取而代之，它将调用一个在服务器上执行的RPC方法。
-        
-    - **伪代码:**
-        
-        codeC#
-        
-2. **创建 NetworkPlayer.cs:**
-    
-    - 这是一个新的 NetworkBehaviour，代表一个网络中的玩家实体。当一个玩家连接到服务器时，服务器应该为他生成一个 NetworkPlayer 对象。
-        
-    - **职责:** 作为客户端向服务器发送指令的唯一通道。
-        
-    - **伪代码:**
-        
-        codeC#
-        
-    - 这样，点击操作就形成了一个闭环：**客户端输入 -> [ServerRpc] -> 服务器执行逻辑 -> 服务器更新 NetworkGameState -> 所有客户端同步状态 -> 客户端 BoardRenderer 刷新画面**。
-        
-
-处理好 “自己总在下方” 的体验。
-
-1. **阵营分配:**
-    
-    - 如阶段一所述，服务器在加载游戏场景前，就为每个连接分配好阵营（红/黑）。这个信息需要同步给所有客户端。
-        
-2. **视角相机控制:**
-    
-    - 在 Game.unity 场景中，创建一个 CameraRig 或 CameraController 脚本。
-        
-    - 在 Start() 方法中，它会获取本地玩家的阵营信息。
-        
-    - 如果本地玩家是红方（默认在下方），相机保持默认旋转。
-        
-    - 如果本地玩家是黑方（默认在上方），该脚本需要将相机绕棋盘中心旋转180度。这样，黑方玩家看到的棋盘就是“正”的，自己的棋子在下方。
-        
-3. **棋子文字朝向:**
-    
-    - 棋子上的文字（帅、車、馬...）通常是3D Text或TextMeshPro组件。
-        
-    - 默认情况下，它们会跟随棋子一起旋转。当相机旋转180度后，黑方玩家会看到自己的棋子文字是倒的。
-        
-    - **解决方案:** 创建一个 Billboard.cs 脚本，挂在每个棋子的文字组件上。
-        
-        - **伪代码:**
-            
-            codeC#
-            
-        - 这样，无论棋盘怎么转，文字总是正对着玩家的屏幕。
-            
 
 ---
 
-#### **4. 开发路线图 (Roadmap)**
+#### **3. 最新文件结构与职责说明 (新增/修改)**
 
-我建议将整个改造过程分为以下几个可交付的步骤：
+|   |   |   |
+|---|---|---|
+|文件夹/文件名|核心职责|备注|
+|**_Scripts/Network/**|**存放所有网络核心逻辑与数据结构**||
+|GameNetworkManager.cs|**[核心]** 游戏状态同步枢纽。作为场景对象存在于Game.unity。管理玩家数据和棋盘状态的同步列表，并提供OnInstanceReady事件作为PVP初始化信号。|继承自NetworkBehaviour。|
+|PlayerNetData.cs|**[数据结构]** 定义了在网络中同步的玩家信息（SteamID, 阵营颜色等）。|纯struct。|
+|NetworkPieceData.cs|**[数据结构]** 定义了在网络中同步的棋子信息（ID, 类型, 颜色, 位置）。|纯struct。|
+|**_Scripts/ (根目录)**|||
+|GameManager.cs|**[核心控制器]** 游戏总管理器。**新增职责**：检测PVE/PVP模式，并根据GameNetworkManager的事件来驱动PVP初始化流程。在客户端，它负责响应网络数据并调用渲染。|修改巨大，是网络化改造的中心。|
+|**_Scripts/Network/**|||
+|LobbyManager.cs|**[网络引导]** 大厅管理器。**职责简化**：现在只负责处理Steam Lobby和网络连接，并在游戏开始时**仅加载场景**，不再负责生成任何游戏对象。|继承自MonoBehaviour。|
 
-1. **[Milestone 1] 联网启动与场景同步:**
+---
+
+#### **4. 后续开发规划 (Milestone 3 及以后)**
+
+当前我们已成功完成Milestone 2，为后续开发奠定了坚实的基础。
+
+1. **创建 NetworkPlayerController.cs:**
     
-    - **任务:** 实现 LobbyManager.StartGame()，让房主点击后，所有玩家能一同加载到 Game.unity 场景。
+    - 这是一个新的 NetworkBehaviour Prefab。
         
-    - **验证:** 两个客户端都能进入游戏场景，并打印日志 "PVP mode started on [Server/Client]"。
+    - **职责:** 代表一个网络中的“玩家实体”。每个客户端连接成功后，服务器会为其生成一个NetworkPlayerController实例，并将所有权（Ownership）交给他。
         
-2. **[Milestone 2] 静态棋盘同步:**
+    - 它将包含一个 [ServerRpc] 方法，例如 CmdRequestMove(Vector2Int from, Vector2Int to)。
+        
+2. **改造 PlayerInputController.cs:**
     
-    - **任务:** 实现 NetworkGameState 和 NetworkPieceData。服务器在 Start 时初始化 BoardState，并将其状态同步到 NetworkGameState。客户端的 BoardRenderer 根据 NetworkGameState 来生成初始棋盘。
+    - 不再是MonoBehaviour，而是一个纯C#类，或者保持MonoBehaviour但需要被动态添加到玩家对象上。
         
-    - **验证:** 游戏开始时，双方客户端都能看到一模一样的初始棋盘布局。
+    - 当检测到合法的鼠标点击时，它不再调用本地的GameManager.RequestMove()。
         
-3. **[Milestone 3] 玩家输入与移动同步:**
+    - 而是找到属于本地玩家的 NetworkPlayerController 实例，并调用其 CmdRequestMove 方法，将移动指令发送给服务器。
+        
+3. **服务器响应:**
     
-    - **任务:** 实现 NetworkPlayer 和 PlayerInputController 的 CmdRequestMove 逻辑。完成从客户端输入到服务器执行，再到状态同步回所有客户端的完整流程。
+    - 服务器上的 NetworkPlayerController 收到 CmdRequestMove RPC后，会验证该移动（例如，该玩家是否是棋子的主人）。
         
-    - **验证:** 房主移动一个棋子，另一个客户端能平滑地看到该棋子移动到目标位置。反之亦然。
+    - 验证通过后，调用服务器上权威的 GameManager.RequestMove() 来执行游戏逻辑。
         
-4. **[Milestone 4] 核心逻辑（能量、战斗）同步:**
+4. **状态同步:**
     
-    - **任务:** 将 EnergySystem 和 CombatManager 的逻辑完全放到服务器上。将能量值通过 SyncVar 同步。战斗结果（棋子死亡）通过更新 NetworkGameState 中的 IsDead 标志来同步。
+    - 服务器的 RealTimeModeController 在执行移动后，需要更新棋子的 RealTimePieceState。
         
-    - **验证:** 玩家移动消耗能量，双方UI同步显示。棋子发生碰撞，在双方屏幕上同时消失。
+    - 创建一个新的同步机制（例如，修改NetworkGameState中的AllPieces列表或创建一个新的SyncList用于移动状态），将棋子的“正在移动”状态、起点和终点同步给所有客户端。
         
-5. **[Milestone 5] 视角与游戏结束处理:**
-    
-    - **任务:** 实现相机旋转和文字Billboard。实现游戏结束逻辑的判断（服务器判断）和同步。
+    - 客户端的 BoardRenderer 订阅这些移动状态的变化，并播放相应的移动动画。
         
-    - **验证:** 黑方玩家进入游戏后，视角自动翻转，棋子文字正常。一方将死另一方后，双方都弹出胜负结算界面。
+
+**此阶段完成后，玩家将能够真正在网络上移动棋子。**
+
+---
