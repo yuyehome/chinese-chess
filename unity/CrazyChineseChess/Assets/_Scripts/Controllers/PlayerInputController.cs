@@ -88,8 +88,8 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
             // 如果已选中己方棋子，且本次点击是合法的吃子目标
             if (selectedPiece != null && currentValidMoves.Contains(clickedPiece.BoardPosition))
             {
-                // 提交移动请求
-                gameManager.RequestMove(assignedColor, selectedPiece.BoardPosition, clickedPiece.BoardPosition);
+                gameManager.Client_RequestMove(selectedPiece.BoardPosition, clickedPiece.BoardPosition);
+                Debug.Log($"[Input] 提交吃子移动: 从 {selectedPiece.BoardPosition} 到 {clickedPiece.BoardPosition}");
                 ClearSelection();
             }
             else
@@ -105,8 +105,8 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
         Debug.Log($"[Input] 玩家点击了移动标记，目标坐标: {marker.BoardPosition}");
         if (selectedPiece != null && currentValidMoves.Contains(marker.BoardPosition))
         {
-            // 提交移动请求
-            gameManager.RequestMove(assignedColor, selectedPiece.BoardPosition, marker.BoardPosition);
+            gameManager.Client_RequestMove(selectedPiece.BoardPosition, marker.BoardPosition);
+            Debug.Log($"[Input] 提交空格移动: 从 {selectedPiece.BoardPosition} 到 {marker.BoardPosition}");
             ClearSelection();
         }
     }
@@ -162,6 +162,7 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
         if (selectedPiece == null) return;
 
         BoardState logicalBoard = gameManager.GetLogicalBoardState();
+        // MODIFICATION: Use .Value for SyncVar
         List<Vector2Int> newValidMoves = RuleEngine.GetValidMoves(selectedPiece.PieceData, selectedPiece.RTState.LogicalPosition, logicalBoard);
 
         // 仅当合法移动列表发生变化时才重绘，以优化性能
@@ -171,8 +172,11 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
             lastCalculatedValidMoves = new List<Vector2Int>(newValidMoves);
 
             boardRenderer.ClearAllHighlights();
-            boardRenderer.ShowValidMoves(currentValidMoves, selectedPiece.PieceData.Color, logicalBoard);
+            // MODIFICATION: Use .Value for SyncVar
+            boardRenderer.ShowValidMoves(currentValidMoves, selectedPiece.Color.Value, logicalBoard);
             boardRenderer.ShowSelectionMarker(selectedPiece.RTState.LogicalPosition);
         }
     }
+
+
 }

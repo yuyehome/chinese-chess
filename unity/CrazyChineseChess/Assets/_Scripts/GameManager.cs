@@ -4,6 +4,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using FishNet;
+using FishNet.Object; // 引入这个命名空间来使用 NetworkBehaviour 的特性
 
 /// <summary>
 /// 游戏总管理器 (Singleton)，作为游戏核心逻辑的入口和协调者。
@@ -296,7 +297,59 @@ public class GameManager : MonoBehaviour
         return pieces;
     }
 
-    public void RequestMove(PlayerColor color, Vector2Int from, Vector2Int to)
+    /// <summary>
+    /// [Client-Side Entry] 供客户端的输入控制器调用，用于发起一个移动请求。
+    /// </summary>
+    public void Client_RequestMove(Vector2Int from, Vector2Int to)
+    {
+        // 客户端不执行任何游戏逻辑，而是通过GameNetworkManager向服务器发送RPC
+        if (GameNetworkManager.Instance != null)
+        {
+            Debug.Log($"[Client] 发送移动请求到服务器: 从 {from} 到 {to}");
+            GameNetworkManager.Instance.CmdRequestMove(from, to);
+        }
+        else
+        {
+            Debug.LogError("[Client] Client_RequestMove 无法找到 GameNetworkManager.Instance！");
+        }
+    }
+
+    /// <summary>
+    /// [Server-Side Logic] 服务器处理经过验证的移动请求。
+    /// </summary>
+    public void Server_ProcessMoveRequest(PlayerColor color, Vector2Int from, Vector2Int to)
+    {
+        // 关键保护：确保此逻辑只在服务器上运行
+        if (!InstanceFinder.IsServer) return;
+
+        if (IsGameEnded) return;
+
+        // 能量检查等核心逻辑现在完全在服务器上进行
+        if (!EnergySystem.CanSpendEnergy(color))
+        {
+            Debug.LogWarning($"[Server] 玩家 {color} 的移动请求被拒绝：能量不足。");
+            return;
+        }
+        EnergySystem.SpendEnergy(color);
+
+        // 将移动指令交给实时模式控制器执行
+        if (currentGameMode is RealTimeModeController rtController)
+        {
+            Debug.Log($"[Server] 验证通过，正在执行玩家 {color} 的移动: 从 {from} 到 {to}");
+            PieceComponent pieceToMove = rtController.ExecuteMoveCommand(from, to);
+
+            // 如果成功执行了移动逻辑，则命令该棋子在所有客户端上播放动画
+            if (pieceToMove != null)
+            {
+                pieceToMove.Observer_PlayMoveAnimation(from, to);
+            }
+        }
+    }
+
+    /// <summary>
+    /// [Local/Single-Player Logic] 单机模式下处理移动请求的私有方法。
+    /// </summary>
+    private void Local_ProcessMoveRequest(PlayerColor color, Vector2Int from, Vector2Int to)
     {
         if (IsGameEnded) return;
 
@@ -309,7 +362,35 @@ public class GameManager : MonoBehaviour
 
         if (currentGameMode is RealTimeModeController rtController)
         {
-            rtController.ExecuteMoveCommand(from, to);
+            PieceComponent pieceToMove = rtController.ExecuteMoveCommand(from, to);
+
+            // 在单机模式下，我们直接调用棋子的 "RPC" 方法来播放动画，
+            // 因为它内部已经包含了动画播放和状态更新的完整逻辑。
+            if (pieceToMove != null)
+            {
+                // 这在单机模式下会安全地执行，因为 IsServer 会是 false，
+                // 所有的回调逻辑都会被正确地当作本地逻辑来处理。
+                pieceToMove.Observer_PlayMoveAnimation(from, to);
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// [统一入口] 请求移动棋子。
+    /// 这个方法会根据当前是网络模式还是单机模式，决定是发送RPC还是直接执行本地逻辑。
+    /// </summary>
+    public void RequestMove(PlayerColor color, Vector2Int from, Vector2Int to)
+    {
+        if (isPVPMode)
+        {
+            // 在PVP模式下，调用客户端的请求方法
+            Client_RequestMove(from, to);
+        }
+        else
+        {
+            // 在单机模式下，直接执行本地逻辑
+            Local_ProcessMoveRequest(color, from, to);
         }
     }
 

@@ -3,6 +3,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using FishNet.Object;
 
 /// <summary>
 /// 实时模式的核心逻辑执行器。
@@ -96,46 +97,45 @@ public class RealTimeModeController : GameModeController
 
     #region Action Execution
 
-    public void ExecuteMoveCommand(Vector2Int from, Vector2Int to)
+    /// <summary>
+    /// [Server Only] 当服务器端的棋子移动动画完成时，由PieceComponent的RPC回调调用。
+    /// </summary>
+    public void Server_OnMoveAnimationComplete(PieceComponent pc)
+    {
+        if (!movingPieces.Contains(pc)) return;
+
+        movingPieces.Remove(pc);
+    }
+
+    /// <summary>
+    /// [Server-Side Logic] 服务器执行移动指令。
+    /// 这个版本不再直接调用RPC，而是返回需要播放动画的棋子组件。
+    /// </summary>
+    /// <returns>返回被移动的PieceComponent，以便上层调用者（GameManager）可以对其发起RPC。</returns>
+    public PieceComponent ExecuteMoveCommand(Vector2Int from, Vector2Int to)
     {
         PieceComponent pieceToMove = boardRenderer.GetPieceComponentAt(from);
         if (pieceToMove == null)
         {
-            Debug.LogError($"[RTController] 尝试移动一个不存在的棋子，位置: {from}");
-            return;
+            Debug.LogError($"[Server-RTController] 尝试移动一个不存在的棋子，位置: {from}");
+            return null;
         }
 
-        PlayerColor movingColor = pieceToMove.PieceData.Color;
-        Debug.Log($"[Action] {movingColor}方 {pieceToMove.name} 开始移动到 {to}。");
+        // --- 服务器权威逻辑 ---
+        PlayerColor movingColor = pieceToMove.Color.Value;
+        Debug.Log($"[Server-Action] {movingColor}方 {pieceToMove.name} 开始移动到 {to}。");
 
+        // 1. 更新服务器的逻辑棋盘状态
         boardState.RemovePieceAt(from);
 
+        // 2. 更新服务器上棋子的实时状态
         pieceToMove.RTState.IsMoving = true;
-        pieceToMove.RTState.MoveStartPos = pieceToMove.BoardPosition;
+        pieceToMove.RTState.MoveStartPos = from;
         pieceToMove.RTState.MoveEndPos = to;
         movingPieces.Add(pieceToMove);
 
-        boardRenderer.MovePiece(
-            from, to,
-            onProgressUpdate: (pc, progress) => {
-                if (pc != null && pc.RTState != null) pc.RTState.MoveProgress = progress;
-            },
-            onComplete: (pc) => {
-                if (pc != null && pc.RTState != null && !pc.RTState.IsDead)
-                {
-                    boardState.SetPieceAt(pc.RTState.MoveEndPos, pc.PieceData);
-                    pc.BoardPosition = pc.RTState.MoveEndPos;
-                    pc.RTState.ResetToDefault(pc.RTState.MoveEndPos);
-                    movingPieces.Remove(pc);
-                    Debug.Log($"[State] {pc.name} 移动完成，状态已重置于 {pc.RTState.MoveEndPos}。");
-                }
-                else if (pc != null)
-                {
-                    movingPieces.Remove(pc);
-                    Debug.Log($"[State] 已死亡的棋子 {pc.name} 动画结束，不执行落子逻辑。");
-                }
-            }
-        );
+        // 3. 返回这个棋子，让GameManager来处理网络同步
+        return pieceToMove;
     }
 
     public BoardState GetLogicalBoardState()

@@ -164,4 +164,33 @@ public class GameNetworkManager : NetworkBehaviour
         }
         return null;
     }
+
+    /// <summary>
+    /// [Server Rpc] 客户端请求移动棋子。
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdRequestMove(Vector2Int from, Vector2Int to, FishNet.Connection.NetworkConnection sender = null)
+    {
+        // 1. 安全性检查：根据发送者ID，从已注册的玩家列表中查找数据
+        if (!AllPlayers.TryGetValue(sender.ClientId, out PlayerNetData playerData))
+        {
+            Debug.LogError($"[Server] 收到来自未注册玩家(ID: {sender.ClientId})的移动请求，已忽略。");
+            return;
+        }
+
+        Debug.Log($"[Server] 收到来自玩家 {playerData.PlayerName} (颜色: {playerData.Color}) 的移动请求: 从 {from} 到 {to}");
+
+        // 2. 将请求转发给GameManager进行逻辑处理
+        // 我们传递从服务器权威数据中获取的玩家颜色，而不是相信客户端
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Server_ProcessMoveRequest(playerData.Color, from, to);
+        }
+        else
+        {
+            Debug.LogError("[Server] CmdRequestMove 无法找到 GameManager.Instance！");
+        }
+    }
+
+
 }
