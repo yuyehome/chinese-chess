@@ -23,27 +23,6 @@ public class RealTimeModeController : GameModeController
         this.CombatManager = new CombatManager(state, renderer, collisionDistanceSquared);
     }
 
-    public void InitializeRealTimeStates()
-    {
-        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
-        {
-            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
-            {
-                Vector2Int pos = new Vector2Int(x, y);
-                if (boardState.GetPieceAt(pos).Type != PieceType.None)
-                {
-                    PieceComponent pc = boardRenderer.GetPieceComponentAt(pos);
-                    if (pc != null)
-                    {
-                        pc.RTState = new RealTimePieceState();
-                        pc.RTState.LogicalPosition = pos;
-                    }
-                }
-            }
-        }
-        Debug.Log("[System] 实时模式控制器：已为所有棋子初始化实时状态(RTState)。");
-    }
-
     #region Main Logic Loop
 
     public void Tick()

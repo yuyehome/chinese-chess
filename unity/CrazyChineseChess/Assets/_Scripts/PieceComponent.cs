@@ -84,6 +84,17 @@ public class PieceComponent : NetworkBehaviour
         Debug.Log($"[{(IsServer ? "Server" : "Client")}] 棋子 {gameObject.name} (Type: {Type.Value}, Color: {Color.Value}) 已生成，正在设置视觉效果。坐标: {BoardPosition}");
         BoardRenderer.Instance.SetupPieceVisuals(this);
 
+        // 只要视觉设置完成，就意味着棋子已经“存在”于游戏世界中，
+        // 此时我们可以安全地初始化它的实时状态。
+        // 这适用于单机、服务器和客户端。
+        if (this.RTState == null)
+        {
+            this.RTState = new RealTimePieceState();
+            // 使用 BoardPosition 作为初始的 LogicalPosition
+            this.RTState.LogicalPosition = this.BoardPosition;
+            Debug.Log($"[{(IsServer ? "Server" : (IsClient ? "Client" : "Local"))}] 棋子 {gameObject.name} 的 RTState 已初始化。");
+        }
+
         // 标记为已初始化，并取消订阅，因为我们只需要执行一次
         _visualsInitialized = true;
         BoardRenderer.OnInstanceReady -= TrySetupVisuals;

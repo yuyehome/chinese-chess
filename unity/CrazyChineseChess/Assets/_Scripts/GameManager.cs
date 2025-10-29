@@ -184,10 +184,6 @@ public class GameManager : MonoBehaviour
         InitializeControllers();
         BoardRenderer.RenderBoard(CurrentBoardState);
 
-        if (currentGameMode is RealTimeModeController rtController)
-        {
-            rtController.InitializeRealTimeStates();
-        }
     }
 
     private void InitializeControllers()
