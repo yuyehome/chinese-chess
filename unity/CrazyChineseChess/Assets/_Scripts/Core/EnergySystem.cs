@@ -1,64 +1,103 @@
+// File: _Scripts/Core/EnergySystem.cs
+
 using UnityEngine;
 
 /// <summary>
-/// 负责管理行动点（能量）的恢复、消耗和查询逻辑。
-/// 这是一个无状态的工具类，所有计算都基于传入的当前能量值。
+/// 负责管理双方玩家行动点（能量）的恢复、消耗和查询。
 /// </summary>
 public class EnergySystem
 {
+    // --- 配置参数 (由外部注入) ---
     private readonly float maxEnergy;
     private readonly float energyRecoveryRate;
     private readonly int moveCost;
 
+    // --- 内部状态 ---
+    private float redPlayerEnergy;
+    private float blackPlayerEnergy;
+
     /// <summary>
-    /// 构造函数，注入配置参数。
+    /// 构造函数，用于初始化能量系统并注入配置参数。
     /// </summary>
-    public EnergySystem(float maxEnergy, float recoveryRate, int moveCost)
+    /// <param name="maxEnergy">最大能量上限</param>
+    /// <param name="recoveryRate">每秒恢复速率</param>
+    /// <param name="moveCost">每次移动消耗</param>
+    /// <param name="startEnergy">初始能量</param>
+    public EnergySystem(float maxEnergy, float recoveryRate, int moveCost, float startEnergy)
     {
         this.maxEnergy = maxEnergy;
         this.energyRecoveryRate = recoveryRate;
         this.moveCost = moveCost;
+
+        // 游戏开始时，双方拥有初始能量
+        this.redPlayerEnergy = startEnergy;
+        this.blackPlayerEnergy = startEnergy;
     }
 
     /// <summary>
-    /// 计算并返回一帧之后的新能量值。
+    /// 由MonoBehaviour的Update()方法每帧调用，以平滑地恢复能量。
     /// </summary>
-    /// <param name="currentEnergy">当前的能量值</param>
-    /// <returns>更新后的能量值</returns>
-    public float Tick(float currentEnergy)
+    public void Tick()
     {
-        if (currentEnergy < maxEnergy)
+        // 恢复红方能量
+        if (redPlayerEnergy < maxEnergy)
         {
-            currentEnergy += energyRecoveryRate * Time.deltaTime;
-            return Mathf.Min(currentEnergy, maxEnergy);
+            redPlayerEnergy += energyRecoveryRate * Time.deltaTime;
+            redPlayerEnergy = Mathf.Min(redPlayerEnergy, maxEnergy); // 确保不超过上限
         }
-        return currentEnergy;
+
+        // 恢复黑方能量
+        if (blackPlayerEnergy < maxEnergy)
+        {
+            blackPlayerEnergy += energyRecoveryRate * Time.deltaTime;
+            blackPlayerEnergy = Mathf.Min(blackPlayerEnergy, maxEnergy); // 确保不超过上限
+        }
     }
 
     /// <summary>
-    /// 检查是否有足够的能量执行一次操作。
+    /// 检查指定玩家是否有足够的能量执行一次操作。
     /// </summary>
-    /// <param name="currentEnergy">当前的能量值</param>
-    public bool CanSpendEnergy(float currentEnergy)
+    public bool CanSpendEnergy(PlayerColor player)
     {
-        return currentEnergy >= moveCost;
+        return GetEnergy(player) >= moveCost;
     }
 
     /// <summary>
-    /// 计算并返回消耗一次操作后的新能量值。
+    /// 消耗指定玩家一次操作所需的能量。
     /// </summary>
-    /// <param name="currentEnergy">当前的能量值</param>
-    /// <returns>消耗后的能量值</returns>
-    public float SpendEnergy(float currentEnergy)
+    public void SpendEnergy(PlayerColor player)
     {
-        return currentEnergy - moveCost;
+        if (player == PlayerColor.Red)
+        {
+            redPlayerEnergy -= moveCost;
+        }
+        else if (player == PlayerColor.Black)
+        {
+            blackPlayerEnergy -= moveCost;
+        }
     }
 
     /// <summary>
-    /// 获取能量值的整数部分（用于UI显示）。
+    /// 获取指定玩家当前能量值的整数部分（用于UI显示）。
     /// </summary>
-    public int GetEnergyInt(float currentEnergy)
+    public int GetEnergyInt(PlayerColor player)
     {
-        return Mathf.FloorToInt(currentEnergy);
+        return Mathf.FloorToInt(GetEnergy(player));
+    }
+
+    /// <summary>
+    /// 获取指定玩家当前的精确能量值。
+    /// </summary>
+    public float GetEnergy(PlayerColor player)
+    {
+        if (player == PlayerColor.Red)
+        {
+            return redPlayerEnergy;
+        }
+        if (player == PlayerColor.Black)
+        {
+            return blackPlayerEnergy;
+        }
+        return 0;
     }
 }

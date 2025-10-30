@@ -146,11 +146,8 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
 
     private void TrySelectPiece(PieceComponent pieceToSelect)
     {
-        float currentEnergy = (assignedColor == PlayerColor.Red)
-            ? gameManager.RedPlayerEnergy.Value
-            : gameManager.BlackPlayerEnergy.Value;
-
-        if (gameManager.EnergySystem.CanSpendEnergy(currentEnergy))
+        // 检查能量是否足够选择
+        if (gameManager.EnergySystem.CanSpendEnergy(assignedColor))
         {
             SelectPiece(pieceToSelect);
             Debug.Log($"[Input] 成功选择棋子 {pieceToSelect.name}。");
