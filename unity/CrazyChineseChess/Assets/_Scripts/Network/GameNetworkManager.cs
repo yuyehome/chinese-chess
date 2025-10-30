@@ -128,39 +128,29 @@ public class GameNetworkManager : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void CmdRegisterPlayer(CSteamID steamId, string playerName, FishNet.Connection.NetworkConnection conn = null)
     {
+
+        // 重构后的逻辑更加简洁和健壮
         int connectionId = conn.ClientId;
 
-        bool redPlayerExists = false;
-        foreach (var player in AllPlayers.Values)
+        // 如果玩家已经注册，则忽略，防止重复处理
+        if (AllPlayers.ContainsKey(connectionId))
         {
-            if (player.Color == PlayerColor.Red)
-            {
-                redPlayerExists = true;
-                break;
-            }
+            Debug.LogWarning($"[Server] 连接ID {connectionId} 的玩家尝试重复注册。");
+            return;
         }
-        PlayerColor color = redPlayerExists ? PlayerColor.Black : PlayerColor.Red;
-        var playerData = new PlayerNetData(steamId, playerName, color);
 
-        if (!AllPlayers.ContainsKey(connectionId))
-        {
-            AllPlayers.Add(connectionId, playerData);
-            Debug.Log($"[Server] 玩家注册: Id={connectionId}, Name={playerName}, Color={color}");
+        // 决定玩家颜色：第一个连接的总是红方
+        PlayerColor assignedColor = (AllPlayers.Count == 0) ? PlayerColor.Red : PlayerColor.Black;
 
-            // Host的连接ID总是0
-            if (connectionId == 0)
-            {
-                Debug.Log("[Server-Host] 检测到Host本地注册，直接触发本地事件...");
-                _localPlayerData = playerData; // 为Host自己也缓存数据
-                OnLocalPlayerDataReceived?.Invoke(playerData);
-            }
-            // 远程客户端
-            else
-            {
-                Debug.Log($"[Server-Remote] 检测到远程客户端 {connectionId} 注册，发送TargetRpc...");
-                Target_SetPlayerColor(conn, playerData);
-            }
-        }
+        var playerData = new PlayerNetData(steamId, playerName, assignedColor);
+        AllPlayers.Add(connectionId, playerData);
+
+        Debug.Log($"[Server] 玩家注册成功: ConnId={connectionId}, Name={playerName}, 分配颜色={assignedColor}");
+
+        // 关键：无论是Host还是Client，都通过TargetRpc将分配好的数据发回给对应的连接。
+        // 这统一了初始化流程，消除了特殊处理Host的需要。
+        Target_SetPlayerColor(conn, playerData);
+
     }
 
     /// <summary>

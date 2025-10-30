@@ -63,11 +63,11 @@
   <ItemGroup>
     <Compile Include="Assets\_Scripts\Core\RealTimePieceState.cs" />
     <Compile Include="Assets\_Scripts\Network\LobbyManager.cs" />
-    <Compile Include="Assets\_Scripts\GameManager.cs" />
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\Core\ServerSocket.cs" />
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\Core\LocalPacket.cs" />
     <Compile Include="Assets\_Scripts\UI\MainMenuController.cs" />
     <Compile Include="Assets\_Scripts\UI\LobbyItem.cs" />
+    <Compile Include="Assets\_Scripts\Gameplay\RealTimeModeController.cs" />
     <Compile Include="Assets\_Scripts\Core\PieceData.cs" />
     <Compile Include="Assets\_Scripts\Controllers\IPlayerController.cs" />
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\Core\ClientHostSocket.cs" />
@@ -76,12 +76,13 @@
     <Compile Include="Assets\_Scripts\Controllers\AI\HardAIStrategy.cs" />
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\Core\BidirectionalDictionary.cs" />
     <Compile Include="Assets\_Scripts\Controllers\AI\EasyAIStrategy.cs" />
-    <Compile Include="Assets\_Scripts\GameModes\RealTimeModeController.cs" />
     <Compile Include="Assets\_Scripts\Controllers\PlayerInputController.cs" />
     <Compile Include="Assets\_Scripts\Network\NetworkPieceData.cs" />
     <Compile Include="Assets\_Scripts\Core\RuleEngine.cs" />
+    <Compile Include="Assets\_Scripts\Gameplay\GameManager.cs" />
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\Core\ClientSocket.cs" />
     <Compile Include="Assets\_Scripts\UI\GameUIManager.cs" />
+    <Compile Include="Assets\_Scripts\Gameplay\GameSetupController.cs" />
     <Compile Include="Assets\_Scripts\GameModes\TurnBasedModeController.cs" />
     <Compile Include="Assets\_Scripts\MoveMarkerComponent.cs" />
     <Compile Include="Assets\_Scripts\Network\GameNetworkManager.cs" />
