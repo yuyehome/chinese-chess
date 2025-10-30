@@ -30,6 +30,11 @@ public class GameUIManager : MonoBehaviour
     private EnergyBarSegmentsUI myEnergyBar;
     private EnergyBarSegmentsUI enemyEnergyBar;
 
+    private PlayerColor _localPlayerColor = PlayerColor.None;
+    private PlayerColor _enemyPlayerColor = PlayerColor.None;
+    private bool _isNetworkInitialized = false; // 网络身份初始化标志
+
+
     void Start()
     {
         // 确保GameManager及其核心系统已准备就绪
@@ -42,6 +47,21 @@ public class GameUIManager : MonoBehaviour
             {
                 AdaptUILayout(); // 步骤1: 先根据屏幕比例调整布局容器的位置
                 SetupUI();       // 步骤2: 在调整好的容器内创建UI元素
+                // 检查是否是网络模式
+                bool isPVPMode = InstanceFinder.IsClient || InstanceFinder.IsServer;
+                if (isPVPMode)
+                {
+                    // 在网络模式下，订阅事件以等待服务器分配身份
+                    Debug.Log("[GameUIManager] 检测到PVP模式，正在订阅玩家身份确认事件...");
+                    GameNetworkManager.OnLocalPlayerDataReceived += HandleLocalPlayerDataReceived;
+                }
+                else
+                {
+                    // 在单机模式下，我们硬编码身份
+                    Debug.Log("[GameUIManager] 检测到单机模式，设置默认玩家身份（红方）。");
+                    _localPlayerColor = PlayerColor.Red;
+                    _enemyPlayerColor = PlayerColor.Black;
+                }
             }
         }
         else
@@ -51,15 +71,36 @@ public class GameUIManager : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        // 切换场景或对象销毁时，务必取消订阅
+        GameNetworkManager.OnLocalPlayerDataReceived -= HandleLocalPlayerDataReceived;
+    }
+
+    /// <summary>
+    /// 当从GameNetworkManager接收到本地玩家的数据时，此回调被触发。
+    /// </summary>
+    private void HandleLocalPlayerDataReceived(PlayerNetData localPlayerData)
+    {
+        Debug.Log($"[GameUIManager] 身份确认！本地玩家是 {localPlayerData.Color} 方。");
+        _localPlayerColor = localPlayerData.Color;
+        _enemyPlayerColor = (_localPlayerColor == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
+        _isNetworkInitialized = true; // 标记网络身份已初始化
+    }
+
     private void Update()
     {
-        // 如果UI未初始化，则不执行任何操作
+        // 检查：如果能量系统或UI元素未准备好，则不执行任何操作
         if (energySystem == null || myEnergyBar == null || enemyEnergyBar == null) return;
 
-        // 每帧更新能量条的显示
-        // 注意：当前硬编码我方为红方，敌方为黑方。未来网络对战中需根据服务器分配的角色动态决定。
-        myEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Red), 4.0f);
-        enemyEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Black), 4.0f);
+        // 检查：如果身份未确定，则不更新
+        // 在单机模式下，_localPlayerColor 在 Start() 中就被赋值了，所以这个判断不会阻塞
+        // 在网络模式下，这个判断会等到 HandleLocalPlayerDataReceived 执行后才通过
+        if (_localPlayerColor == PlayerColor.None) return;
+
+        // 每帧根据已确认的身份，动态更新能量条的显示
+        myEnergyBar.UpdateEnergy(energySystem.GetEnergy(_localPlayerColor), 4.0f);
+        enemyEnergyBar.UpdateEnergy(energySystem.GetEnergy(_enemyPlayerColor), 4.0f);
     }
 
     /// <summary>

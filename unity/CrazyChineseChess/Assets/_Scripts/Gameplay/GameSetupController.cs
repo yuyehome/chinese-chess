@@ -9,24 +9,33 @@ using FishNet;
 /// </summary>
 public class GameSetupController : MonoBehaviour
 {
+
     private void Start()
     {
         bool isPVPMode = InstanceFinder.IsClient || InstanceFinder.IsServer;
 
         if (isPVPMode)
         {
-            // 在PVP模式下，我们不在这里做任何事。
-            // 而是等待 GameNetworkManager 通过事件通知我们本地玩家的数据。
             Debug.Log("[GameSetup] 检测到PVP模式，等待网络玩家数据...");
+            // 订阅事件
             GameNetworkManager.OnLocalPlayerDataReceived += InitializeLocalPlayerForPVP;
+
+            // 除了订阅，我们还要检查一下数据是不是已经到了
+            // 如果 GameNetworkManager 的实例存在，并且已经缓存了本地玩家数据
+            if (GameNetworkManager.Instance != null && GameNetworkManager.Instance.LocalPlayerData.Color != PlayerColor.None)
+            {
+                Debug.Log("[GameSetup] 检测到玩家数据已提前到达，立即执行初始化！");
+                // 直接用已经存在的数据进行初始化
+                InitializeLocalPlayerForPVP(GameNetworkManager.Instance.LocalPlayerData);
+            }
         }
         else
         {
-            // 在PVE（单机）模式下，我们立即进行设置。
             Debug.Log("[GameSetup] 检测到PVE模式，立即初始化单机对战...");
             InitializeForPVE();
         }
     }
+
 
     private void OnDestroy()
     {
@@ -39,22 +48,27 @@ public class GameSetupController : MonoBehaviour
     /// </summary>
     private void InitializeLocalPlayerForPVP(PlayerNetData localPlayerData)
     {
-        Debug.Log($"[GameSetup] 收到网络玩家数据，开始为 {localPlayerData.Color} 方设置本地输入...");
+        // 安全锁：确保这个初始化逻辑只执行一次
+        if (this.enabled == false) return;
 
-        // 获取或创建 PlayerInputController
-        PlayerInputController playerController = GetComponent<PlayerInputController>();
-        if (playerController == null)
+        Debug.Log($"[GameSetup] 收到网络玩家数据，开始为 {localPlayerData.Color} 方设置本地输入和相机...");
+
+        // 移除可能存在的旧组件，确保我们是从一个干净的状态开始
+        if (TryGetComponent<PlayerInputController>(out var oldController))
         {
-            playerController = gameObject.AddComponent<PlayerInputController>();
+            Destroy(oldController);
         }
+        // 总是添加一个新的、干净的控制器组件
+        PlayerInputController playerController = gameObject.AddComponent<PlayerInputController>();
 
         // 初始化输入控制器，这会激活它
         playerController.Initialize(localPlayerData.Color, GameManager.Instance);
+        Debug.Log($"[GameSetup] PlayerInputController 已为 {localPlayerData.Color} 方初始化。");
 
-        // 如果分配到的是黑方，直接设置预设的相机位置和旋转
+        // 如果分配到的是黑方，旋转相机
         if (localPlayerData.Color == PlayerColor.Black)
         {
-            Debug.Log("[GameSetup] 本地玩家为黑方，设置预设的相机Transform。");
+            Debug.Log("[GameSetup] 本地玩家为黑方，正在调整相机视角。");
             Camera mainCamera = Camera.main;
             if (mainCamera != null)
             {
@@ -63,40 +77,46 @@ public class GameSetupController : MonoBehaviour
             }
         }
 
-        // 设置完成，可以禁用自身，因为它的使命已经完成了
+        // 设置完成，禁用自身，因为它的使命已经完成了
         this.enabled = false;
+        Debug.Log("[GameSetup] 初始化完成，GameSetupController 已禁用。");
     }
 
-    /// <summary>
-    /// [PVE-Setup] 初始化单机游戏模式。
-    /// </summary>
     private void InitializeForPVE()
     {
-        // PVE模式下，玩家固定为红方
-        PlayerInputController playerController = GetComponent<PlayerInputController>();
-        if (playerController == null) playerController = gameObject.AddComponent<PlayerInputController>();
-        playerController.Initialize(PlayerColor.Red, GameManager.Instance);
+        // 移除可能存在的旧组件
+        if (TryGetComponent<PlayerInputController>(out var oldPlayerController)) Destroy(oldPlayerController);
+        if (TryGetComponent<TurnBasedInputController>(out var oldTurnBasedController)) Destroy(oldTurnBasedController);
+        if (TryGetComponent<AIController>(out var oldAIController)) Destroy(oldAIController);
 
-        // 根据难度选择创建AI
-        IAIStrategy aiStrategy;
-        switch (GameModeSelector.SelectedAIDifficulty)
+        // 根据游戏模式创建合适的控制器
+        if (GameModeSelector.SelectedMode == GameModeType.RealTime)
         {
-            case AIDifficulty.VeryHard:
-                aiStrategy = new VeryHardAIStrategy();
-                break;
-            case AIDifficulty.Hard:
-                aiStrategy = new HardAIStrategy();
-                break;
-            case AIDifficulty.Easy:
-            default:
-                aiStrategy = new EasyAIStrategy();
-                break;
-        }
-        AIController aiController = gameObject.AddComponent<AIController>();
-        aiController.Initialize(PlayerColor.Black, GameManager.Instance);
-        aiController.SetupAI(aiStrategy);
+            // PVE实时模式下，玩家固定为红方
+            PlayerInputController playerController = gameObject.AddComponent<PlayerInputController>();
+            playerController.Initialize(PlayerColor.Red, GameManager.Instance);
 
+            // 根据难度选择创建AI
+            IAIStrategy aiStrategy;
+            switch (GameModeSelector.SelectedAIDifficulty)
+            {
+                case AIDifficulty.VeryHard: aiStrategy = new VeryHardAIStrategy(); break;
+                case AIDifficulty.Hard: aiStrategy = new HardAIStrategy(); break;
+                case AIDifficulty.Easy: default: aiStrategy = new EasyAIStrategy(); break;
+            }
+            AIController aiController = gameObject.AddComponent<AIController>();
+            aiController.Initialize(PlayerColor.Black, GameManager.Instance);
+            aiController.SetupAI(aiStrategy);
+        }
+        else if (GameModeSelector.SelectedMode == GameModeType.TurnBased)
+        {
+            // PVE回合制模式
+            TurnBasedInputController turnBasedInput = gameObject.AddComponent<TurnBasedInputController>();
+            turnBasedInput.Initialize(PlayerColor.Red, GameManager.Instance);
+            // 这里可以根据需要添加回合制AI
+        }
         // PVE设置完成，禁用自身
         this.enabled = false;
     }
+
 }
