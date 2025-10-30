@@ -9,10 +9,6 @@ using FishNet.Object.Synchronizing;
 /// </summary>
 public class PieceComponent : NetworkBehaviour
 {
-    [Header("组件引用")]
-    [Tooltip("挂载模型网格的子对象Transform")]
-    [SerializeField] private Transform visualsTransform;
-
     // 【核心改动】将 readonly 关键字加回来！
     // 这满足了 FishNet ILPP 的要求。
     public readonly SyncVar<PieceType> Type = new SyncVar<PieceType>();
@@ -98,31 +94,9 @@ public class PieceComponent : NetworkBehaviour
             this.RTState.LogicalPosition = this.BoardPosition;
         }
 
-        // 根据本地玩家的阵营，调整视觉模型的朝向
-        OrientVisualsForLocalPlayer();
-
         // 标记为已初始化，并取消订阅，因为我们只需要执行一次
         _visualsInitialized = true;
         BoardRenderer.OnInstanceReady -= TrySetupVisuals;
-    }
-
-    /// <summary>
-    /// 根据本地玩家的颜色来调整棋子视觉模型的朝向。
-    /// </summary>
-    public void OrientVisualsForLocalPlayer()
-    {
-        // 如果本地玩家是黑方，则将视觉模型Y轴旋转180度。
-        if (GameNetworkManager.LocalPlayerColor == PlayerColor.Black)
-        {
-            if (visualsTransform != null)
-            {
-                visualsTransform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            }
-            else
-            {
-                Debug.LogWarning($"棋子 {gameObject.name} 的 visualsTransform 未指定，无法调整朝向。");
-            }
-        }
     }
 
     public override void OnStartNetwork()
