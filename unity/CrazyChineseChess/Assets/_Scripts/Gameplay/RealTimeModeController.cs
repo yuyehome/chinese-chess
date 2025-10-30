@@ -81,9 +81,11 @@ public class RealTimeModeController : GameModeController
     /// </summary>
     public void Server_OnMoveAnimationComplete(PieceComponent pc)
     {
-        if (!movingPieces.Contains(pc)) return;
+        if (pc != null && movingPieces.Contains(pc))
+        {
+            movingPieces.Remove(pc);
+        }
 
-        movingPieces.Remove(pc);
     }
 
     /// <summary>

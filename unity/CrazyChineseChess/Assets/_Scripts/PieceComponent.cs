@@ -114,46 +114,60 @@ public class PieceComponent : NetworkBehaviour
     public void Observer_PlayMoveAnimation(Vector2Int from, Vector2Int to)
     {
         Debug.Log($"[{(IsServer ? "Server" : "Client")}] 收到移动指令，棋子 {this.name} 将从 {from} 移动到 {to}");
+        if (BoardRenderer.Instance == null) return;
 
-        // 每个客户端都调用自己的BoardRenderer来播放视觉动画
-        // 注意：这里的逻辑回调（onProgressUpdate, onComplete）只在服务器上有意义，
-        // 因为只有服务器才需要根据动画进度更新权威的游戏状态。
-        if (BoardRenderer.Instance != null)
+        // 1. 定义动画进度更新的回调 (仅服务器需要)
+        System.Action<PieceComponent, float> onProgressUpdate = null;
+        if (IsServer)
         {
-            BoardRenderer.Instance.MovePiece(
-                from, to,
-                onProgressUpdate: (pc, progress) => {
-                    // 这个回调只在服务器上执行
-                    if (!IsServer) return;
-                    if (pc != null && pc.RTState != null) pc.RTState.MoveProgress = progress;
-                },
-                onComplete: (pc) => {
-                    // 这个回调也只在服务器上执行
-                    if (!IsServer) return;
-
-                    if (pc != null && pc.RTState != null && !pc.RTState.IsDead)
-                    {
-                        // 服务器在动画完成后更新最终的逻辑状态
-                        GameManager.Instance.CurrentBoardState.SetPieceAt(pc.RTState.MoveEndPos, pc.PieceData);
-                        pc.BoardPosition = pc.RTState.MoveEndPos;
-                        pc.RTState.ResetToDefault(pc.RTState.MoveEndPos);
-
-                        // 从服务器的movingPieces列表中移除
-                        var rtController = GameManager.Instance.GetCurrentGameMode() as RealTimeModeController;
-                        rtController?.Server_OnMoveAnimationComplete(pc);
-
-                        Debug.Log($"[Server-State] {pc.name} 移动完成，服务器状态已重置于 {pc.RTState.MoveEndPos}。");
-                    }
-                    else if (pc != null)
-                    {
-                        // 从服务器的movingPieces列表中移除
-                        var rtController = GameManager.Instance.GetCurrentGameMode() as RealTimeModeController;
-                        rtController?.Server_OnMoveAnimationComplete(pc);
-                        Debug.Log($"[Server-State] 已死亡的棋子 {pc.name} 动画结束，不执行落子逻辑。");
-                    }
-                }
-            );
+            onProgressUpdate = (pc, progress) =>
+            {
+                if (pc != null && pc.RTState != null) pc.RTState.MoveProgress = progress;
+            };
         }
+
+        // 2. 定义动画完成后的回调 (服务器和客户端都需要)
+        System.Action<PieceComponent> onComplete = (pc) =>
+        {
+            if (pc == null || pc.RTState == null) return;
+
+            // 如果棋子在移动过程中死亡，则不执行任何落子逻辑
+            if (pc.RTState.IsDead)
+            {
+                if (IsServer)
+                {
+                    // 仅在服务器上，需要将死亡棋子从“移动中”列表中移除
+                    var rtController = GameManager.Instance.GetCurrentGameMode() as RealTimeModeController;
+                    rtController?.Server_OnMoveAnimationComplete(pc);
+                }
+                return;
+            }
+
+            // --- 对存活棋子的处理 ---
+
+            // 更新双方的本地逻辑棋盘 (BoardState)
+            // 这是为了确保RuleEngine在任何一端都能拿到最新的棋盘布局
+            GameManager.Instance.CurrentBoardState.MovePiece(from, to);
+
+            // 更新棋子组件自身的逻辑位置数据
+            pc.BoardPosition = to;
+            pc.RTState.ResetToDefault(to);
+
+            // 服务器需要执行额外的状态同步和清理
+            if (IsServer)
+            {
+                Debug.Log($"[Server-State] {pc.name} 移动完成，服务器逻辑已更新于 {to}。");
+                var rtController = GameManager.Instance.GetCurrentGameMode() as RealTimeModeController;
+                rtController?.Server_OnMoveAnimationComplete(pc);
+            }
+            else // 客户端仅需打印日志确认
+            {
+                Debug.Log($"[Client-State] {pc.name} 移动完成，客户端逻辑位置已更新至 {to}。");
+            }
+        };
+
+        // 3. 调用视觉层的移动方法
+        BoardRenderer.Instance.MovePiece(from, to, onProgressUpdate, onComplete);
     }
 
 }
