@@ -1,7 +1,6 @@
-// File: _Scripts/UI/GameUIManager.cs
-
 using UnityEngine;
-using FishNet;  
+using FishNet;
+using TMPro; // 需要引入TextMeshPro
 
 /// <summary>
 /// 游戏内主UI的管理器。
@@ -10,19 +9,17 @@ using FishNet;
 public class GameUIManager : MonoBehaviour
 {
     [Header("UI Prefabs")]
-    [Tooltip("能量条UI的预制件")]
     [SerializeField] private GameObject energyBarPrefab;
 
     [Header("UI Layout Containers")]
-    [Tooltip("我方信息块的根对象，用于布局定位")]
     [SerializeField] private RectTransform myInfoBlock;
-    [Tooltip("敌方信息块的根对象，用于布局定位")]
     [SerializeField] private RectTransform enemyInfoBlock;
 
-    [Header("UI Element Parents")]
-    [Tooltip("我方能量条将被实例化到的具体位置")]
+    // --- 新增：对信息块内部元素的具体引用 ---
+    [Header("Player Info UI Elements")]
+    [SerializeField] private TextMeshProUGUI myNameText;
+    [SerializeField] private TextMeshProUGUI enemyNameText;
     [SerializeField] private Transform myEnergyBarContainer;
-    [Tooltip("敌方能量条将被实例化到的具体位置")]
     [SerializeField] private Transform enemyEnergyBarContainer;
 
     // --- 内部引用 ---
@@ -30,42 +27,65 @@ public class GameUIManager : MonoBehaviour
     private EnergyBarSegmentsUI myEnergyBar;
     private EnergyBarSegmentsUI enemyEnergyBar;
 
-    void Start()
-    {
-        // 确保GameManager及其核心系统已准备就绪
-        if (GameManager.Instance != null && GameManager.Instance.EnergySystem != null)
-        {
-            energySystem = GameManager.Instance.EnergySystem;
+    private PlayerColor myColor = PlayerColor.None;
+    private PlayerColor enemyColor = PlayerColor.None;
+    private bool isInitialized = false;
 
-            // 仅在实时模式下才需要能量条等相关UI
-            if (GameModeSelector.SelectedMode == GameModeType.RealTime)
+    /// <summary>
+    /// 初始化UI管理器。由GameSetupController在正确时机调用。
+    /// </summary>
+    /// <param name="localPlayerColor">本地玩家被分配的颜色</param>
+    public void Initialize(PlayerColor localPlayerColor)
+    {
+        if (isInitialized) return;
+
+        this.myColor = localPlayerColor;
+        this.enemyColor = (myColor == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
+
+        // 确保GameManager已经准备好
+        if (GameManager.Instance != null)
+        {
+            // 不再需要检查EnergySystem，因为它现在是无状态的
+            if (GameModeSelector.SelectedMode == GameModeType.RealTime || InstanceFinder.IsClient)
             {
-                AdaptUILayout(); // 步骤1: 先根据屏幕比例调整布局容器的位置
-                SetupUI();       // 步骤2: 在调整好的容器内创建UI元素
+                AdaptUILayout();
+                SetupUIElements();
+                isInitialized = true;
             }
         }
         else
         {
-            // 如果不是实时模式或GameManager异常，则禁用此UI管理器
+            Debug.LogError("[UI] GameUIManager初始化失败：GameManager或其EnergySystem尚未准备好。");
             gameObject.SetActive(false);
         }
     }
 
+
     private void Update()
     {
-        // 如果UI未初始化，则不执行任何操作
-        if (energySystem == null || myEnergyBar == null || enemyEnergyBar == null) return;
+        // 如果未初始化或游戏结束，则不执行任何操作
+        if (!isInitialized || GameManager.Instance.IsGameEnded) return;
+
+
+        // 从GameManager的SyncVar中读取能量值来更新UI
+        float myEnergy = (myColor == PlayerColor.Red)
+            ? GameManager.Instance.RedPlayerEnergy.Value
+            : GameManager.Instance.BlackPlayerEnergy.Value;
+
+        float enemyEnergy = (enemyColor == PlayerColor.Red)
+            ? GameManager.Instance.RedPlayerEnergy.Value
+            : GameManager.Instance.BlackPlayerEnergy.Value;
 
         // 每帧更新能量条的显示
-        // 注意：当前硬编码我方为红方，敌方为黑方。未来网络对战中需根据服务器分配的角色动态决定。
-        myEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Red), 4.0f);
-        enemyEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Black), 4.0f);
+        myEnergyBar.UpdateEnergy(myEnergy, 4.0f);
+        enemyEnergyBar.UpdateEnergy(enemyEnergy, 4.0f);
+
     }
 
     /// <summary>
-    /// 在指定的容器内实例化能量条UI。
+    /// 在指定的容器内实例化能量条UI，并设置玩家名称。
     /// </summary>
-    private void SetupUI()
+    private void SetupUIElements()
     {
         if (energyBarPrefab == null)
         {
@@ -73,13 +93,40 @@ public class GameUIManager : MonoBehaviour
             return;
         }
 
-        // 为我方(红方)创建能量条
+        // 创建能量条
         GameObject myBarGO = Instantiate(energyBarPrefab, myEnergyBarContainer);
         myEnergyBar = myBarGO.GetComponent<EnergyBarSegmentsUI>();
 
-        // 为敌方(黑方)创建能量条
         GameObject enemyBarGO = Instantiate(energyBarPrefab, enemyEnergyBarContainer);
         enemyEnergyBar = enemyBarGO.GetComponent<EnergyBarSegmentsUI>();
+
+        // 设置玩家名称
+        // PVE模式
+        if (!InstanceFinder.IsClient && !InstanceFinder.IsServer)
+        {
+            myNameText.text = "玩家";
+            enemyNameText.text = "电脑";
+        }
+        else // PVP模式
+        {
+            // 在PVP模式下，我们需要从GameNetworkManager获取玩家数据来显示名字
+            var gnm = GameNetworkManager.Instance;
+            if (gnm != null)
+            {
+                // 遍历所有玩家数据来找到自己和对手
+                foreach (var player in gnm.AllPlayers.Values)
+                {
+                    if (player.Color == myColor)
+                    {
+                        myNameText.text = player.PlayerName;
+                    }
+                    else if (player.Color == enemyColor)
+                    {
+                        enemyNameText.text = player.PlayerName;
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -87,60 +134,42 @@ public class GameUIManager : MonoBehaviour
     /// </summary>
     private void AdaptUILayout()
     {
-        // 判断是否为竖屏 (高度大于宽度)
-        if ((float)Screen.height / Screen.width > 1.0f)
+        if ((float)Screen.height / Screen.width > 1.0f) // 竖屏
         {
-            Debug.Log("[UI] 检测到竖屏模式，调整UI布局为上下结构。");
+            myInfoBlock.anchorMin = new Vector2(0.5f, 0);
+            myInfoBlock.anchorMax = new Vector2(0.5f, 0);
+            myInfoBlock.pivot = new Vector2(0.5f, 0);
+            myInfoBlock.anchoredPosition = new Vector2(0, 20);
 
-            // --- 调整我方信息块到屏幕下中 ---
-            myInfoBlock.anchorMin = new Vector2(0.5f, 0);   // 锚点(左,下)
-            myInfoBlock.anchorMax = new Vector2(0.5f, 0);   // 锚点(右,上)
-            myInfoBlock.pivot = new Vector2(0.5f, 0);       // 轴心点
-            myInfoBlock.anchoredPosition = new Vector2(0, 20); // 离锚点的偏移，向上20像素
-
-            // --- 调整敌方信息块到屏幕上中 ---
             enemyInfoBlock.anchorMin = new Vector2(0.5f, 1);
             enemyInfoBlock.anchorMax = new Vector2(0.5f, 1);
             enemyInfoBlock.pivot = new Vector2(0.5f, 1);
-            enemyInfoBlock.anchoredPosition = new Vector2(0, -20); // 向下20像素
+            enemyInfoBlock.anchoredPosition = new Vector2(0, -20);
         }
-        // 如果是横屏，则UI会保持其在编辑器中通过锚点设置的默认布局，无需代码干预。
     }
 
     /// <summary>
-    /// 公共方法，用于响应UI按钮的点击事件来退出游戏。
+    /// 响应UI按钮点击退出游戏。
     /// </summary>
     public void OnClick_ExitGame()
     {
-        Debug.Log("[GameUIManager] 玩家点击了退出游戏按钮。");
-
-        // 在网络游戏中，退出不是简单地关闭程序，而是要先断开网络连接。
-        // FishNet的InstanceFinder可以方便地找到NetworkManager实例。
         if (InstanceFinder.IsHost)
         {
-            // 如果是主机，需要同时关闭服务器和客户端。
-            Debug.Log("主机正在关闭连接...");
             InstanceFinder.ServerManager.StopConnection(true);
             InstanceFinder.ClientManager.StopConnection();
         }
         else if (InstanceFinder.IsClient)
         {
-            // 如果只是客户端，只需关闭客户端连接。
-            Debug.Log("客户端正在断开连接...");
             InstanceFinder.ClientManager.StopConnection();
         }
 
-        // 这里的逻辑可以扩展，比如返回主菜单场景
+        // 这里可以改为返回主菜单
         // UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
 
-        // 如果只是简单地关闭游戏程序：
-        // 注意：这在Unity编辑器中不起作用，只在构建出的游戏中生效。
-        #if UNITY_EDITOR
-                    UnityEditor.EditorApplication.isPlaying = false;
-        #else
-                Application.Quit();
-        #endif
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
-
-
 }

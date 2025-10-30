@@ -9,6 +9,10 @@ using FishNet;
 /// </summary>
 public class GameSetupController : MonoBehaviour
 {
+    [Header("Scene References")]
+    [SerializeField]
+    private GameUIManager uiManager;
+
     private void Start()
     {
         bool isPVPMode = InstanceFinder.IsClient || InstanceFinder.IsServer;
@@ -50,6 +54,16 @@ public class GameSetupController : MonoBehaviour
 
         // 初始化输入控制器，这会激活它
         playerController.Initialize(localPlayerData.Color, GameManager.Instance);
+
+        // 在正确分配颜色后，立即初始化UI
+        if (uiManager != null)
+        {
+            uiManager.Initialize(localPlayerData.Color);
+        }
+        else
+        {
+            Debug.LogError("[GameSetup] GameUIManager 未在 GameSetupController 中被引用！");
+        }
 
         // 如果分配到的是黑方，直接设置预设的相机位置和旋转
         if (localPlayerData.Color == PlayerColor.Black)
@@ -95,6 +109,16 @@ public class GameSetupController : MonoBehaviour
         AIController aiController = gameObject.AddComponent<AIController>();
         aiController.Initialize(PlayerColor.Black, GameManager.Instance);
         aiController.SetupAI(aiStrategy);
+
+        // PVE模式下也需要初始化UI，玩家固定为红方
+        if (uiManager != null)
+        {
+            uiManager.Initialize(PlayerColor.Red);
+        }
+        else
+        {
+            Debug.LogError("[GameSetup] GameUIManager 未在 GameSetupController 中被引用！");
+        }
 
         // PVE设置完成，禁用自身
         this.enabled = false;

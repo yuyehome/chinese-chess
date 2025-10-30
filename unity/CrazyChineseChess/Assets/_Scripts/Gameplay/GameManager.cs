@@ -1,33 +1,28 @@
 using UnityEngine;
-using System;
 using System.Collections.Generic;
 using FishNet;
-using FishNet.Object; // 引入这个命名空间来使用 NetworkBehaviour 的特性
+using FishNet.Object;
+using FishNet.Object.Synchronizing;
 
 /// <summary>
 /// 游戏总管理器 (Singleton)，作为游戏核心逻辑的入口和协调者。
-/// 负责管理游戏状态、模式切换、和核心操作的执行。
+/// 继承自NetworkBehaviour，以利用网络同步能力（如能量值）。
 /// </summary>
-public class GameManager : MonoBehaviour
+public class GameManager : NetworkBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+
     [Header("游戏平衡性配置")]
-    [SerializeField]
-    [Tooltip("能量最大值")]
-    private float maxEnergy = 4.0f;
-    [SerializeField]
-    [Tooltip("能量每秒恢复速率")]
-    private float energyRecoveryRate = 0.3f;
-    [SerializeField]
-    [Tooltip("移动一次消耗的能量点数")]
-    private int moveCost = 1;
-    [SerializeField]
-    [Tooltip("开局时的初始能量")]
-    private float startEnergy = 2.0f;
-    [SerializeField]
-    [Tooltip("实时模式下，棋子碰撞的判定距离")]
-    private float collisionDistance = 0.0175f;
+    [SerializeField] private float maxEnergy = 4.0f;
+    [SerializeField] private float energyRecoveryRate = 0.3f;
+    [SerializeField] private int moveCost = 1;
+    [SerializeField] private float startEnergy = 2.0f;
+    [SerializeField] private float collisionDistance = 0.0175f;
+
+    // --- 最终修正: 使用正确的 SyncTypeSetting 类型 ---
+    public readonly SyncVar<float> RedPlayerEnergy = new SyncVar<float>();
+    public readonly SyncVar<float> BlackPlayerEnergy = new SyncVar<float>();
 
     // --- 核心系统引用 ---
     public BoardState CurrentBoardState { get; private set; }
@@ -36,9 +31,6 @@ public class GameManager : MonoBehaviour
     public BoardRenderer BoardRenderer { get; private set; }
     public bool IsGameEnded { get; private set; } = false;
 
-    // --- 控制器管理 ---
-    private Dictionary<PlayerColor, IPlayerController> controllers = new Dictionary<PlayerColor, IPlayerController>();
-
     private bool isPVPMode = false;
 
     private void Awake()
@@ -46,8 +38,21 @@ public class GameManager : MonoBehaviour
         if (Instance != null && Instance != this) Destroy(gameObject);
         else Instance = this;
 
-        // isPVPMode的判断应在Awake中完成
         isPVPMode = InstanceFinder.IsClient || InstanceFinder.IsServer;
+
+    }
+
+    public override void OnStartNetwork()
+    {
+        base.OnStartNetwork();
+        Instance = this;
+    }
+
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+        RedPlayerEnergy.Value = startEnergy;
+        BlackPlayerEnergy.Value = startEnergy;
     }
 
     void Start()
@@ -55,225 +60,96 @@ public class GameManager : MonoBehaviour
         BoardRenderer = BoardRenderer.Instance;
         if (BoardRenderer == null)
         {
-            Debug.LogError("[Error] 场景中找不到 BoardRenderer!");
+            Debug.LogError("场景中找不到 BoardRenderer!");
             return;
         }
 
         CurrentBoardState = new BoardState();
         CurrentBoardState.InitializeDefaultSetup();
-        EnergySystem = new EnergySystem(maxEnergy, energyRecoveryRate, moveCost, startEnergy);
+        EnergySystem = new EnergySystem(maxEnergy, energyRecoveryRate, moveCost);
 
         if (isPVPMode)
         {
-            Debug.Log("[GameManager] PVP模式已检测。正在订阅GameNetworkManager的启动事件...");
-            // 订阅来自GNM的事件，它将在服务器和客户端各自准备好时触发
             GameNetworkManager.OnNetworkStart += HandleNetworkStart;
-            GameNetworkManager.OnLocalPlayerDataReceived += InitializeLocalPlayerController;
         }
         else
         {
-            Debug.Log("[System] 检测到单机模式，初始化PVE对战...");
-            InitializeForPVE();
+            RedPlayerEnergy.Value = startEnergy;
+            BlackPlayerEnergy.Value = startEnergy;
+            InitializeGameModeForPVE();
+            BoardRenderer.RenderBoard(CurrentBoardState);
         }
     }
 
     private void OnDestroy()
     {
-        // 确保取消订阅所有事件
         GameNetworkManager.OnNetworkStart -= HandleNetworkStart;
-        GameNetworkManager.OnLocalPlayerDataReceived -= InitializeLocalPlayerController;
     }
 
     private void HandleNetworkStart(bool isServer)
     {
+        if (currentGameMode != null) return;
+
         Debug.Log($"[GameManager] 接到网络启动通知. IsServer: {isServer}");
+
+        float collisionDistanceSquared = collisionDistance * collisionDistance;
+        var rtController = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
+
         if (isServer)
         {
-            // 服务器端的初始化
-            if (currentGameMode != null) return;
-            Debug.Log("[GameManager-Server] 正在初始化服务器端游戏模式...");
-            float collisionDistanceSquared = collisionDistance * collisionDistance;
-            var rtController = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
             rtController.CombatManager.OnPieceKilled += HandlePieceKilled;
-            currentGameMode = rtController;
-
-            // 命令GNM生成棋盘
             if (GameNetworkManager.Instance != null)
             {
                 GameNetworkManager.Instance.Server_InitializeBoard(CurrentBoardState);
             }
         }
-        else
-        {
-            // 客户端端的初始化
-            if (currentGameMode != null) return;
-            Debug.Log("[GameManager-Client] 正在为客户端初始化游戏模式...");
-            currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, 0);
-        }
+
+        currentGameMode = rtController;
     }
 
-
-    /// <summary>
-    /// 当从服务器接收到本地玩家的数据后，此方法被调用。
-    /// </summary>
-    public void InitializeLocalPlayerController(PlayerNetData localPlayerData)
-    {
-        Debug.Log($"[DIAG-5A] InitializeLocalPlayerController CALLED for color {localPlayerData.Color}.");
-
-        if (controllers.ContainsKey(localPlayerData.Color))
-        {
-            Debug.LogWarning($"[DIAG-5B] Controller for {localPlayerData.Color} already exists. Aborting.");
-            return;
-        }
-
-        Debug.Log($"[DIAG-5C] Getting or adding PlayerInputController component...");
-        PlayerInputController playerController = GetComponent<PlayerInputController>();
-        if (playerController == null)
-        {
-            playerController = gameObject.AddComponent<PlayerInputController>();
-            Debug.Log("[DIAG-5D] PlayerInputController component was ADDED.");
-        }
-        else
-        {
-            Debug.Log("[DIAG-5E] PlayerInputController component was FOUND.");
-        }
-
-        if (playerController != null)
-        {
-            playerController.Initialize(localPlayerData.Color, this);
-            controllers.Add(localPlayerData.Color, playerController);
-
-            // 如果是黑方，旋转相机
-            if (localPlayerData.Color == PlayerColor.Black)
-            {
-                Debug.Log("[Client Setup] 检测到本地玩家为黑方，正在调整视角...");
-                Camera mainCamera = Camera.main;
-                if (mainCamera != null)
-                {
-                    mainCamera.transform.rotation = Quaternion.Euler(0, 180f, 0);
-                }
-            }
-        }
-        else
-        {
-            Debug.LogError("[DIAG-5G-ERROR] FATAL: playerController is NULL after get/add! Cannot initialize.");
-        }
-    }
-
-    private void InitializeForPVE()
+    private void InitializeGameModeForPVE()
     {
         switch (GameModeSelector.SelectedMode)
         {
             case GameModeType.TurnBased:
                 currentGameMode = new TurnBasedModeController(this, CurrentBoardState, BoardRenderer);
-                Debug.Log("[System] 游戏开始，已进入【传统回合制】模式。");
                 break;
             case GameModeType.RealTime:
                 float collisionDistanceSquared = collisionDistance * collisionDistance;
-                currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
-                ((RealTimeModeController)currentGameMode).CombatManager.OnPieceKilled += HandlePieceKilled;
-                Debug.Log("[System] 游戏开始，已进入【实时对战】模式。");
+                var rtController = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
+                rtController.CombatManager.OnPieceKilled += HandlePieceKilled;
+                currentGameMode = rtController;
                 break;
-            default:
-                Debug.LogWarning("[Warning] 未知的游戏模式，默认进入回合制。");
-                currentGameMode = new TurnBasedModeController(this, CurrentBoardState, BoardRenderer);
-                break;
-        }
-
-        InitializeControllers();
-        BoardRenderer.RenderBoard(CurrentBoardState);
-
-    }
-
-    private void InitializeControllers()
-    {
-        if (isPVPMode)
-        {
-            Debug.LogWarning("[GameManager] InitializeControllers 在PVP模式下被调用，这可能是个错误。PVP控制器初始化应有单独的逻辑。");
-            return;
-        }
-
-        if (currentGameMode is RealTimeModeController)
-        {
-            PlayerInputController playerController = GetComponent<PlayerInputController>();
-            if (playerController == null) playerController = gameObject.AddComponent<PlayerInputController>();
-            playerController.Initialize(PlayerColor.Red, this);
-            controllers.Add(PlayerColor.Red, playerController);
-
-            IAIStrategy aiStrategy;
-            switch (GameModeSelector.SelectedAIDifficulty)
-            {
-                case AIDifficulty.VeryHard:
-                    aiStrategy = new VeryHardAIStrategy();
-                    break;
-                case AIDifficulty.Hard:
-                    aiStrategy = new EasyAIStrategy();
-                    break;
-                case AIDifficulty.Easy:
-                default:
-                    aiStrategy = new EasyAIStrategy();
-                    break;
-            }
-            AIController aiController = gameObject.AddComponent<AIController>();
-            aiController.Initialize(PlayerColor.Black, this);
-            aiController.SetupAI(aiStrategy);
-            controllers.Add(PlayerColor.Black, aiController);
-        }
-        else if (currentGameMode is TurnBasedModeController)
-        {
-            TurnBasedInputController turnBasedInput = GetComponent<TurnBasedInputController>();
-            if (turnBasedInput == null) turnBasedInput = gameObject.AddComponent<TurnBasedInputController>();
-            turnBasedInput.Initialize(PlayerColor.Red, this);
         }
     }
 
     private void Update()
     {
-        if (IsGameEnded) return;
+        if (IsGameEnded || currentGameMode == null) return;
 
-        if (InstanceFinder.IsServer)
+        // 服务器权威更新能量
+        if (IsServer)
+        {
+            if (currentGameMode is RealTimeModeController)
+            {
+                RedPlayerEnergy.Value = EnergySystem.Tick(RedPlayerEnergy.Value);
+                BlackPlayerEnergy.Value = EnergySystem.Tick(BlackPlayerEnergy.Value);
+            }
+        }
+        else if (!isPVPMode && GameModeSelector.SelectedMode == GameModeType.RealTime) // 单机模式也更新能量
+        {
+            RedPlayerEnergy.Value = EnergySystem.Tick(RedPlayerEnergy.Value);
+            BlackPlayerEnergy.Value = EnergySystem.Tick(BlackPlayerEnergy.Value);
+        }
+
+        // 服务器或单机实时模式下，驱动游戏逻辑更新
+        if (IsServer || (!isPVPMode && GameModeSelector.SelectedMode == GameModeType.RealTime))
         {
             if (currentGameMode is RealTimeModeController rtController)
             {
-                EnergySystem?.Tick();
                 rtController.Tick();
             }
         }
-        else if (!isPVPMode)
-        {
-            if (GameModeSelector.SelectedMode == GameModeType.RealTime)
-            {
-                EnergySystem?.Tick();
-                if (currentGameMode is RealTimeModeController rtController)
-                {
-                    rtController.Tick();
-                }
-            }
-        }
-    }
-
-    public struct SimulatedPiece
-    {
-        public Piece PieceData;
-        public Vector2Int BoardPosition;
-    }
-
-    public List<SimulatedPiece> GetSimulatedPiecesOfColorFromBoard(PlayerColor color, BoardState board)
-    {
-        var pieces = new List<SimulatedPiece>();
-        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
-        {
-            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
-            {
-                var pos = new Vector2Int(x, y);
-                Piece pieceData = board.GetPieceAt(pos);
-                if (pieceData.Type != PieceType.None && pieceData.Color == color)
-                {
-                    pieces.Add(new SimulatedPiece { PieceData = pieceData, BoardPosition = pos });
-                }
-            }
-        }
-        return pieces;
     }
 
     #region Public Game Actions & Helpers
@@ -320,47 +196,50 @@ public class GameManager : MonoBehaviour
         return pieces;
     }
 
-    /// <summary>
-    /// [Client-Side Entry] 供客户端的输入控制器调用，用于发起一个移动请求。
-    /// </summary>
     public void Client_RequestMove(Vector2Int from, Vector2Int to)
     {
-        if (GameNetworkManager.Instance != null)
+        if (isPVPMode)
         {
-            Debug.Log($"[Client] 发送移动请求到服务器: 从 {from} 到 {to}");
-            GameNetworkManager.Instance.CmdRequestMove(from, to);
+            if (GameNetworkManager.Instance != null)
+            {
+                Debug.Log($"[Client] 发送移动请求到服务器: 从 {from} 到 {to}");
+                GameNetworkManager.Instance.CmdRequestMove(from, to);
+            }
+            else
+            {
+                Debug.LogError("[Client] Client_RequestMove 无法找到 GameNetworkManager.Instance！");
+            }
         }
         else
         {
-            Debug.LogError("[Client] Client_RequestMove 无法找到 GameNetworkManager.Instance！");
+            Local_ProcessMoveRequest(PlayerColor.Red, from, to);
         }
     }
 
-    /// <summary>
-    /// [Server-Side Logic] 服务器处理经过验证的移动请求。
-    /// </summary>
     public void Server_ProcessMoveRequest(PlayerColor color, Vector2Int from, Vector2Int to)
     {
-        // 关键保护：确保此逻辑只在服务器上运行
-        if (!InstanceFinder.IsServer) return;
+        if (!IsServer || IsGameEnded) return;
 
-        if (IsGameEnded) return;
-
-        // 能量检查等核心逻辑现在完全在服务器上进行
-        if (!EnergySystem.CanSpendEnergy(color))
+        if (!EnergySystem.CanSpendEnergy(color == PlayerColor.Red ? RedPlayerEnergy.Value : BlackPlayerEnergy.Value))
         {
-            Debug.LogWarning($"[Server] 玩家 {color} 的移动请求被拒绝：能量不足。");
+            Debug.LogWarning($"[Server] 玩家 {color} 移动请求被拒：能量不足。");
             return;
         }
-        EnergySystem.SpendEnergy(color);
 
-        // 将移动指令交给实时模式控制器执行
+        if (color == PlayerColor.Red)
+        {
+            RedPlayerEnergy.Value = EnergySystem.SpendEnergy(RedPlayerEnergy.Value);
+        }
+        else
+        {
+            BlackPlayerEnergy.Value = EnergySystem.SpendEnergy(BlackPlayerEnergy.Value);
+        }
+
         if (currentGameMode is RealTimeModeController rtController)
         {
             Debug.Log($"[Server] 验证通过，正在执行玩家 {color} 的移动: 从 {from} 到 {to}");
             PieceComponent pieceToMove = rtController.ExecuteMoveCommand(from, to);
 
-            // 如果成功执行了移动逻辑，则命令该棋子在所有客户端上播放动画
             if (pieceToMove != null)
             {
                 pieceToMove.Observer_PlayMoveAnimation(from, to);
@@ -368,19 +247,20 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// [Local/Single-Player Logic] 单机模式下处理移动请求的私有方法。
-    /// </summary>
     private void Local_ProcessMoveRequest(PlayerColor color, Vector2Int from, Vector2Int to)
     {
         if (IsGameEnded) return;
 
-        if (!EnergySystem.CanSpendEnergy(color))
+        if (!EnergySystem.CanSpendEnergy(color == PlayerColor.Red ? RedPlayerEnergy.Value : BlackPlayerEnergy.Value)) return;
+
+        if (color == PlayerColor.Red)
         {
-            Debug.LogWarning($"[GameManager] 来自 {color} 的移动请求被拒绝：能量不足。");
-            return;
+            RedPlayerEnergy.Value = EnergySystem.SpendEnergy(RedPlayerEnergy.Value);
         }
-        EnergySystem.SpendEnergy(color);
+        else
+        {
+            BlackPlayerEnergy.Value = EnergySystem.SpendEnergy(BlackPlayerEnergy.Value);
+        }
 
         if (currentGameMode is RealTimeModeController rtController)
         {
@@ -393,15 +273,14 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// [统一入口] 请求移动棋子。
-    /// 这个方法会根据当前是网络模式还是单机模式，决定是发送RPC还是直接执行本地逻辑。
-    /// </summary>
     public void RequestMove(PlayerColor color, Vector2Int from, Vector2Int to)
     {
         if (isPVPMode)
         {
-            Client_RequestMove(from, to);
+            if (IsServer)
+            {
+                Server_ProcessMoveRequest(color, from, to);
+            }
         }
         else
         {
@@ -433,35 +312,59 @@ public class GameManager : MonoBehaviour
         if (playerInput != null) playerInput.enabled = false;
         var turnBasedInput = GetComponent<TurnBasedInputController>();
         if (turnBasedInput != null) turnBasedInput.enabled = false;
-        var aiInput = GetComponent<AIController>();
-        if (aiInput != null) aiInput.enabled = false;
+        var aiControllers = GetComponents<AIController>();
+        foreach (var ai in aiControllers) ai.enabled = false;
     }
 
     private void HandlePieceKilled(PieceComponent killedPiece)
     {
         if (killedPiece == null) return;
-        Debug.Log($"[GameManager] 收到 {killedPiece.name} 的死亡事件。");
 
         if (killedPiece.RTState.IsMoving)
         {
-            Debug.Log($"[GameManager] 死亡的棋子 {killedPiece.name} 正在移动，直接移除其GameObject。");
             BoardRenderer.RemovePiece(killedPiece);
         }
         else
         {
-            Debug.Log($"[GameManager] 死亡的棋子 {killedPiece.name} 是静止的，按坐标移除并更新模型。");
             CurrentBoardState.RemovePieceAt(killedPiece.RTState.LogicalPosition);
             BoardRenderer.RemovePieceAt(killedPiece.RTState.LogicalPosition);
         }
 
         if (killedPiece.Type.Value == PieceType.General)
         {
-            Debug.Log($"[GameFlow] {killedPiece.Type.Value} 被击杀！游戏结束！");
             GameStatus status = (killedPiece.Color.Value == PlayerColor.Black)
                                 ? GameStatus.RedWin
                                 : GameStatus.BlackWin;
             HandleEndGame(status);
         }
     }
+
+    public List<SimulatedPiece> GetSimulatedPiecesOfColorFromBoard(PlayerColor color, BoardState board)
+    {
+        var pieces = new List<SimulatedPiece>();
+        for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
+        {
+            for (int y = 0; y < BoardState.BOARD_HEIGHT; y++)
+            {
+                var pos = new Vector2Int(x, y);
+                Piece pieceData = board.GetPieceAt(pos);
+                if (pieceData.Type != PieceType.None && pieceData.Color == color)
+                {
+                    pieces.Add(new SimulatedPiece { PieceData = pieceData, BoardPosition = pos });
+                }
+            }
+        }
+        return pieces;
+    }
+
     #endregion
+
+    /// <summary>
+    /// 用于AI决策的棋子模拟数据结构。
+    /// </summary>
+    public struct SimulatedPiece
+    {
+        public Piece PieceData;
+        public Vector2Int BoardPosition;
+    }
 }

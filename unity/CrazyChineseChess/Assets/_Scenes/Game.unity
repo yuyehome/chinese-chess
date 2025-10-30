@@ -1405,6 +1405,8 @@ MonoBehaviour:
   energyBarPrefab: {fileID: 9212438060263307109, guid: c83bf25a2f2f2ef4ebe5535b13ebdccc, type: 3}
   myInfoBlock: {fileID: 882189121}
   enemyInfoBlock: {fileID: 1458226405}
+  myNameText: {fileID: 1337213796}
+  enemyNameText: {fileID: 554811396}
   myEnergyBarContainer: {fileID: 1611308722}
   enemyEnergyBarContainer: {fileID: 635598479}
 --- !u!1 &1458226404
@@ -1819,6 +1821,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 98e438bd3687d6e48bc2e03b5a4b553d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  uiManager: {fileID: 1361694071}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
