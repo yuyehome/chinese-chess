@@ -1,5 +1,4 @@
 // File: _Scripts/Controllers/TurnBasedInputController.cs
-// (放在 _Scripts/Controllers 文件夹下)
 
 using UnityEngine;
 
