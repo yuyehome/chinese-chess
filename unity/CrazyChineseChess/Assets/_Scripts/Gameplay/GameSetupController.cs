@@ -61,6 +61,13 @@ public class GameSetupController : MonoBehaviour
                 mainCamera.transform.position = new Vector3(0f, 0.6f, 0.15f);
                 mainCamera.transform.rotation = Quaternion.Euler(80f, 180f, 0f);
             }
+            // 确保场景中所有已经生成的棋子都为黑方视角进行一次朝向校准
+            var allPieces = FindObjectsOfType<PieceComponent>();
+            Debug.Log($"[GameSetup] 找到 {allPieces.Length} 个棋子，为黑方视角校准朝向...");
+            foreach (var piece in allPieces)
+            {
+                piece.OrientVisualsForLocalPlayer();
+            }
         }
 
         // 设置完成，可以禁用自身，因为它的使命已经完成了

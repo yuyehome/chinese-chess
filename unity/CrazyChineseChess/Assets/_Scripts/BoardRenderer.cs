@@ -198,7 +198,7 @@ public class BoardRenderer : MonoBehaviour
     /// </summary>
     public void SetupPieceVisuals(PieceComponent pc)
     {
-        MeshRenderer renderer = pc.GetComponent<MeshRenderer>();
+        MeshRenderer renderer = pc.GetComponentInChildren<MeshRenderer>(); 
         if (renderer == null) return;
 
         MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
@@ -279,7 +279,7 @@ public class BoardRenderer : MonoBehaviour
         {
             if (pc != null)
             {
-                var renderer = pc.GetComponent<MeshRenderer>();
+                var renderer = pc.GetComponentInChildren<MeshRenderer>(); 
                 var propBlock = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(propBlock);
                 propBlock.SetColor("_EmissionColor", Color.black);
@@ -431,7 +431,7 @@ public class BoardRenderer : MonoBehaviour
     /// </summary>
     private void HighlightPiece(PieceComponent piece, Color color)
     {
-        var renderer = piece.GetComponent<MeshRenderer>();
+        var renderer = piece.GetComponentInChildren<MeshRenderer>(); 
         var propBlock = new MaterialPropertyBlock();
         renderer.GetPropertyBlock(propBlock);
         propBlock.SetColor("_EmissionColor", color * 2.0f);

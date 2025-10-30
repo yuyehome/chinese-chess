@@ -15,6 +15,11 @@ public class GameNetworkManager : NetworkBehaviour
 {
     public static GameNetworkManager Instance { get; private set; }
 
+    /// <summary>
+    /// [Client-Side] 存储本地客户端被分配的颜色。
+    /// </summary>
+    public static PlayerColor LocalPlayerColor { get; private set; } = PlayerColor.None;
+
     // 事件，用于通知 GameManager 等逻辑脚本
     public static event Action<bool> OnNetworkStart; // 参数: isServer
     public static event Action<PlayerNetData> OnLocalPlayerDataReceived;
@@ -159,7 +164,9 @@ public class GameNetworkManager : NetworkBehaviour
     [TargetRpc]
     private void Target_SetPlayerColor(FishNet.Connection.NetworkConnection target, PlayerNetData data)
     {
-        Debug.Log($"[DIAG-CLIENT-RPC] Target_SetPlayerColor RPC RECEIVED on client. Color: {data.Color}");
+
+        Debug.Log($"[Client] 收到服务器分配的数据. 颜色: {data.Color}");
+        LocalPlayerColor = data.Color;
 
         // 缓存数据并触发事件
         _localPlayerData = data;
