@@ -4,6 +4,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System;
 using System.Collections;
+using FishNet;
 
 /// <summary>
 /// 视觉渲染层核心，负责将BoardState中的逻辑数据渲染为场景中的3D对象。
@@ -212,6 +213,12 @@ public class BoardRenderer : MonoBehaviour
         {
             Vector2 offset = uvOffsets[pc.Type.Value];
             propBlock.SetVector("_MainTex_ST", new Vector4(0.25f, 0.5f, offset.x, offset.y));
+        }
+
+        //黑方玩家 棋子倒过来
+        if (InstanceFinder.IsClient)
+        {
+            pc.transform.rotation = Quaternion.Euler(-90, 0, 180);
         }
 
         // 3. 重置高光
