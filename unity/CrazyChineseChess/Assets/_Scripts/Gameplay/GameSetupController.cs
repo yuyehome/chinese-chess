@@ -51,14 +51,15 @@ public class GameSetupController : MonoBehaviour
         // 初始化输入控制器，这会激活它
         playerController.Initialize(localPlayerData.Color, GameManager.Instance);
 
-        // 如果分配到的是黑方，则旋转相机
+        // 如果分配到的是黑方，直接设置预设的相机位置和旋转
         if (localPlayerData.Color == PlayerColor.Black)
         {
-            Debug.Log("[GameSetup] 本地玩家为黑方，旋转相机视角。");
+            Debug.Log("[GameSetup] 本地玩家为黑方，设置预设的相机Transform。");
             Camera mainCamera = Camera.main;
             if (mainCamera != null)
             {
-                mainCamera.transform.rotation = Quaternion.Euler(0, 180f, 0);
+                mainCamera.transform.position = new Vector3(0f, 0.6f, 0.15f);
+                mainCamera.transform.rotation = Quaternion.Euler(80f, 180f, 0f);
             }
         }
 
