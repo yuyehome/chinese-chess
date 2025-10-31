@@ -25,6 +25,20 @@ public class GameNetworkManager : NetworkBehaviour
     // 同步所有玩家的数据
     public readonly SyncDictionary<int, PlayerNetData> AllPlayers = new SyncDictionary<int, PlayerNetData>();
 
+    // 使用您项目中已验证的 SyncVar<T> 语法
+    public readonly SyncVar<float> ServerTime = new SyncVar<float>();
+
+    private void Update()
+    {
+        // 这段逻辑只会由服务器实例执行
+        if (base.IsServer)
+        {
+            // 更新 SyncVar<T> 的值需要通过 .Value 属性
+            ServerTime.Value += Time.deltaTime;
+        }
+    }
+
+
     [Header("网络对象 Prefabs")]
     [Tooltip("必须挂载了 NetworkObject 组件的棋子Prefab")]
     public GameObject networkPiecePrefab;
