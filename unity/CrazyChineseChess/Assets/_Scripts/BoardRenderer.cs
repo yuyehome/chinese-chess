@@ -52,7 +52,6 @@ public class BoardRenderer : MonoBehaviour
         }
         Instance = this;
 
-        Debug.Log("[BoardRenderer] Instance is now set. Firing OnInstanceReady event.");
         OnInstanceReady?.Invoke(); // 通知所有订阅者，我已经准备好了
 
         // 在开始时缓存Layer的整数值，比每次用字符串查找更高效
@@ -329,7 +328,6 @@ public class BoardRenderer : MonoBehaviour
     {
         if (pieceToRemove != null && pieceToRemove.gameObject != null)
         {
-            Debug.Log($"[Renderer] 正在直接移除GameObject: {pieceToRemove.name}。");
             Destroy(pieceToRemove.gameObject);
         }
         else

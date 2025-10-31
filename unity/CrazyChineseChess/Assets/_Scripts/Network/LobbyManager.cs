@@ -163,7 +163,6 @@ public class LobbyManager : MonoBehaviour
                 GameObject gnmInstance = Instantiate(gameNetworkManagerPrefab);
                 InstanceFinder.ServerManager.Spawn(gnmInstance);
 
-                Debug.Log("[Server] GameNetworkManager已生成并Spawn。");
             }
         }
     }

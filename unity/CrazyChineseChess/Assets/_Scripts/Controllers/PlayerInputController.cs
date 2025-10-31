@@ -31,21 +31,16 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
         // 默认禁用自身，等待GameManager在正确的时机通过Initialize()来激活。
         // 这样可以防止在未初始化完成时执行Update逻辑。
         this.enabled = false;
-        Debug.Log("[InputController] PlayerInputController Awake: aelf-disabled, waiting for initialization.");
     }
 
     public void Initialize(PlayerColor color, GameManager manager)
     {
-        Debug.Log($"[DIAG-6A] PlayerInputController.Initialize CALLED for color {color}.");
         this.assignedColor = color;
         this.gameManager = manager;
         this.boardRenderer = gameManager.BoardRenderer;
         this.mainCamera = Camera.main;
 
-        // 关键：在初始化完成后，启用此组件，使其Update()方法开始执行。
-        Debug.Log("[DIAG-6B] About to set this.enabled = true...");
         this.enabled = true;
-        Debug.Log($"[DIAG-6C] PlayerInputController for {assignedColor} is now ENABLED. Is component enabled? {this.enabled}");
     }
 
     private void Update()
@@ -65,9 +60,6 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
         // 处理鼠标点击输入
         if (Input.GetMouseButtonDown(0))
         {
-            // ----- DIAGNOSTIC LOG START (添加诊断日志) -----
-            Debug.Log($"[InputController-DIAGNOSTIC] Mouse button down detected for color: {assignedColor}. Firing Raycast...");
-            // ----- DIAGNOSTIC LOG END -----
             HandleMouseClick();
         }
     }
@@ -77,7 +69,6 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray, out RaycastHit hit, 100f, clickableLayers))
         {
-            Debug.Log($"[InputController-DIAGNOSTIC] Raycast HIT! Object: {hit.collider.name}, Layer: {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
             PieceComponent clickedPiece = hit.collider.GetComponent<PieceComponent>();
             MoveMarkerComponent clickedMarker = hit.collider.GetComponent<MoveMarkerComponent>();
 
@@ -93,10 +84,6 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
             {
                 OnBoardClicked();
             }
-        }
-        else
-        {
-            Debug.LogWarning($"[InputController-DIAGNOSTIC] Raycast MISSED. No object hit on clickable layers.");
         }
     }
 

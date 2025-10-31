@@ -1,8 +1,8 @@
 // File: _Scripts/UI/PingDisplay.cs
 
 using UnityEngine;
-using TMPro; // 用于控制 TextMeshPro 组件
-using FishNet; // 引入FishNet命名空间以使用InstanceFinder
+using TMPro; 
+using FishNet; 
 
 /// <summary>
 /// 负责在UI上显示客户端到服务器的网络延迟(Ping)。

@@ -46,7 +46,6 @@ public class GameNetworkManager : NetworkBehaviour
     {
         base.OnStartNetwork();
         Instance = this;
-        Debug.Log("[GameNetworkManager] OnStartNetwork called, Instance is set.");
     }
 
     public override void OnStartServer()
@@ -63,7 +62,6 @@ public class GameNetworkManager : NetworkBehaviour
         OnNetworkStart?.Invoke(false);
 
         // 客户端准备好后，立即向服务器发起注册
-        Debug.Log("[GNM-Client] OnStartClient: Requesting to register player.");
         if (SteamManager.Instance != null && SteamManager.Instance.IsSteamInitialized)
         {
             CmdRegisterPlayer(SteamManager.Instance.PlayerSteamId, SteamManager.Instance.PlayerName);
@@ -159,8 +157,6 @@ public class GameNetworkManager : NetworkBehaviour
     [TargetRpc]
     private void Target_SetPlayerColor(FishNet.Connection.NetworkConnection target, PlayerNetData data)
     {
-        Debug.Log($"[DIAG-CLIENT-RPC] Target_SetPlayerColor RPC RECEIVED on client. Color: {data.Color}");
-
         // 缓存数据并触发事件
         _localPlayerData = data;
         OnLocalPlayerDataReceived?.Invoke(data);

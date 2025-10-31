@@ -81,7 +81,6 @@ public class PieceComponent : NetworkBehaviour
             this.BoardPosition = BoardRenderer.Instance.GetBoardPosition(this.transform.localPosition);
         }
 
-        //Debug.Log($"[{(IsServer ? "Server" : "Client")}] 棋子 {gameObject.name} (Type: {Type.Value}, Color: {Color.Value}) 已生成，正在设置视觉效果。坐标: {BoardPosition}");
         BoardRenderer.Instance.SetupPieceVisuals(this);
 
         // 只要视觉设置完成，就意味着棋子已经“存在”于游戏世界中，

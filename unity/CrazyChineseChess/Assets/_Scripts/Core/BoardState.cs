@@ -3,25 +3,15 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-/// <summary>
-/// 游戏状态的唯一真实来源 (Single Source of Truth) for STATIONALY pieces.
-/// 它是一个纯数据类，用二维数组表示棋盘上静止棋子的逻辑状态。
-/// 注意：在实时模式中，移动中的棋子不在此类中记录，其位置由RealTimePieceState动态管理。
-/// </summary>
 public class BoardState
 {
     public const int BOARD_WIDTH = 9;
     public const int BOARD_HEIGHT = 10;
 
-    // 存储棋盘上所有静止棋子的数据
     private Piece[,] board = new Piece[BOARD_WIDTH, BOARD_HEIGHT];
 
-    /// <summary>
-    /// 初始化棋盘到中国象棋的标准开局状态。
-    /// </summary>
     public void InitializeDefaultSetup()
     {
-        // 1. 清空棋盘
         for (int x = 0; x < BOARD_WIDTH; x++)
         {
             for (int y = 0; y < BOARD_HEIGHT; y++)
@@ -31,7 +21,6 @@ public class BoardState
         }
 
         #region Piece Placement
-        // 2. 放置红方棋子 (下方, y = 0 to 4)
         board[0, 0] = new Piece(PieceType.Chariot, PlayerColor.Red);
         board[1, 0] = new Piece(PieceType.Horse, PlayerColor.Red);
         board[2, 0] = new Piece(PieceType.Elephant, PlayerColor.Red);
@@ -49,7 +38,6 @@ public class BoardState
         board[6, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);
         board[8, 3] = new Piece(PieceType.Soldier, PlayerColor.Red);
 
-        // 3. 放置黑方棋子 (上方, y = 5 to 9)
         board[0, 9] = new Piece(PieceType.Chariot, PlayerColor.Black);
         board[1, 9] = new Piece(PieceType.Horse, PlayerColor.Black);
         board[2, 9] = new Piece(PieceType.Elephant, PlayerColor.Black);
