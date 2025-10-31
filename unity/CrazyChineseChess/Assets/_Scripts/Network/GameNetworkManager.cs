@@ -20,7 +20,7 @@ public class GameNetworkManager : NetworkBehaviour
     public static event Action<PlayerNetData> OnLocalPlayerDataReceived;
 
     // 本地缓存的玩家数据，主要由 TargetRpc 填充
-    public PlayerNetData LocalPlayerData { get; private set; }
+    private PlayerNetData _localPlayerData;
 
     // 同步所有玩家的数据
     public readonly SyncDictionary<int, PlayerNetData> AllPlayers = new SyncDictionary<int, PlayerNetData>();
@@ -159,11 +159,10 @@ public class GameNetworkManager : NetworkBehaviour
     [TargetRpc]
     private void Target_SetPlayerColor(FishNet.Connection.NetworkConnection target, PlayerNetData data)
     {
-        Debug.Log($"[客户端RPC] 客户端收到了自己的玩家数据! 分配到的颜色是: {data.Color}");
+        Debug.Log($"[DIAG-CLIENT-RPC] Target_SetPlayerColor RPC RECEIVED on client. Color: {data.Color}");
 
-        // 缓存数据到新的公开属性中
-        LocalPlayerData = data;
-        // 触发全局事件，通知所有已订阅的脚本
+        // 缓存数据并触发事件
+        _localPlayerData = data;
         OnLocalPlayerDataReceived?.Invoke(data);
     }
 

@@ -55,7 +55,7 @@ public class GameManager : MonoBehaviour
         BoardRenderer = BoardRenderer.Instance;
         if (BoardRenderer == null)
         {
-            Debug.LogError("[GameManager] 错误：场景中找不到 BoardRenderer!");
+            Debug.LogError("[Error] 场景中找不到 BoardRenderer!");
             return;
         }
 
@@ -63,25 +63,25 @@ public class GameManager : MonoBehaviour
         CurrentBoardState.InitializeDefaultSetup();
         EnergySystem = new EnergySystem(maxEnergy, energyRecoveryRate, moveCost, startEnergy);
 
-        isPVPMode = InstanceFinder.IsClient || InstanceFinder.IsServer;
-
         if (isPVPMode)
         {
-            Debug.Log("[GameManager] PVP模式已检测。正在等待网络启动通知...");
-            // 只订阅网络启动事件，不再负责玩家控制器的初始化
+            Debug.Log("[GameManager] PVP模式已检测。正在订阅GameNetworkManager的启动事件...");
+            // 订阅来自GNM的事件，它将在服务器和客户端各自准备好时触发
             GameNetworkManager.OnNetworkStart += HandleNetworkStart;
+            GameNetworkManager.OnLocalPlayerDataReceived += InitializeLocalPlayerController;
         }
         else
         {
-            Debug.Log("[GameManager] 单机模式已检测，正在初始化PVE...");
+            Debug.Log("[System] 检测到单机模式，初始化PVE对战...");
             InitializeForPVE();
         }
     }
 
     private void OnDestroy()
     {
-        // 确保只取消订阅我们实际订阅的事件
+        // 确保取消订阅所有事件
         GameNetworkManager.OnNetworkStart -= HandleNetworkStart;
+        GameNetworkManager.OnLocalPlayerDataReceived -= InitializeLocalPlayerController;
     }
 
     private void HandleNetworkStart(bool isServer)
@@ -112,31 +112,119 @@ public class GameManager : MonoBehaviour
         }
     }
 
+
+    /// <summary>
+    /// 当从服务器接收到本地玩家的数据后，此方法被调用。
+    /// </summary>
+    public void InitializeLocalPlayerController(PlayerNetData localPlayerData)
+    {
+        Debug.Log($"[DIAG-5A] InitializeLocalPlayerController CALLED for color {localPlayerData.Color}.");
+
+        if (controllers.ContainsKey(localPlayerData.Color))
+        {
+            Debug.LogWarning($"[DIAG-5B] Controller for {localPlayerData.Color} already exists. Aborting.");
+            return;
+        }
+
+        Debug.Log($"[DIAG-5C] Getting or adding PlayerInputController component...");
+        PlayerInputController playerController = GetComponent<PlayerInputController>();
+        if (playerController == null)
+        {
+            playerController = gameObject.AddComponent<PlayerInputController>();
+            Debug.Log("[DIAG-5D] PlayerInputController component was ADDED.");
+        }
+        else
+        {
+            Debug.Log("[DIAG-5E] PlayerInputController component was FOUND.");
+        }
+
+        if (playerController != null)
+        {
+            playerController.Initialize(localPlayerData.Color, this);
+            controllers.Add(localPlayerData.Color, playerController);
+
+            // 如果是黑方，旋转相机
+            if (localPlayerData.Color == PlayerColor.Black)
+            {
+                Debug.Log("[Client Setup] 检测到本地玩家为黑方，正在调整视角...");
+                Camera mainCamera = Camera.main;
+                if (mainCamera != null)
+                {
+                    mainCamera.transform.rotation = Quaternion.Euler(0, 180f, 0);
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError("[DIAG-5G-ERROR] FATAL: playerController is NULL after get/add! Cannot initialize.");
+        }
+    }
+
     private void InitializeForPVE()
     {
-        // 根据选择的游戏模式初始化对应的控制器
         switch (GameModeSelector.SelectedMode)
         {
             case GameModeType.TurnBased:
                 currentGameMode = new TurnBasedModeController(this, CurrentBoardState, BoardRenderer);
-                Debug.Log("[GameManager] 游戏开始，已进入【传统回合制】模式。");
+                Debug.Log("[System] 游戏开始，已进入【传统回合制】模式。");
                 break;
             case GameModeType.RealTime:
                 float collisionDistanceSquared = collisionDistance * collisionDistance;
-                var rtController = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
-                rtController.CombatManager.OnPieceKilled += HandlePieceKilled;
-                currentGameMode = rtController;
-                Debug.Log("[GameManager] 游戏开始，已进入【实时对战】模式。");
+                currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
+                ((RealTimeModeController)currentGameMode).CombatManager.OnPieceKilled += HandlePieceKilled;
+                Debug.Log("[System] 游戏开始，已进入【实时对战】模式。");
                 break;
             default:
-                Debug.LogWarning("[GameManager] 未知的游戏模式，默认进入回合制。");
+                Debug.LogWarning("[Warning] 未知的游戏模式，默认进入回合制。");
                 currentGameMode = new TurnBasedModeController(this, CurrentBoardState, BoardRenderer);
                 break;
         }
 
-        // PVE模式下，GameSetupController 会负责创建玩家和AI控制器
-        // GameManager 只负责渲染初始棋盘
+        InitializeControllers();
         BoardRenderer.RenderBoard(CurrentBoardState);
+
+    }
+
+    private void InitializeControllers()
+    {
+        if (isPVPMode)
+        {
+            Debug.LogWarning("[GameManager] InitializeControllers 在PVP模式下被调用，这可能是个错误。PVP控制器初始化应有单独的逻辑。");
+            return;
+        }
+
+        if (currentGameMode is RealTimeModeController)
+        {
+            PlayerInputController playerController = GetComponent<PlayerInputController>();
+            if (playerController == null) playerController = gameObject.AddComponent<PlayerInputController>();
+            playerController.Initialize(PlayerColor.Red, this);
+            controllers.Add(PlayerColor.Red, playerController);
+
+            IAIStrategy aiStrategy;
+            switch (GameModeSelector.SelectedAIDifficulty)
+            {
+                case AIDifficulty.VeryHard:
+                    aiStrategy = new VeryHardAIStrategy();
+                    break;
+                case AIDifficulty.Hard:
+                    aiStrategy = new EasyAIStrategy();
+                    break;
+                case AIDifficulty.Easy:
+                default:
+                    aiStrategy = new EasyAIStrategy();
+                    break;
+            }
+            AIController aiController = gameObject.AddComponent<AIController>();
+            aiController.Initialize(PlayerColor.Black, this);
+            aiController.SetupAI(aiStrategy);
+            controllers.Add(PlayerColor.Black, aiController);
+        }
+        else if (currentGameMode is TurnBasedModeController)
+        {
+            TurnBasedInputController turnBasedInput = GetComponent<TurnBasedInputController>();
+            if (turnBasedInput == null) turnBasedInput = gameObject.AddComponent<TurnBasedInputController>();
+            turnBasedInput.Initialize(PlayerColor.Red, this);
+        }
     }
 
     private void Update()

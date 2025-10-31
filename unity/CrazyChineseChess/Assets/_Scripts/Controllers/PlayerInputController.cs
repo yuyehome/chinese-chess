@@ -50,57 +50,34 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
 
     private void Update()
     {
-        if (gameManager == null) return;
+        if (gameManager == null)
+        {
+            // 这个日志不应该出现，如果出现说明Initialize完全没被调用
+            Debug.LogError("[InputController-DIAGNOSTIC] GameManager is NULL in Update!");
+            return;
+        }
+
         if (gameManager.IsGameEnded) return;
 
+        // 实时更新选中棋子的高亮（处理动态炮架等情况）
         UpdateSelectionHighlights();
 
+        // 处理鼠标点击输入
         if (Input.GetMouseButtonDown(0))
         {
+            // ----- DIAGNOSTIC LOG START (添加诊断日志) -----
+            Debug.Log($"[InputController-DIAGNOSTIC] Mouse button down detected for color: {assignedColor}. Firing Raycast...");
+            // ----- DIAGNOSTIC LOG END -----
             HandleMouseClick();
         }
     }
 
     private void HandleMouseClick()
     {
-        // --- 检查 mainCamera ---
-        if (mainCamera == null)
-        {
-            mainCamera = Camera.main;
-            if (mainCamera == null)
-            {
-                Debug.LogError("[InputController-DIAG] 致命错误: Camera.main 未找到!");
-                return;
-            }
-        }
-
-        // --- 创建射线 ---
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-
-        // --- 可视化射线，用于场景调试 ---
-        Debug.DrawRay(ray.origin, ray.direction * 100f, Color.red, 10.0f);
-
-        // --- 【核心修复】直接执行射线检测，不再打印复杂的LayerMask名字 ---
-        RaycastHit hit;
-        bool didHit = false; // 用于存储射线检测结果的变量
-
-        // 检查 LayerMask 是否被设置。如果没设置，射线将检测所有层。
-        if (clickableLayers.value == 0)
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f, clickableLayers))
         {
-            Debug.LogWarning("[InputController-DIAG] Clickable Layers 未在Inspector中设置，将对所有层进行射线检测。");
-            didHit = Physics.Raycast(ray, out hit, 100f);
-        }
-        else
-        {
-            // 如果设置了，就使用指定的 LayerMask
-            didHit = Physics.Raycast(ray, out hit, 100f, clickableLayers);
-        }
-
-        // --- 根据射线检测结果执行后续逻辑 ---
-        if (didHit)
-        {
-            Debug.Log($"[InputController-DIAG] >>> 射线命中! 物体: {hit.collider.name}, 标签: {hit.collider.tag}, 层: {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
-
+            Debug.Log($"[InputController-DIAGNOSTIC] Raycast HIT! Object: {hit.collider.name}, Layer: {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
             PieceComponent clickedPiece = hit.collider.GetComponent<PieceComponent>();
             MoveMarkerComponent clickedMarker = hit.collider.GetComponent<MoveMarkerComponent>();
 
@@ -114,13 +91,12 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
             }
             else
             {
-                Debug.Log($"[InputController-DIAG] 命中了物体 {hit.collider.name}，但它既不是棋子也不是标记。");
                 OnBoardClicked();
             }
         }
         else
         {
-            Debug.LogWarning("[InputController-DIAG] >>> 射线未命中任何可点击物体。");
+            Debug.LogWarning($"[InputController-DIAGNOSTIC] Raycast MISSED. No object hit on clickable layers.");
         }
     }
 
