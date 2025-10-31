@@ -216,7 +216,8 @@ public class BoardRenderer : MonoBehaviour
         }
 
         //黑方玩家 棋子倒过来
-        if (InstanceFinder.IsClient)
+        //if (InstanceFinder.IsClient)
+        if (pc.Color.Value == PlayerColor.Black)
         {
             pc.transform.rotation = Quaternion.Euler(-90, 0, 180);
         }

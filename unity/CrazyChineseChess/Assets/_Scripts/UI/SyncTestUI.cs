@@ -19,7 +19,7 @@ public class SyncTestUI : MonoBehaviour
         }
 
         // 从 GameNetworkManager.Instance 中读取同步过来的 ServerTime 的值
-        timeDisplayText.text = $"Server Time (Correct): {GameNetworkManager.Instance.ServerTime.Value:F2}";
+        timeDisplayText.text = $"时间同步: {GameNetworkManager.Instance.ServerTime.Value:F2}";
         // =============================【修改结束】=============================
     }
 }
