@@ -32,6 +32,9 @@ public class GameUIManager : MonoBehaviour
 
     void Start()
     {
+        Debug.Log($"[GameUIManager] Start调用，当前游戏模式: {GameModeSelector.SelectedMode}");
+        Debug.Log($"[GameUIManager] 初始启用状态: {this.enabled}");
+
         // 先禁用自身，等待网络就绪
         this.enabled = false;
 

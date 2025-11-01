@@ -59,6 +59,11 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+
+        // 强制设置为实时模式
+        GameModeSelector.SelectedMode = GameModeType.RealTime;
+        Debug.Log($"[GameManager] 强制设置游戏模式为: {GameModeSelector.SelectedMode}");
+
         BoardRenderer = BoardRenderer.Instance;
         if (BoardRenderer == null)
         {

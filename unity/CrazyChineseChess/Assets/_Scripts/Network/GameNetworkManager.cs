@@ -65,11 +65,11 @@ public class GameNetworkManager : NetworkBehaviour
 
         // 监听能量变化
         redPlayerEnergy.OnChange += (oldValue, newValue, asServer) => {
-            Debug.Log($"[EnergySync] 红方能量变化: {oldValue} -> {newValue}, 服务器: {asServer}");
+            //Debug.Log($"[EnergySync] 红方能量变化: {oldValue} -> {newValue}, 服务器: {asServer}");
         };
 
         blackPlayerEnergy.OnChange += (oldValue, newValue, asServer) => {
-            Debug.Log($"[EnergySync] 黑方能量变化: {oldValue} -> {newValue}, 服务器: {asServer}");
+            //Debug.Log($"[EnergySync] 黑方能量变化: {oldValue} -> {newValue}, 服务器: {asServer}");
         };
         // 触发事件，通知所有监听者（比如GameManager）服务器已启动
         OnNetworkStart?.Invoke(true);
