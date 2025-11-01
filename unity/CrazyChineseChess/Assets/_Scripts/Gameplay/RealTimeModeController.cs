@@ -1,4 +1,4 @@
-// File: _Scripts/GameModes/RealTimeModeController.cs
+// File: _Scripts/Gameplay/RealTimeModeController.cs
 
 using UnityEngine;
 using System.Collections.Generic;

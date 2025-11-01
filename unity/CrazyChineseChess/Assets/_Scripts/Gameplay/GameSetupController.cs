@@ -1,3 +1,5 @@
+// File: _Scripts/Gameplay/GameSetupController.cs
+
 using UnityEngine;
 using FishNet;
 

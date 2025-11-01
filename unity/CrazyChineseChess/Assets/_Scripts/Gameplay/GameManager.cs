@@ -1,8 +1,10 @@
+// File: _Scripts/Gameplay/GameManager.cs
+
 using UnityEngine;
 using System;
 using System.Collections.Generic;
 using FishNet;
-using FishNet.Object; // 引入这个命名空间来使用 NetworkBehaviour 的特性
+using FishNet.Object; 
 
 /// <summary>
 /// 游戏总管理器 (Singleton)，作为游戏核心逻辑的入口和协调者。
