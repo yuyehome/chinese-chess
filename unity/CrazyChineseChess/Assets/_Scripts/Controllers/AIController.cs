@@ -65,7 +65,7 @@ public class AIController : MonoBehaviour, IPlayerController
 
     private async void MakeDecisionAsync()
     {
-        if (!gameManager.EnergySystem.CanSpendEnergy(assignedColor)) return;
+        if (!gameManager.CanSpendEnergy(assignedColor)) return;
 
         isThinking = true;
         MovePlan bestMove = null;

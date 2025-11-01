@@ -32,23 +32,20 @@ public class GameUIManager : MonoBehaviour
 
     void Start()
     {
-        // 确保GameManager及其核心系统已准备就绪
-        if (GameManager.Instance != null && GameManager.Instance.EnergySystem != null)
+        // 直接检查GameManager是否存在，不再依赖EnergySystem
+        if (GameManager.Instance != null)
         {
-            energySystem = GameManager.Instance.EnergySystem;
-
-            // 仅在实时模式下才需要能量条等相关UI
             if (GameModeSelector.SelectedMode == GameModeType.RealTime)
             {
-                AdaptUILayout(); // 步骤1: 先根据屏幕比例调整布局容器的位置
-                SetupUI();       // 步骤2: 在调整好的容器内创建UI元素
+                AdaptUILayout();
+                SetupUI();
             }
         }
         else
         {
-            // 如果不是实时模式或GameManager异常，则禁用此UI管理器
             gameObject.SetActive(false);
         }
+
     }
 
     private void Update()
@@ -56,10 +53,25 @@ public class GameUIManager : MonoBehaviour
         // 如果UI未初始化，则不执行任何操作
         if (energySystem == null || myEnergyBar == null || enemyEnergyBar == null) return;
 
-        // 每帧更新能量条的显示
-        // 注意：当前硬编码我方为红方，敌方为黑方。未来网络对战中需根据服务器分配的角色动态决定。
-        myEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Red), 4.0f);
-        enemyEnergyBar.UpdateEnergy(energySystem.GetEnergy(PlayerColor.Black), 4.0f);
+        // 修复：正确判断LocalPlayerData是否有效
+        if (GameNetworkManager.Instance != null &&
+            GameNetworkManager.Instance.LocalPlayerData.PlayerName != null) // 检查结构体字段
+        {
+            var localPlayerData = GameNetworkManager.Instance.LocalPlayerData;
+
+            float myEnergy = GameManager.Instance.GetEnergy(localPlayerData.Color);
+            PlayerColor enemyColor = (localPlayerData.Color == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
+            float enemyEnergy = GameManager.Instance.GetEnergy(enemyColor);
+
+            myEnergyBar.UpdateEnergy(myEnergy, 4.0f);
+            enemyEnergyBar.UpdateEnergy(enemyEnergy, 4.0f);
+        }
+        else
+        {
+            // 网络未就绪或单机模式：使用默认显示
+            myEnergyBar.UpdateEnergy(GameManager.Instance.GetEnergy(PlayerColor.Red), 4.0f);
+            enemyEnergyBar.UpdateEnergy(GameManager.Instance.GetEnergy(PlayerColor.Black), 4.0f);
+        }
     }
 
     /// <summary>

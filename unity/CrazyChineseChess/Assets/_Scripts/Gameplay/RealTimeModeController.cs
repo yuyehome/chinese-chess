@@ -16,12 +16,12 @@ public class RealTimeModeController : GameModeController
 
     private readonly List<PieceComponent> movingPieces = new List<PieceComponent>();
 
-    public RealTimeModeController(GameManager manager, BoardState state, BoardRenderer renderer, EnergySystem energySystem, float collisionDistanceSquared)
+    public RealTimeModeController(GameManager manager, BoardState state, BoardRenderer renderer, float collisionDistanceSquared)
         : base(manager, state, renderer)
     {
-        this.energySystem = energySystem;
         this.CombatManager = new CombatManager(state, renderer, collisionDistanceSquared);
     }
+
 
     #region Main Logic Loop
 

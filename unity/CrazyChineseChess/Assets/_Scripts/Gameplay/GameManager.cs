@@ -4,7 +4,12 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using FishNet;
-using FishNet.Object; 
+using FishNet.Object;
+using FishNet.Object.Synchronizing;
+using System.Collections.Generic;
+using Steamworks;
+using System;
+using FishNet.Managing.Server;
 
 /// <summary>
 /// 游戏总管理器 (Singleton)，作为游戏核心逻辑的入口和协调者。
@@ -34,7 +39,7 @@ public class GameManager : MonoBehaviour
     // --- 核心系统引用 ---
     public BoardState CurrentBoardState { get; private set; }
     private GameModeController currentGameMode;
-    public EnergySystem EnergySystem { get; private set; }
+
     public BoardRenderer BoardRenderer { get; private set; }
     public bool IsGameEnded { get; private set; } = false;
 
@@ -63,7 +68,13 @@ public class GameManager : MonoBehaviour
 
         CurrentBoardState = new BoardState();
         CurrentBoardState.InitializeDefaultSetup();
-        EnergySystem = new EnergySystem(maxEnergy, energyRecoveryRate, moveCost, startEnergy);
+
+        // 初始化能量（服务器端）
+        if (InstanceFinder.IsServer && GameNetworkManager.Instance != null)
+        {
+            GameNetworkManager.Instance.redPlayerEnergy.Value = startEnergy;
+            GameNetworkManager.Instance.blackPlayerEnergy.Value = startEnergy;
+        }
 
         if (isPVPMode)
         {
@@ -77,6 +88,64 @@ public class GameManager : MonoBehaviour
             Debug.Log("[System] 检测到单机模式，初始化PVE对战...");
             InitializeForPVE();
         }
+    }
+    /// <summary>
+    /// 服务器端能量恢复逻辑
+    /// </summary>
+    [Server]
+    private void Server_UpdateEnergy()
+    {
+        if (GameNetworkManager.Instance.redPlayerEnergy.Value < maxEnergy)
+        {
+            GameNetworkManager.Instance.redPlayerEnergy.Value += energyRecoveryRate * Time.deltaTime;
+            GameNetworkManager.Instance.redPlayerEnergy.Value = Mathf.Min(GameNetworkManager.Instance.redPlayerEnergy.Value, maxEnergy);
+        }
+
+        if (GameNetworkManager.Instance.blackPlayerEnergy.Value < maxEnergy)
+        {
+            GameNetworkManager.Instance.blackPlayerEnergy.Value += energyRecoveryRate * Time.deltaTime;
+            GameNetworkManager.Instance.blackPlayerEnergy.Value = Mathf.Min(GameNetworkManager.Instance.blackPlayerEnergy.Value, maxEnergy);
+        }
+    }
+
+    // 添加能量访问方法
+    public float GetEnergy(PlayerColor player)
+    {
+        if (GameNetworkManager.Instance != null)
+        {
+            if (player == PlayerColor.Red)
+                return GameNetworkManager.Instance.redPlayerEnergy.Value;
+            else if (player == PlayerColor.Black)
+                return GameNetworkManager.Instance.blackPlayerEnergy.Value;
+        }
+        return 0;
+    }
+
+    [Server]
+    public void SpendEnergy(PlayerColor player)
+    {
+        if (GameNetworkManager.Instance != null && InstanceFinder.IsServer)
+        {
+            if (player == PlayerColor.Red)
+            {
+                GameNetworkManager.Instance.redPlayerEnergy.Value -= moveCost;
+                GameNetworkManager.Instance.redPlayerEnergy.Value = Mathf.Max(GameNetworkManager.Instance.redPlayerEnergy.Value, 0);
+            }
+            else if (player == PlayerColor.Black)
+            {
+                GameNetworkManager.Instance.blackPlayerEnergy.Value -= moveCost;
+                GameNetworkManager.Instance.blackPlayerEnergy.Value = Mathf.Max(GameNetworkManager.Instance.blackPlayerEnergy.Value, 0);
+            }
+        }
+    }
+
+
+    /// <summary>
+    /// 检查玩家是否有足够能量
+    /// </summary>
+    public bool CanSpendEnergy(PlayerColor player)
+    {
+        return GetEnergy(player) >= moveCost;
     }
 
     private void OnDestroy()
@@ -95,7 +164,7 @@ public class GameManager : MonoBehaviour
             if (currentGameMode != null) return;
             Debug.Log("[GameManager-Server] 正在初始化服务器端游戏模式...");
             float collisionDistanceSquared = collisionDistance * collisionDistance;
-            var rtController = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
+            var rtController = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, collisionDistanceSquared);
             rtController.CombatManager.OnPieceKilled += HandlePieceKilled;
             currentGameMode = rtController;
 
@@ -110,7 +179,7 @@ public class GameManager : MonoBehaviour
             // 客户端端的初始化
             if (currentGameMode != null) return;
             Debug.Log("[GameManager-Client] 正在为客户端初始化游戏模式...");
-            currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, 0);
+            currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, 0);
         }
     }
 
@@ -167,7 +236,7 @@ public class GameManager : MonoBehaviour
                 break;
             case GameModeType.RealTime:
                 float collisionDistanceSquared = collisionDistance * collisionDistance;
-                currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, EnergySystem, collisionDistanceSquared);
+                currentGameMode = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, collisionDistanceSquared);
                 ((RealTimeModeController)currentGameMode).CombatManager.OnPieceKilled += HandlePieceKilled;
                 Debug.Log("[System] 游戏开始，已进入【实时对战】模式。");
                 break;
@@ -224,27 +293,29 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // 在Update方法中更新能量恢复
     private void Update()
     {
         if (IsGameEnded) return;
 
-        if (InstanceFinder.IsServer)
+        if (InstanceFinder.IsServer && GameNetworkManager.Instance != null)
         {
             if (currentGameMode is RealTimeModeController rtController)
             {
-                EnergySystem?.Tick();
-                rtController.Tick();
-            }
-        }
-        else if (!isPVPMode)
-        {
-            if (GameModeSelector.SelectedMode == GameModeType.RealTime)
-            {
-                EnergySystem?.Tick();
-                if (currentGameMode is RealTimeModeController rtController)
+                // 能量恢复逻辑
+                if (GameNetworkManager.Instance.redPlayerEnergy.Value < maxEnergy)
                 {
-                    rtController.Tick();
+                    GameNetworkManager.Instance.redPlayerEnergy.Value += energyRecoveryRate * Time.deltaTime;
+                    GameNetworkManager.Instance.redPlayerEnergy.Value = Mathf.Min(GameNetworkManager.Instance.redPlayerEnergy.Value, maxEnergy);
                 }
+
+                if (GameNetworkManager.Instance.blackPlayerEnergy.Value < maxEnergy)
+                {
+                    GameNetworkManager.Instance.blackPlayerEnergy.Value += energyRecoveryRate * Time.deltaTime;
+                    GameNetworkManager.Instance.blackPlayerEnergy.Value = Mathf.Min(GameNetworkManager.Instance.blackPlayerEnergy.Value, maxEnergy);
+                }
+
+                rtController.Tick();
             }
         }
     }
@@ -343,13 +414,13 @@ public class GameManager : MonoBehaviour
 
         if (IsGameEnded) return;
 
-        // 能量检查等核心逻辑现在完全在服务器上进行
-        if (!EnergySystem.CanSpendEnergy(color))
+        // 使用新的能量检查方法
+        if (!CanSpendEnergy(color))
         {
             Debug.LogWarning($"[Server] 玩家 {color} 的移动请求被拒绝：能量不足。");
             return;
         }
-        EnergySystem.SpendEnergy(color);
+        SpendEnergy(color); // 使用新的能量消耗方法
 
         // 将移动指令交给实时模式控制器执行
         if (currentGameMode is RealTimeModeController rtController)
@@ -366,18 +437,18 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// [Local/Single-Player Logic] 单机模式下处理移动请求的私有方法。
+    /// [Local/Single-Player Logic] 单机模式下处理移动请求
     /// </summary>
     private void Local_ProcessMoveRequest(PlayerColor color, Vector2Int from, Vector2Int to)
     {
         if (IsGameEnded) return;
 
-        if (!EnergySystem.CanSpendEnergy(color))
+        if (!CanSpendEnergy(color))
         {
             Debug.LogWarning($"[GameManager] 来自 {color} 的移动请求被拒绝：能量不足。");
             return;
         }
-        EnergySystem.SpendEnergy(color);
+        SpendEnergy(color);
 
         if (currentGameMode is RealTimeModeController rtController)
         {
@@ -391,8 +462,7 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// [统一入口] 请求移动棋子。
-    /// 这个方法会根据当前是网络模式还是单机模式，决定是发送RPC还是直接执行本地逻辑。
+    /// [统一入口] 请求移动棋子
     /// </summary>
     public void RequestMove(PlayerColor color, Vector2Int from, Vector2Int to)
     {

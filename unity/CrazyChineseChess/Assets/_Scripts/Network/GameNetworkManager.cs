@@ -17,6 +17,15 @@ public class GameNetworkManager : NetworkBehaviour
 {
     public static GameNetworkManager Instance { get; private set; }
 
+    public readonly SyncVar<float> redPlayerEnergy = new SyncVar<float>();
+    public readonly SyncVar<float> blackPlayerEnergy = new SyncVar<float>();
+
+    // 添加LocalPlayerData的公共访问器
+    public PlayerNetData LocalPlayerData
+    {
+        get { return _localPlayerData; }
+    }
+
     // 事件，用于通知 GameManager 等逻辑脚本
     public static event Action<bool> OnNetworkStart; // 参数: isServer
     public static event Action<PlayerNetData> OnLocalPlayerDataReceived;

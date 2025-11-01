@@ -133,11 +133,10 @@ public class PlayerInputController : MonoBehaviour, IPlayerController
 
     private void TrySelectPiece(PieceComponent pieceToSelect)
     {
-        // 检查能量是否足够选择
-        if (gameManager.EnergySystem.CanSpendEnergy(assignedColor))
+        // 修复：使用GameManager的新方法而不是EnergySystem
+        if (gameManager.CanSpendEnergy(assignedColor))
         {
             SelectPiece(pieceToSelect);
-            Debug.Log($"[Input] 成功选择棋子 {pieceToSelect.name}。");
         }
         else
         {
