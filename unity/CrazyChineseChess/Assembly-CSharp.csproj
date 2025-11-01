@@ -96,7 +96,6 @@
     <Compile Include="Assets\_Scripts\UI\PingDisplay.cs" />
     <Compile Include="Assets\_Scripts\Controllers\AI\IAIStrategy.cs" />
     <Compile Include="Assets\_Scripts\Controllers\AI\VeryHardAIStrategy.cs" />
-    <Compile Include="Assets\_Scripts\UI\PlayerInfoDisplay.cs" />
     <Compile Include="Assets\_Scripts\Network\PlayerNetData.cs" />
     <Compile Include="Assets\_Scripts\Core\GameModeSelector.cs" />
     <Compile Include="Assets\FishNet\Plugins\FishySteamworks\FishySteamworks.cs" />
@@ -104,7 +103,6 @@
     <Compile Include="Assets\_Scripts\Core\EnergySystem.cs" />
     <Compile Include="Assets\_Scripts\PieceComponent.cs" />
     <Compile Include="Assets\FishNet\Upgrading\MirrorUpgrade.cs" />
-    <Compile Include="Assets\_Scripts\UI\PlayerHUDManager.cs" />
     <Compile Include="Assets\_Scripts\Controllers\TurnBasedInputController.cs" />
   </ItemGroup>
   <ItemGroup>
