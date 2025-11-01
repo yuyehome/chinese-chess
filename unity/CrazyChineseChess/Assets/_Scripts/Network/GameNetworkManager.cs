@@ -69,10 +69,20 @@ public class GameNetworkManager : NetworkBehaviour
         // 触发事件，通知所有监听者（比如GameManager）服务器已启动
         OnNetworkStart?.Invoke(true);
 
-        // 服务器启动时，初始化能量值
-        RedPlayerSyncedEnergy.Value = startEnergy;
-        BlackPlayerSyncedEnergy.Value = startEnergy;
+        // 服务器启动时，立即为自己（Host）创建并注册玩家数据。
+        // 这是同步操作，没有网络延迟，确保Host永远是第一个，永远是红色。
+        CSteamID hostSteamId = SteamManager.Instance.PlayerSteamId;
+        string hostPlayerName = SteamManager.Instance.PlayerName;
 
+        // Host的连接ID在服务器上就是0。
+        var hostPlayerData = new PlayerNetData(hostSteamId, hostPlayerName, PlayerColor.Red);
+        AllPlayers.Add(0, hostPlayerData);
+        Debug.Log($"[Server-Host] Host玩家数据已在服务器本地直接注册: ConnId=0, Name={hostPlayerName}, Color=Red");
+
+        // 将数据缓存起来，但不在这里触发事件。
+        // 我们将通过一个延迟调用来触发事件，确保场景中的其他脚本有足够的时间完成订阅。
+        _localPlayerData = hostPlayerData;
+        Invoke("BroadcastLocalPlayerData", 0.1f);
     }
 
     private void Update()
@@ -102,7 +112,6 @@ public class GameNetworkManager : NetworkBehaviour
         // 触发事件，通知监听者客户端已启动
         OnNetworkStart?.Invoke(false);
 
-        // 客户端准备好后，立即向服务器发起注册
         if (SteamManager.Instance != null && SteamManager.Instance.IsSteamInitialized)
         {
             CmdRegisterPlayer(SteamManager.Instance.PlayerSteamId, SteamManager.Instance.PlayerName);
@@ -171,6 +180,13 @@ public class GameNetworkManager : NetworkBehaviour
         // 重构后的逻辑更加简洁和健壮
         int connectionId = conn.ClientId;
 
+        // 我们之前发现Host的conn.ClientId可能是32767，而服务器逻辑里需要把它当成0。
+        // 我们在这里统一这个ID。这才是真正需要修正的地方。
+        if (connectionId == short.MaxValue)
+        {
+            connectionId = 0; // 将服务器自身的连接ID标准化为0
+        }
+
         // 如果玩家已经注册，则忽略，防止重复处理
         if (AllPlayers.ContainsKey(connectionId))
         {
@@ -178,8 +194,8 @@ public class GameNetworkManager : NetworkBehaviour
             return;
         }
 
-        // 决定玩家颜色：第一个连接的总是红方
-        PlayerColor assignedColor = (AllPlayers.Count == 0) ? PlayerColor.Red : PlayerColor.Black;
+        // 颜色分配逻辑现在更简单：只要不是红方（已被Host占用），就是黑方
+        PlayerColor assignedColor = PlayerColor.Black;
 
         var playerData = new PlayerNetData(steamId, playerName, assignedColor);
         AllPlayers.Add(connectionId, playerData);

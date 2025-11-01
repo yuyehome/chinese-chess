@@ -76,7 +76,15 @@ public class PlayerHUDManager : MonoBehaviour
         _localPlayerColor = localPlayerData.Color;
         InstantiateHUDs();
         GameNetworkManager.Instance.AllPlayers.OnChange += HandleAllPlayersDataChanged;
-        RefreshHUDs();
+
+        // 检查一下当前字典里是否已经有数据了，如果有，就手动刷新一次。
+        // 这可以处理“字典数据先于本脚本Start”的情况。
+        if (GameNetworkManager.Instance.AllPlayers.Count > 0)
+        {
+            Debug.Log("[PlayerHUDManager] 检测到AllPlayers已有数据，立即执行一次刷新。");
+            RefreshHUDs();
+        }
+
     }
 
     private void InstantiateHUDs()
@@ -104,6 +112,7 @@ public class PlayerHUDManager : MonoBehaviour
     /// </summary>
     private void HandleAllPlayersDataChanged(SyncDictionaryOperation op, int key, PlayerNetData value, bool asServer)
     {
+        Debug.Log($"[PlayerHUDManager] AllPlayers.OnChange 事件触发! 操作: {op}, Key: {key}, 玩家: {value.PlayerName}。准备刷新UI...");
         RefreshHUDs();
     }
 
