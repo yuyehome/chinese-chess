@@ -118,24 +118,19 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void InitializeLocalPlayerController(PlayerNetData localPlayerData)
     {
-        Debug.Log($"[DIAG-5A] InitializeLocalPlayerController CALLED for color {localPlayerData.Color}.");
-
         if (controllers.ContainsKey(localPlayerData.Color))
         {
             Debug.LogWarning($"[DIAG-5B] Controller for {localPlayerData.Color} already exists. Aborting.");
             return;
         }
 
-        Debug.Log($"[DIAG-5C] Getting or adding PlayerInputController component...");
         PlayerInputController playerController = GetComponent<PlayerInputController>();
         if (playerController == null)
         {
             playerController = gameObject.AddComponent<PlayerInputController>();
-            Debug.Log("[DIAG-5D] PlayerInputController component was ADDED.");
         }
         else
         {
-            Debug.Log("[DIAG-5E] PlayerInputController component was FOUND.");
         }
 
         if (playerController != null)
