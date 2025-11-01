@@ -1,3 +1,5 @@
+// File: _Scripts/Network/GameNetworkManager.cs
+
 using UnityEngine;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
