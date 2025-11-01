@@ -32,46 +32,80 @@ public class GameUIManager : MonoBehaviour
 
     void Start()
     {
-        // 直接检查GameManager是否存在，不再依赖EnergySystem
-        if (GameManager.Instance != null)
+        // 先禁用自身，等待网络就绪
+        this.enabled = false;
+
+        // 直接开始等待协程，不要用StartCoroutine(WaitForNetworkReady())
+        StartCoroutine(WaitForNetworkReady());
+    }
+
+    private System.Collections.IEnumerator WaitForNetworkReady()
+    {
+        Debug.Log("[GameUIManager] 开始等待网络就绪");
+
+        // 等待GameManager就绪
+        while (GameManager.Instance == null)
         {
-            if (GameModeSelector.SelectedMode == GameModeType.RealTime)
-            {
-                AdaptUILayout();
-                SetupUI();
-            }
-        }
-        else
-        {
-            gameObject.SetActive(false);
+            Debug.Log("[GameUIManager] 等待GameManager...");
+            yield return null;
         }
 
+        // 等待GameNetworkManager就绪
+        while (GameNetworkManager.Instance == null)
+        {
+            Debug.Log("[GameUIManager] 等待GameNetworkManager...");
+            yield return null;
+        }
+
+        // 等待本地玩家数据就绪
+        while (GameNetworkManager.Instance.LocalPlayerData.PlayerName == null)
+        {
+            Debug.Log("[GameUIManager] 等待LocalPlayerData...");
+            yield return null;
+        }
+
+        Debug.Log("[GameUIManager] 网络就绪，开始初始化UI");
+
+        if (GameModeSelector.SelectedMode == GameModeType.RealTime)
+        {
+            AdaptUILayout();
+            SetupUI();
+            this.enabled = true; // 关键：重新启用组件！
+        }
+
+        Debug.Log($"[GameUIManager] 组件启用状态: {this.enabled}");
     }
 
     private void Update()
     {
-        // 如果UI未初始化，则不执行任何操作
-        if (energySystem == null || myEnergyBar == null || enemyEnergyBar == null) return;
-
-        // 修复：正确判断LocalPlayerData是否有效
-        if (GameNetworkManager.Instance != null &&
-            GameNetworkManager.Instance.LocalPlayerData.PlayerName != null) // 检查结构体字段
+        if (myEnergyBar == null || enemyEnergyBar == null)
         {
-            var localPlayerData = GameNetworkManager.Instance.LocalPlayerData;
-
-            float myEnergy = GameManager.Instance.GetEnergy(localPlayerData.Color);
-            PlayerColor enemyColor = (localPlayerData.Color == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
-            float enemyEnergy = GameManager.Instance.GetEnergy(enemyColor);
-
-            myEnergyBar.UpdateEnergy(myEnergy, 4.0f);
-            enemyEnergyBar.UpdateEnergy(enemyEnergy, 4.0f);
+            Debug.LogWarning($"[EnergyUI] 能量条未初始化: my={myEnergyBar == null}, enemy={enemyEnergyBar == null}");
+            return;
         }
-        else
+
+        // 详细的网络状态检查
+        if (GameNetworkManager.Instance == null)
         {
-            // 网络未就绪或单机模式：使用默认显示
-            myEnergyBar.UpdateEnergy(GameManager.Instance.GetEnergy(PlayerColor.Red), 4.0f);
-            enemyEnergyBar.UpdateEnergy(GameManager.Instance.GetEnergy(PlayerColor.Black), 4.0f);
+            Debug.LogWarning("[EnergyUI] GameNetworkManager.Instance 为 null");
+            return;
         }
+
+        var localPlayerData = GameNetworkManager.Instance.LocalPlayerData;
+        if (localPlayerData.PlayerName == null)
+        {
+            Debug.LogWarning("[EnergyUI] LocalPlayerData 未就绪");
+            return;
+        }
+
+        float myEnergy = GameManager.Instance.GetEnergy(localPlayerData.Color);
+        PlayerColor enemyColor = (localPlayerData.Color == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
+        float enemyEnergy = GameManager.Instance.GetEnergy(enemyColor);
+
+        Debug.Log($"[EnergyUI] 本地玩家: {localPlayerData.Color}, 我方能量: {myEnergy}, 敌方能量: {enemyEnergy}");
+
+        myEnergyBar.UpdateEnergy(myEnergy, 4.0f);
+        enemyEnergyBar.UpdateEnergy(enemyEnergy, 4.0f);
     }
 
     /// <summary>
@@ -85,14 +119,44 @@ public class GameUIManager : MonoBehaviour
             return;
         }
 
-        // 为我方(红方)创建能量条
-        GameObject myBarGO = Instantiate(energyBarPrefab, myEnergyBarContainer);
-        myEnergyBar = myBarGO.GetComponent<EnergyBarSegmentsUI>();
+        Debug.Log($"[UI] 开始创建能量条，预制体: {energyBarPrefab.name}");
+        Debug.Log($"[UI] 我方容器: {myEnergyBarContainer != null}, 敌方容器: {enemyEnergyBarContainer != null}");
 
-        // 为敌方(黑方)创建能量条
-        GameObject enemyBarGO = Instantiate(energyBarPrefab, enemyEnergyBarContainer);
-        enemyEnergyBar = enemyBarGO.GetComponent<EnergyBarSegmentsUI>();
+        // 为我方创建能量条
+        if (myEnergyBarContainer != null)
+        {
+            GameObject myBarGO = Instantiate(energyBarPrefab, myEnergyBarContainer);
+            Debug.Log($"[UI] 我方能量条实例化: {myBarGO != null}, 位置: {myBarGO.transform.position}");
+
+            myEnergyBar = myBarGO.GetComponent<EnergyBarSegmentsUI>();
+            Debug.Log($"[UI] 我方能量条脚本: {myEnergyBar != null}");
+
+            if (myEnergyBar != null)
+            {
+                // 立即设置一个测试值
+                myEnergyBar.UpdateEnergy(2.5f, 4.0f);
+            }
+        }
+
+        // 为敌方创建能量条
+        if (enemyEnergyBarContainer != null)
+        {
+            GameObject enemyBarGO = Instantiate(energyBarPrefab, enemyEnergyBarContainer);
+            Debug.Log($"[UI] 敌方能量条实例化: {enemyBarGO != null}, 位置: {enemyBarGO.transform.position}");
+
+            enemyEnergyBar = enemyBarGO.GetComponent<EnergyBarSegmentsUI>();
+            Debug.Log($"[UI] 敌方能量条脚本: {enemyEnergyBar != null}");
+
+            if (enemyEnergyBar != null)
+            {
+                enemyEnergyBar.UpdateEnergy(3.0f, 4.0f);
+            }
+        }
+
+        Debug.Log($"[UI] 能量条创建完成: 我方={myEnergyBar != null}, 敌方={enemyEnergyBar != null}");
     }
+
+
 
     /// <summary>
     /// 检查屏幕朝向，并动态调整UI布局以适应竖屏或横屏。

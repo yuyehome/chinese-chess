@@ -91,21 +91,46 @@ public class GameManager : MonoBehaviour
     }
     /// <summary>
     /// 服务器端能量恢复逻辑
-    /// </summary>
-    [Server]
+    /// </summary>[Server]
     private void Server_UpdateEnergy()
     {
+        // 添加变化检测，避免不必要的SyncVar更新
         if (GameNetworkManager.Instance.redPlayerEnergy.Value < maxEnergy)
         {
-            GameNetworkManager.Instance.redPlayerEnergy.Value += energyRecoveryRate * Time.deltaTime;
-            GameNetworkManager.Instance.redPlayerEnergy.Value = Mathf.Min(GameNetworkManager.Instance.redPlayerEnergy.Value, maxEnergy);
+            float newRedEnergy = GameNetworkManager.Instance.redPlayerEnergy.Value + energyRecoveryRate * Time.deltaTime;
+            newRedEnergy = Mathf.Min(newRedEnergy, maxEnergy);
+
+            // 只有值真正变化时才设置，减少SyncVar触发
+            if (Mathf.Abs(newRedEnergy - GameNetworkManager.Instance.redPlayerEnergy.Value) > 0.01f)
+            {
+                GameNetworkManager.Instance.redPlayerEnergy.Value = newRedEnergy;
+            }
         }
 
         if (GameNetworkManager.Instance.blackPlayerEnergy.Value < maxEnergy)
         {
-            GameNetworkManager.Instance.blackPlayerEnergy.Value += energyRecoveryRate * Time.deltaTime;
-            GameNetworkManager.Instance.blackPlayerEnergy.Value = Mathf.Min(GameNetworkManager.Instance.blackPlayerEnergy.Value, maxEnergy);
+            float newBlackEnergy = GameNetworkManager.Instance.blackPlayerEnergy.Value + energyRecoveryRate * Time.deltaTime;
+            newBlackEnergy = Mathf.Min(newBlackEnergy, maxEnergy);
+
+            if (Mathf.Abs(newBlackEnergy - GameNetworkManager.Instance.blackPlayerEnergy.Value) > 0.01f)
+            {
+                GameNetworkManager.Instance.blackPlayerEnergy.Value = newBlackEnergy;
+            }
         }
+    }
+
+    // 在 GameManager.cs 中添加测试方法
+    [Server]
+    public void TestEnergySystem()
+    {
+        if (!InstanceFinder.IsServer) return;
+
+        Debug.Log($"[Test] 红方能量: {GameNetworkManager.Instance.redPlayerEnergy.Value}");
+        Debug.Log($"[Test] 黑方能量: {GameNetworkManager.Instance.blackPlayerEnergy.Value}");
+
+        // 手动触发能量消耗
+        SpendEnergy(PlayerColor.Red);
+        Debug.Log($"[Test] 消耗红方能量后: {GameNetworkManager.Instance.redPlayerEnergy.Value}");
     }
 
     // 添加能量访问方法
