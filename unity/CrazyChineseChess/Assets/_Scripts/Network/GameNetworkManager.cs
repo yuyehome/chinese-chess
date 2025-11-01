@@ -29,6 +29,19 @@ public class GameNetworkManager : NetworkBehaviour
     [Tooltip("必须挂载了 NetworkObject 组件的棋子Prefab")]
     public GameObject networkPiecePrefab;
 
+    [Header("游戏状态同步")]
+    [Tooltip("能量最大值")]
+    [SerializeField] private float maxEnergy = 4.0f;
+    [Tooltip("能量每秒恢复速率")]
+    [SerializeField] private float energyRecoveryRate = 0.3f;
+    [Tooltip("开局时的初始能量")]
+    [SerializeField] private float startEnergy = 2.0f;
+
+    // 为避免混淆，使用新的变量名
+    public readonly SyncVar<float> RedPlayerSyncedEnergy = new SyncVar<float>();
+    public readonly SyncVar<float> BlackPlayerSyncedEnergy = new SyncVar<float>();
+
+
     private void Awake()
     {
         if (Instance == null)
@@ -53,6 +66,32 @@ public class GameNetworkManager : NetworkBehaviour
         base.OnStartServer();
         // 触发事件，通知所有监听者（比如GameManager）服务器已启动
         OnNetworkStart?.Invoke(true);
+
+        // 服务器启动时，初始化能量值
+        RedPlayerSyncedEnergy.Value = startEnergy;
+        BlackPlayerSyncedEnergy.Value = startEnergy;
+
+    }
+
+    private void Update()
+    {
+        // 服务器负责驱动能量恢复逻辑
+        if (base.IsServer)
+        {
+            // 恢复红方能量
+            if (RedPlayerSyncedEnergy.Value < maxEnergy)
+            {
+                RedPlayerSyncedEnergy.Value += energyRecoveryRate * Time.deltaTime;
+                RedPlayerSyncedEnergy.Value = Mathf.Min(RedPlayerSyncedEnergy.Value, maxEnergy);
+            }
+
+            // 恢复黑方能量
+            if (BlackPlayerSyncedEnergy.Value < maxEnergy)
+            {
+                BlackPlayerSyncedEnergy.Value += energyRecoveryRate * Time.deltaTime;
+                BlackPlayerSyncedEnergy.Value = Mathf.Min(BlackPlayerSyncedEnergy.Value, maxEnergy);
+            }
+        }
     }
 
     public override void OnStartClient()
