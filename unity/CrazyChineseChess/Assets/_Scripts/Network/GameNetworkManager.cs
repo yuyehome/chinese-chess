@@ -21,6 +21,8 @@ public class GameNetworkManager : NetworkBehaviour
 
     // 本地缓存的玩家数据，主要由 TargetRpc 填充
     private PlayerNetData _localPlayerData;
+    // 提供一个公共的只读属性，以便外部（如PlayerHUDManager）可以安全地检查数据是否已到达
+    public PlayerNetData? LocalPlayerData => _localPlayerData.SteamId.IsValid() ? _localPlayerData : (PlayerNetData?)null;
 
     // 同步所有玩家的数据
     public readonly SyncDictionary<int, PlayerNetData> AllPlayers = new SyncDictionary<int, PlayerNetData>();
@@ -198,6 +200,7 @@ public class GameNetworkManager : NetworkBehaviour
     {
         // 缓存数据并触发事件
         _localPlayerData = data;
+        Debug.Log($"[GameNetworkManager] TargetRpc: 本地玩家数据已设置，颜色为 {data.Color}。准备触发事件...");
         OnLocalPlayerDataReceived?.Invoke(data);
     }
 

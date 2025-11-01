@@ -15,22 +15,64 @@ public class PlayerHUDManager : MonoBehaviour
 
     private PlayerColor? _localPlayerColor;
 
+    private void Awake()
+    {
+        Debug.Log("[PlayerHUDManager] Awake: HUD管理器已唤醒。");
+    }
+
     private void Start()
     {
-        GameNetworkManager.OnLocalPlayerDataReceived += HandleLocalPlayerDataReceived;
+        Debug.Log("[PlayerHUDManager] Start: 开始初始化流程...");
+
+        // 检查 GameNetworkManager 是否已经存在
+        if (GameNetworkManager.Instance != null)
+        {
+            // 直接尝试用现有数据初始化
+            TryInitialize(GameNetworkManager.Instance);
+        }
+        else
+        {
+            Debug.LogWarning("[PlayerHUDManager] Start: GameNetworkManager.Instance 尚不存在。");
+            // 这种情况理论上不应该发生，因为GNM是先于场景逻辑被创建的。
+            // 但作为保险，我们什么也不做，等待后续逻辑。
+        }
     }
 
     private void OnDestroy()
     {
-        GameNetworkManager.OnLocalPlayerDataReceived -= HandleLocalPlayerDataReceived;
+        // 确保在任何情况下都尝试取消订阅
         if (GameNetworkManager.Instance != null)
         {
+            GameNetworkManager.OnLocalPlayerDataReceived -= HandleLocalPlayerDataReceived;
             GameNetworkManager.Instance.AllPlayers.OnChange -= HandleAllPlayersDataChanged;
+        }
+    }
+
+    // 新增一个集中的初始化方法
+    private void TryInitialize(GameNetworkManager gnm)
+    {
+        // 健壮性检查：检查GNM是否已经接收到了本地玩家数据
+        if (gnm.LocalPlayerData.HasValue)
+        {
+            // 情况 A: 我们来晚了，事件已经发生。直接用缓存的数据初始化。
+            Debug.Log("[PlayerHUDManager] TryInitialize: 检测到已缓存的玩家数据，直接进行初始化。");
+            HandleLocalPlayerDataReceived(gnm.LocalPlayerData.Value);
+        }
+        else
+        {
+            // 情况 B: 我们来得早，事件还没发生。订阅它。
+            Debug.Log("[PlayerHUDManager] TryInitialize: 未检测到玩家数据，开始订阅 OnLocalPlayerDataReceived 事件。");
+            GameNetworkManager.OnLocalPlayerDataReceived += HandleLocalPlayerDataReceived;
         }
     }
 
     private void HandleLocalPlayerDataReceived(PlayerNetData localPlayerData)
     {
+        Debug.Log($"[PlayerHUDManager] 事件已触发！HandleLocalPlayerDataReceived 被调用。本地玩家颜色: {localPlayerData.Color}");
+
+        // 重要：一旦处理过，就立即取消订阅，防止重复调用
+        GameNetworkManager.OnLocalPlayerDataReceived -= HandleLocalPlayerDataReceived;
+
         _localPlayerColor = localPlayerData.Color;
         InstantiateHUDs();
         GameNetworkManager.Instance.AllPlayers.OnChange += HandleAllPlayersDataChanged;
@@ -39,9 +81,11 @@ public class PlayerHUDManager : MonoBehaviour
 
     private void InstantiateHUDs()
     {
+        Debug.Log("[PlayerHUDManager] InstantiateHUDs: 正在尝试实例化UI Prefabs...");
+
         if (playerInfoDisplayPrefab == null)
         {
-            Debug.LogError("[PlayerHUDManager] PlayerInfoDisplay Prefab 未指定!");
+            Debug.LogError("[PlayerHUDManager] PlayerInfoDisplay Prefab 未指定! 无法实例化。");
             return;
         }
 
@@ -50,6 +94,8 @@ public class PlayerHUDManager : MonoBehaviour
 
         GameObject enemyInfoGO = Instantiate(playerInfoDisplayPrefab, enemyInfoAnchor);
         _enemyInfoDisplay = enemyInfoGO.GetComponent<PlayerInfoDisplay>();
+
+        Debug.Log($"[PlayerHUDManager] InstantiateHUDs: UI实例化完成。我方UI: {myInfoGO.name}, 敌方UI: {enemyInfoGO.name}");
     }
 
     /// <summary>
