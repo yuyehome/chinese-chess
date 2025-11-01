@@ -105,7 +105,7 @@ public class GameUIManager : MonoBehaviour
         PlayerColor enemyColor = (localPlayerData.Color == PlayerColor.Red) ? PlayerColor.Black : PlayerColor.Red;
         float enemyEnergy = GameManager.Instance.GetEnergy(enemyColor);
 
-        Debug.Log($"[EnergyUI] 本地玩家: {localPlayerData.Color}, 我方能量: {myEnergy}, 敌方能量: {enemyEnergy}");
+        //Debug.Log($"[EnergyUI] 本地玩家: {localPlayerData.Color}, 我方能量: {myEnergy}, 敌方能量: {enemyEnergy}");
 
         myEnergyBar.UpdateEnergy(myEnergy, 4.0f);
         enemyEnergyBar.UpdateEnergy(enemyEnergy, 4.0f);
