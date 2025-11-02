@@ -83,7 +83,7 @@ public class GameManager : MonoBehaviour
 
         if (isPVPMode)
         {
-            Debug.Log("[GameManager] PVP模式已检测。正在订阅GameNetworkManager的启动事件...");
+            //Debug.Log("[GameManager] PVP模式已检测。正在订阅GameNetworkManager的启动事件...");
             // 订阅来自GNM的事件，它将在服务器和客户端各自准备好时触发
             GameNetworkManager.OnNetworkStart += HandleNetworkStart;
             GameNetworkManager.OnLocalPlayerDataReceived += InitializeLocalPlayerController;
@@ -192,7 +192,7 @@ public class GameManager : MonoBehaviour
         {
             // 服务器端的初始化
             if (currentGameMode != null) return;
-            Debug.Log("[GameManager-Server] 正在初始化服务器端游戏模式...");
+            //Debug.Log("[GameManager-Server] 正在初始化服务器端游戏模式...");
             float collisionDistanceSquared = collisionDistance * collisionDistance;
             var rtController = new RealTimeModeController(this, CurrentBoardState, BoardRenderer, collisionDistanceSquared);
             rtController.CombatManager.OnPieceKilled += HandlePieceKilled;

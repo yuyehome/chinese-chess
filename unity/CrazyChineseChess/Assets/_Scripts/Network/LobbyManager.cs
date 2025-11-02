@@ -152,7 +152,7 @@ public class LobbyManager : MonoBehaviour
             if (scene.name == "Game" && !_gameNetworkManagerSpawned)
             {
                 _gameNetworkManagerSpawned = true;
-                Debug.Log("[Server] Game场景加载完成，正在生成GameNetworkManager...");
+                //Debug.Log("[Server] Game场景加载完成，正在生成GameNetworkManager...");
 
                 if (gameNetworkManagerPrefab == null)
                 {
@@ -321,12 +321,12 @@ public class LobbyManager : MonoBehaviour
         int steamLobbyMemberCount = SteamMatchmaking.GetNumLobbyMembers(_currentLobbyId);
         int connectedFishNetClients = _networkManager.ServerManager.Clients.Count; // 这包含了Host自己，所以是 (远程客户端数 + 1)
 
-        Debug.Log($"[StartCheck] 检查开始条件: Steam人数={steamLobbyMemberCount}, FishNet连接数={connectedFishNetClients}");
+        //Debug.Log($"[StartCheck] 检查开始条件: Steam人数={steamLobbyMemberCount}, FishNet连接数={connectedFishNetClients}");
 
         // 我们的游戏是2人对战
         if (steamLobbyMemberCount == 2 && connectedFishNetClients == 2)
         {
-            Debug.Log("[StartCheck] 条件满足！所有玩家已就绪，正在加载游戏场景...");
+            //Debug.Log("[StartCheck] 条件满足！所有玩家已就绪，正在加载游戏场景...");
 
             _isLoadingScene = true; // 在加载前，立刻设置标志位
 
@@ -340,7 +340,7 @@ public class LobbyManager : MonoBehaviour
             sld.ReplaceScenes = ReplaceOption.All;
             _networkManager.SceneManager.LoadGlobalScenes(sld);
 
-            Debug.Log("[LobbyManager] 已向所有客户端发送加载 'Game' 场景的指令。");
+            //Debug.Log("[LobbyManager] 已向所有客户端发送加载 'Game' 场景的指令。");
 
             // 3. 重置标志位，防止重复执行
             _isTryingToStartGame = false;

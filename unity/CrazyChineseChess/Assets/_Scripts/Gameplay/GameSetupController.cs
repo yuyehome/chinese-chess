@@ -19,7 +19,7 @@ public class GameSetupController : MonoBehaviour
         {
             // 在PVP模式下，我们不在这里做任何事。
             // 而是等待 GameNetworkManager 通过事件通知我们本地玩家的数据。
-            Debug.Log("[GameSetup] 检测到PVP模式，等待网络玩家数据...");
+            //Debug.Log("[GameSetup] 检测到PVP模式，等待网络玩家数据...");
             GameNetworkManager.OnLocalPlayerDataReceived += InitializeLocalPlayerForPVP;
         }
         else

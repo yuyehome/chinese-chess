@@ -33,7 +33,6 @@ public class GameUIManager : MonoBehaviour
     void Start()
     {
         Debug.Log($"[GameUIManager] Start调用，当前游戏模式: {GameModeSelector.SelectedMode}");
-        Debug.Log($"[GameUIManager] 初始启用状态: {this.enabled}");
 
         // 先禁用自身，等待网络就绪
         this.enabled = false;
@@ -44,7 +43,7 @@ public class GameUIManager : MonoBehaviour
 
     private System.Collections.IEnumerator WaitForNetworkReady()
     {
-        Debug.Log("[GameUIManager] 开始等待网络就绪");
+        //Debug.Log("[GameUIManager] 开始等待网络就绪");
 
         // 等待GameManager就绪
         while (GameManager.Instance == null)
@@ -56,18 +55,18 @@ public class GameUIManager : MonoBehaviour
         // 等待GameNetworkManager就绪
         while (GameNetworkManager.Instance == null)
         {
-            Debug.Log("[GameUIManager] 等待GameNetworkManager...");
+            //Debug.Log("[GameUIManager] 等待GameNetworkManager...");
             yield return null;
         }
 
         // 等待本地玩家数据就绪
         while (GameNetworkManager.Instance.LocalPlayerData.PlayerName == null)
         {
-            Debug.Log("[GameUIManager] 等待LocalPlayerData...");
+            //Debug.Log("[GameUIManager] 等待LocalPlayerData...");
             yield return null;
         }
 
-        Debug.Log("[GameUIManager] 网络就绪，开始初始化UI");
+        //Debug.Log("[GameUIManager] 网络就绪，开始初始化UI");
 
         if (GameModeSelector.SelectedMode == GameModeType.RealTime)
         {
@@ -76,7 +75,7 @@ public class GameUIManager : MonoBehaviour
             this.enabled = true; // 关键：重新启用组件！
         }
 
-        Debug.Log($"[GameUIManager] 组件启用状态: {this.enabled}");
+        //Debug.Log($"[GameUIManager] 组件启用状态: {this.enabled}");
     }
 
     private void Update()
@@ -122,17 +121,17 @@ public class GameUIManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[UI] 开始创建能量条，预制体: {energyBarPrefab.name}");
-        Debug.Log($"[UI] 我方容器: {myEnergyBarContainer != null}, 敌方容器: {enemyEnergyBarContainer != null}");
+        //Debug.Log($"[UI] 开始创建能量条，预制体: {energyBarPrefab.name}");
+        //Debug.Log($"[UI] 我方容器: {myEnergyBarContainer != null}, 敌方容器: {enemyEnergyBarContainer != null}");
 
         // 为我方创建能量条
         if (myEnergyBarContainer != null)
         {
             GameObject myBarGO = Instantiate(energyBarPrefab, myEnergyBarContainer);
-            Debug.Log($"[UI] 我方能量条实例化: {myBarGO != null}, 位置: {myBarGO.transform.position}");
+            //Debug.Log($"[UI] 我方能量条实例化: {myBarGO != null}, 位置: {myBarGO.transform.position}");
 
             myEnergyBar = myBarGO.GetComponent<EnergyBarSegmentsUI>();
-            Debug.Log($"[UI] 我方能量条脚本: {myEnergyBar != null}");
+            //Debug.Log($"[UI] 我方能量条脚本: {myEnergyBar != null}");
 
             if (myEnergyBar != null)
             {
@@ -145,10 +144,10 @@ public class GameUIManager : MonoBehaviour
         if (enemyEnergyBarContainer != null)
         {
             GameObject enemyBarGO = Instantiate(energyBarPrefab, enemyEnergyBarContainer);
-            Debug.Log($"[UI] 敌方能量条实例化: {enemyBarGO != null}, 位置: {enemyBarGO.transform.position}");
+            //Debug.Log($"[UI] 敌方能量条实例化: {enemyBarGO != null}, 位置: {enemyBarGO.transform.position}");
 
             enemyEnergyBar = enemyBarGO.GetComponent<EnergyBarSegmentsUI>();
-            Debug.Log($"[UI] 敌方能量条脚本: {enemyEnergyBar != null}");
+            //Debug.Log($"[UI] 敌方能量条脚本: {enemyEnergyBar != null}");
 
             if (enemyEnergyBar != null)
             {
@@ -156,7 +155,7 @@ public class GameUIManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"[UI] 能量条创建完成: 我方={myEnergyBar != null}, 敌方={enemyEnergyBar != null}");
+        //Debug.Log($"[UI] 能量条创建完成: 我方={myEnergyBar != null}, 敌方={enemyEnergyBar != null}");
     }
 
 

@@ -112,7 +112,7 @@ public class GameNetworkManager : NetworkBehaviour
             return;
         }
 
-        Debug.Log("[Server] 开始在网络上生成棋子...");
+        //Debug.Log("[Server] 开始在网络上生成棋子...");
         int spawnedCount = 0;
 
         for (int x = 0; x < BoardState.BOARD_WIDTH; x++)
@@ -137,7 +137,7 @@ public class GameNetworkManager : NetworkBehaviour
             }
         }
 
-        Debug.Log($"[Server] 棋盘初始化完成，共生成了 {spawnedCount} 个网络化棋子。");
+        //Debug.Log($"[Server] 棋盘初始化完成，共生成了 {spawnedCount} 个网络化棋子。");
     }
 
     /// <summary>
