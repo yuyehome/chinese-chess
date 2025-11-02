@@ -46,7 +46,12 @@ public class CombatManager
                 float sqrDist = Vector3.SqrMagnitude(pieceA.transform.localPosition - pieceB.transform.localPosition);
                 if (sqrDist < collisionDistanceSquared)
                 {
+                    Debug.Log($"[CombatDebug] ¼ì²âµ½Åö×²: {a.name} vs {b.name}, ¾àÀë: {Mathf.Sqrt(distanceSqr)}");
+                    Debug.Log($"[CombatDebug] Åö×²Ç°×´Ì¬ - A: ¹¥»÷={a.RTState.IsAttacking}, ÎÞµÐ={a.RTState.IsVulnerable}, ËÀÍö={a.RTState.IsDead}");
+                    Debug.Log($"[CombatDebug] Åö×²Ç°×´Ì¬ - B: ¹¥»÷={b.RTState.IsAttacking}, ÎÞµÐ={b.RTState.IsVulnerable}, ËÀÍö={b.RTState.IsDead}");
                     ResolveCollision(pieceA, pieceB);
+                    Debug.Log($"[CombatDebug] Åö×²Ö®ºóµÄ×´Ì¬ - A: ¹¥»÷={a.RTState.IsAttacking}, ÎÞµÐ={a.RTState.IsVulnerable}, ËÀÍö={a.RTState.IsDead}");
+                    Debug.Log($"[CombatDebug] Åö×²Ö®ºóµÄ×´Ì¬ - B: ¹¥»÷={b.RTState.IsAttacking}, ÎÞµÐ={b.RTState.IsVulnerable}, ËÀÍö={b.RTState.IsDead}");
                 }
             }
         }
