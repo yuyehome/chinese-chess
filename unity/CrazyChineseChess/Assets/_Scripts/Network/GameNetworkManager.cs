@@ -190,7 +190,6 @@ public class GameNetworkManager : NetworkBehaviour
     {
         int connectionId = sender.ClientId;
 
-        // 1. 安全性检查：根据修正后的ID，从已注册的玩家列表中查找数据
         if (!AllPlayers.TryGetValue(connectionId, out PlayerNetData playerData))
         {
             Debug.LogError($"[Server] 收到来自未注册玩家(ID: {sender.ClientId}, Mapped to: {connectionId})的移动请求，已忽略。");
