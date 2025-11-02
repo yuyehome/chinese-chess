@@ -46,10 +46,12 @@ public class CombatManager
                 float sqrDist = Vector3.SqrMagnitude(pieceA.transform.localPosition - pieceB.transform.localPosition);
                 if (sqrDist < collisionDistanceSquared)
                 {
-                    Debug.Log($"[CombatDebug] ¼ì²âµ½Åö×²: {pieceA.name} vs {pieceB.name}, ¾àÀë: {Mathf.Sqrt(distanceSqr)}");
+                    Debug.Log($"[CombatDebug] ¼ì²âµ½Åö×²: {pieceA.name} vs {pieceB.name},");
                     Debug.Log($"[CombatDebug] Åö×²Ç°×´Ì¬ - A: ¹¥»÷={pieceA.RTState.IsAttacking}, ÎÞµÐ={pieceA.RTState.IsVulnerable}, ËÀÍö={pieceA.RTState.IsDead}");
                     Debug.Log($"[CombatDebug] Åö×²Ç°×´Ì¬ - B: ¹¥»÷={pieceB.RTState.IsAttacking}, ÎÞµÐ={pieceB.RTState.IsVulnerable}, ËÀÍö={pieceB.RTState.IsDead}");
                     ResolveCollision(pieceA, pieceB);
+                    Debug.Log($"[CombatDebug] Åö×²ºó×´Ì¬ - A: ¹¥»÷={pieceA.RTState.IsAttacking}, ÎÞµÐ={pieceA.RTState.IsVulnerable}, ËÀÍö={pieceA.RTState.IsDead}");
+                    Debug.Log($"[CombatDebug] Åö×²ºó×´Ì¬ - B: ¹¥»÷={pieceB.RTState.IsAttacking}, ÎÞµÐ={pieceB.RTState.IsVulnerable}, ËÀÍö={pieceB.RTState.IsDead}");
                 }
             }
         }
