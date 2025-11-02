@@ -190,13 +190,6 @@ public class GameNetworkManager : NetworkBehaviour
     {
         int connectionId = sender.ClientId;
 
-        // 如果ClientId是short.MaxValue (32767)，说明这是服务器/Host自己发起的调用。
-        // 在我们的逻辑中，Host注册时使用的ID是0。所以这里需要做一个ID转换。
-        if (connectionId == short.MaxValue)
-        {
-            connectionId = 0;
-        }
-
         // 1. 安全性检查：根据修正后的ID，从已注册的玩家列表中查找数据
         if (!AllPlayers.TryGetValue(connectionId, out PlayerNetData playerData))
         {
