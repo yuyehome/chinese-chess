@@ -385,8 +385,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   boardView: {fileID: 1130860865}
-  inputController: {fileID: 1130860866}
-  initialGameMode: 1
 --- !u!4 &1130860868
 Transform:
   m_ObjectHideFlags: 0

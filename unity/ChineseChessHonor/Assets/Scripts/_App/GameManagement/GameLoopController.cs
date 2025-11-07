@@ -6,62 +6,42 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
 {
     [Header("场景引用")]
     [SerializeField] private BoardView boardView;
-    [SerializeField] private InputController inputController;
-
-    [Header("游戏设置")]
-    [SerializeField] private GameModeType initialGameMode = GameModeType.RealTime_Fair;
-
-    private CommandProcessor _commandProcessor;
-    private GameState _currentGameState;
-    private IGameModeLogic _gameModeLogic;
-
-    // 允许外部（如InputController）发送指令
-    public void RequestProcessCommand(ICommand command)
-    {
-        _commandProcessor.ProcessCommand(command);
-    }
+    // InputController现在直接通过NetworkServiceProvider发送指令，不再需要这里的引用
 
     void Start()
     {
-        InitializeGame();
-    }
-
-    void FixedUpdate()
-    {
-        // 游戏逻辑的心跳，以固定的时间间隔驱动
-        if (_commandProcessor != null)
+        // 订阅网络服务事件
+        if (NetworkServiceProvider.Instance != null)
         {
-            _commandProcessor.Tick();
+            NetworkServiceProvider.Instance.OnGameStateUpdated += OnNetworkGameStateUpdated;
         }
     }
 
-    private void InitializeGame()
+    // 允许InputController等通过网络服务发送指令
+    public void RequestProcessCommand(ICommand command)
     {
-        // 1. 创建核心系统实例
-        _currentGameState = new GameState();
-        _commandProcessor = new CommandProcessor(_currentGameState);
-        _gameModeLogic = GameModeManager.CreateLogic(initialGameMode);
+        NetworkServiceProvider.Instance?.SendCommand(command);
+    }
 
-        // 2. 注入依赖
-        _commandProcessor.SetGameMode(_gameModeLogic);
+    // 当接收到来自网络层（无论是Offline还是FishNet）的权威状态时
+    private void OnNetworkGameStateUpdated(GameState newState)
+    {
+        // 直接将这个权威状态交给BoardView去渲染
+        boardView.OnGameStateUpdated(newState);
+    }
 
-        // 3. 初始化游戏状态 (由GameModeLogic负责)
-        _gameModeLogic.Initialize(_currentGameState);
-
-        // 4. 连接事件：当逻辑状态更新时，通知视图更新
-        _commandProcessor.OnGameStateUpdated += boardView.OnGameStateUpdated;
-
-        // 5. 手动触发一次初始渲染
-        boardView.OnGameStateUpdated(_currentGameState);
-
-        Debug.Log($"游戏初始化完成! 模式: {initialGameMode}");
+    protected override void Awake()
+    {
+        base.Awake();
+        // GameLoopController 不再负责初始化游戏逻辑，
+        // 这个职责移交给了 OfflineService (单机) 或 服务器 (联机)
     }
 
     private void OnDestroy()
     {
-        if (_commandProcessor != null && boardView != null)
+        if (NetworkServiceProvider.Instance != null)
         {
-            _commandProcessor.OnGameStateUpdated -= boardView.OnGameStateUpdated;
+            NetworkServiceProvider.Instance.OnGameStateUpdated -= OnNetworkGameStateUpdated;
         }
     }
 }
