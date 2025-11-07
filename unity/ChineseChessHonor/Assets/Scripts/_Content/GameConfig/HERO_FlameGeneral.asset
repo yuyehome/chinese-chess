@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7fae3d32eefe2b4a9ffc324b3dd9645, type: 3}
+  m_Name: HERO_FlameGeneral
+  m_EditorClassIdentifier: 
+  heroId: 1001
+  heroNameKey: 
+  heroDescriptionKey: 
+  allowedPieceType: 4
+  skill: {fileID: 11400000, guid: 11f6c22775c198b4aa682f0d37e4b557, type: 2}
