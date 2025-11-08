@@ -131,7 +131,8 @@ public class MirrorService : NetworkManager, INetworkService
 
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
     {
-        // ... (这部分代码没有问题，保持不变) ...
+        base.OnServerAddPlayer(conn); 
+
         Debug.Log($"[MirrorService] OnServerAddPlayer: 新客户端 (ConnectionId: {conn.connectionId}) 已连接，准备同步游戏状态...");
 
         if (GameLoopController.Instance == null)
