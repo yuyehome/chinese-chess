@@ -1,136 +1,113 @@
-// 文件路径: Assets/Scripts/_App/GameManagement/GameLoopController.cs
+// 文件路径: Assets/Scripts/_App/GameManagement/GameLoopController.cs (修正版)
 
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using Mirror;
 
 public class GameLoopController : PersistentSingleton<GameLoopController>
 {
     [Header("场景引用")]
     [SerializeField] private BoardView boardView;
-    // UI的引用可以在这里添加，例如：[SerializeField] private HudView hudView;
 
-    [Header("游戏设置")]
-    [SerializeField] private GameModeType initialGameMode = GameModeType.RealTime_Fair;
-
-    // 逻辑核心
     private CommandProcessor _commandProcessor;
-    private GameState _localGameState; // 所有客户端和Host都有一个本地状态
+    private GameState _localGameState;
     private IGameModeLogic _gameModeLogic;
+    private INetworkService _networkService;
 
-    // 标记当前是否为权威端 (Host或单机)
-    private bool _isAuthority = true; // 在单机模式下，我们总是权威端
+    public bool IsAuthority => _networkService != null && _networkService.IsHost;
 
-    // 允许外部（如InputController）请求执行一个指令
-    public void RequestProcessCommand(ICommand command)
-    {
-        if (_isAuthority)
-        {
-            _commandProcessor.ProcessCommand(command);
-        }
-        else
-        {
-            // 在网络模式下，这里会调用 INetworkService.SendCommandToServer(command);
-            Debug.Log("非权威端，将发送指令到服务器...");
-        }
-    }
+    public GameState GetCurrentState() => _localGameState;
 
     void Start()
     {
-        InitializeGame();
+        _networkService = NetworkServiceProvider.Instance;
     }
 
+    public void InitializeAsHost()
+    {
+        Debug.Log("[GameLoopController] InitializeAsHost: 作为Host初始化游戏...");
+        _localGameState = new GameState();
+        _commandProcessor = new CommandProcessor(_localGameState);
+
+        // --- 修复点：将 GameManager 修改为 GameModeManager ---
+        _gameModeLogic = GameModeManager.CreateLogic(GameModeType.RealTime_Fair);
+        _commandProcessor.SetGameMode(_gameModeLogic);
+
+        SubscribeToProcessorEvents();
+
+        _gameModeLogic.Initialize(_localGameState);
+        Debug.Log($"[GameLoopController] InitializeAsHost: 逻辑状态已初始化，棋子数量: {_localGameState.pieces.Count}");
+
+        boardView.OnPieceCreated(_localGameState.pieces);
+    }
+
+    public void InitializeAsClient(PieceData[] initialPieces)
+    {
+        Debug.Log($"[GameLoopController] InitializeAsClient: 作为Client初始化，收到 {initialPieces.Length} 个棋子。");
+        _localGameState = new GameState();
+        var dict = initialPieces.ToDictionary(p => p.uniqueId, p => p);
+        _localGameState.pieces = dict;
+        boardView.OnPieceCreated(dict);
+    }
+
+    // ... (文件的其余部分保持不变) ...
     void FixedUpdate()
     {
-        // 只有权威端才需要驱动游戏逻辑心跳
-        if (_isAuthority && _commandProcessor != null)
+        if (IsAuthority && _commandProcessor != null)
         {
             _commandProcessor.Tick();
         }
     }
 
-    private void InitializeGame()
+    public void RequestProcessCommand(ICommand command)
     {
-        _localGameState = new GameState();
-
-        if (_isAuthority)
+        if (IsAuthority)
         {
-            // 只有权威端才需要创建和设置CommandProcessor
-            _commandProcessor = new CommandProcessor(_localGameState);
-            _gameModeLogic = GameModeManager.CreateLogic(initialGameMode);
-            _commandProcessor.SetGameMode(_gameModeLogic);
-
-            // 订阅所有来自CommandProcessor的原子事件
-            SubscribeToProcessorEvents();
-
-            // 由GameModeLogic负责初始化游戏状态
-            _gameModeLogic.Initialize(_localGameState);
-            // 手动触发一次初始棋子创建
-            boardView.OnPieceCreated(_localGameState.pieces);
+            _commandProcessor.ProcessCommand(command);
         }
-
-        Debug.Log($"游戏初始化完成! 模式: {initialGameMode}, 是否权威端: {_isAuthority}");
     }
 
     private void OnDestroy()
     {
-        if (_commandProcessor != null)
-        {
-            UnsubscribeFromProcessorEvents();
-        }
+        if (IsAuthority && _commandProcessor != null) UnsubscribeFromProcessorEvents();
     }
 
-    #region Event Subscription (订阅/取消订阅事件)
-
+    #region Event Subscription & Forwarding (Host Only)
     private void SubscribeToProcessorEvents()
     {
-        _commandProcessor.OnPieceCreated += HandlePieceCreated;
         _commandProcessor.OnPieceUpdated += HandlePieceUpdated;
         _commandProcessor.OnPieceRemoved += HandlePieceRemoved;
         _commandProcessor.OnActionPointsUpdated += HandleActionPointsUpdated;
-        // ... 订阅其他事件
     }
-
     private void UnsubscribeFromProcessorEvents()
     {
-        _commandProcessor.OnPieceCreated -= HandlePieceCreated;
         _commandProcessor.OnPieceUpdated -= HandlePieceUpdated;
         _commandProcessor.OnPieceRemoved -= HandlePieceRemoved;
         _commandProcessor.OnActionPointsUpdated -= HandleActionPointsUpdated;
-        // ... 取消订阅其他事件
     }
-
+    private void HandlePieceUpdated(PieceData pieceData) => NetworkEvents.Instance?.RpcOnPieceUpdated(pieceData);
+    private void HandlePieceRemoved(int pieceId) => NetworkEvents.Instance?.RpcOnPieceRemoved(pieceId);
+    private void HandleActionPointsUpdated(PlayerTeam team, float newAmount) => NetworkEvents.Instance?.RpcOnActionPointsUpdated(team, newAmount);
     #endregion
 
-    #region Event Handlers (事件处理与转发)
-    // 这些处理器在单机模式下直接调用View层。
-    // 在网络模式下，Host端的这些方法会调用RPC，而Client端的这些方法会被RPC调用。
-
-    // 注意：Initialize里的初始创建比较特殊，我们单独处理。
-    // 这里的OnPieceCreated主要用于游戏过程中的召唤。
-    private void HandlePieceCreated(PieceData pieceData)
+    #region Handlers for Network Events (Client Side)
+    public void HandlePieceUpdated_FromNet(PieceData updatedPiece)
     {
-        Debug.Log($"[Event] Piece Created: ID {pieceData.uniqueId}");
-        boardView.OnPieceCreated(new Dictionary<int, PieceData> { { pieceData.uniqueId, pieceData } });
+        if (_localGameState == null) return;
+        _localGameState.pieces[updatedPiece.uniqueId] = updatedPiece;
+        boardView.OnPieceUpdated(updatedPiece);
     }
-
-    private void HandlePieceUpdated(PieceData pieceData)
+    public void HandlePieceRemoved_FromNet(int pieceId)
     {
-        Debug.Log($"[Event] Piece Updated: ID {pieceData.uniqueId}, Pos: {pieceData.position}");
-        boardView.OnPieceUpdated(pieceData);
-    }
-
-    private void HandlePieceRemoved(int pieceId)
-    {
-        Debug.Log($"[Event] Piece Removed: ID {pieceId}");
+        if (_localGameState == null) return;
+        _localGameState.pieces.Remove(pieceId);
         boardView.OnPieceRemoved(pieceId);
     }
-
-    private void HandleActionPointsUpdated(PlayerTeam team, float newAmount)
+    public void HandleActionPointsUpdated_FromNet(PlayerTeam team, float newAmount)
     {
-        Debug.Log($"[Event] AP Updated: Team {team}, New AP: {newAmount}");
-        // 这里可以转发给UI层
-        // hudView.UpdateActionPoints(team, newAmount);
+        if (_localGameState == null) return;
+        _localGameState.actionPoints[(int)team] = newAmount;
     }
-
     #endregion
 }
