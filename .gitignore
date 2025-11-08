@@ -12,3 +12,4 @@
 Builds
 .vs
 /unity/Builds.rar
+*.cache
