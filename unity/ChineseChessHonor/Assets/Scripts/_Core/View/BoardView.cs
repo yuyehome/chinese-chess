@@ -5,35 +5,41 @@ using UnityEngine;
 
 public class BoardView : MonoBehaviour
 {
-    public GameObject piecePrefab; // 用于实例化棋子的Prefab
+    public GameObject piecePrefab;
 
     private Dictionary<int, PieceView> _pieceViews = new Dictionary<int, PieceView>();
 
-    // 当游戏状态更新时，此方法被调用
-    public void OnGameStateUpdated(GameState newState)
+    // 响应棋子创建事件 (可批量创建)
+    public void OnPieceCreated(Dictionary<int, PieceData> newPieces)
     {
-        var activePieceIds = new HashSet<int>(_pieceViews.Keys);
-
-        // 遍历最新的状态
-        foreach (var pieceData in newState.pieces.Values)
+        foreach (var pieceData in newPieces.Values)
         {
-            if (_pieceViews.ContainsKey(pieceData.uniqueId))
+            if (!_pieceViews.ContainsKey(pieceData.uniqueId))
             {
-                // 已存在的棋子，更新它的目标位置
-                _pieceViews[pieceData.uniqueId].UpdateTargetPosition(pieceData.position);
-                activePieceIds.Remove(pieceData.uniqueId);
-            }
-            else
-            {
-                // 新棋子，创建它
                 CreatePieceView(pieceData);
             }
         }
+    }
 
-        // 移除已经不在最新状态中的棋子 (被吃掉的)
-        foreach (var deadPieceId in activePieceIds)
+    // 响应单个棋子更新事件
+    public void OnPieceUpdated(PieceData updatedPieceData)
+    {
+        if (_pieceViews.TryGetValue(updatedPieceData.uniqueId, out PieceView pieceView))
         {
-            DestroyPieceView(deadPieceId);
+            // 更新视觉目标位置
+            pieceView.UpdateTargetPosition(updatedPieceData.position);
+            // TODO: 未来可以在这里处理状态变化，如播放中毒特效等
+        }
+    }
+
+    // 响应棋子移除事件
+    public void OnPieceRemoved(int pieceId)
+    {
+        if (_pieceViews.TryGetValue(pieceId, out PieceView pieceView))
+        {
+            // 播放死亡动画/特效
+            Destroy(pieceView.gameObject, 0.5f); // 延迟销毁以播放动画
+            _pieceViews.Remove(pieceId);
         }
     }
 
@@ -49,7 +55,6 @@ public class BoardView : MonoBehaviour
         PieceView pieceView = pieceObject.GetComponent<PieceView>();
         pieceView.Initialize(pieceData);
 
-        // 根据阵营设置不同颜色以作区分
         var renderer = pieceObject.GetComponentInChildren<Renderer>();
         if (renderer != null)
         {
@@ -57,15 +62,5 @@ public class BoardView : MonoBehaviour
         }
 
         _pieceViews.Add(pieceData.uniqueId, pieceView);
-    }
-
-    private void DestroyPieceView(int pieceId)
-    {
-        if (_pieceViews.TryGetValue(pieceId, out PieceView pieceView))
-        {
-            // TODO: 播放死亡动画/特效
-            Destroy(pieceView.gameObject);
-            _pieceViews.Remove(pieceId);
-        }
     }
 }
