@@ -86,6 +86,7 @@
     <Compile Include="Assets\Scripts\_Core\Command\ICommand.cs" />
     <Compile Include="Assets\Scripts\_Core\GameModes\IGameModeLogic.cs" />
     <Compile Include="Assets\Scripts\_Core\View\PieceView.cs" />
+    <Compile Include="Assets\Scripts\_Core\Networking\NetworkSerializers.cs" />
     <Compile Include="Assets\Scripts\_Core\GameModes\GameModeType.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\MirrorService.cs" />
     <Compile Include="Assets\Scripts\_Content\GameConfig\HeroConfig.cs" />

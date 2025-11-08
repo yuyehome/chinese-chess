@@ -1,4 +1,4 @@
-// 文件路径: Assets/Scripts/_App/GameManagement/GameLoopController.cs (修正版)
+// 文件路径: Assets/Scripts/_App/GameManagement/GameLoopController.cs
 
 using System.Collections.Generic;
 using System.Linq;
@@ -29,8 +29,6 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
         Debug.Log("[GameLoopController] InitializeAsHost: 作为Host初始化游戏...");
         _localGameState = new GameState();
         _commandProcessor = new CommandProcessor(_localGameState);
-
-        // --- 修复点：将 GameManager 修改为 GameModeManager ---
         _gameModeLogic = GameModeManager.CreateLogic(GameModeType.RealTime_Fair);
         _commandProcessor.SetGameMode(_gameModeLogic);
 
@@ -39,7 +37,14 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
         _gameModeLogic.Initialize(_localGameState);
         Debug.Log($"[GameLoopController] InitializeAsHost: 逻辑状态已初始化，棋子数量: {_localGameState.pieces.Count}");
 
-        boardView.OnPieceCreated(_localGameState.pieces);
+        if (boardView != null)
+        {
+            boardView.OnPieceCreated(_localGameState.pieces);
+        }
+        else
+        {
+            Debug.LogError("[GameLoopController] InitializeAsHost: BoardView为空，无法创建棋子视觉对象!");
+        }
     }
 
     public void InitializeAsClient(PieceData[] initialPieces)
@@ -48,10 +53,18 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
         _localGameState = new GameState();
         var dict = initialPieces.ToDictionary(p => p.uniqueId, p => p);
         _localGameState.pieces = dict;
-        boardView.OnPieceCreated(dict);
+
+        if (boardView != null)
+        {
+            Debug.Log("[GameLoopController] InitializeAsClient: 正在通知BoardView创建棋子...");
+            boardView.OnPieceCreated(dict);
+        }
+        else
+        {
+            Debug.LogError("[GameLoopController] InitializeAsClient: BoardView为空，无法创建棋子视觉对象!");
+        }
     }
 
-    // ... (文件的其余部分保持不变) ...
     void FixedUpdate()
     {
         if (IsAuthority && _commandProcessor != null)
@@ -62,9 +75,15 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
 
     public void RequestProcessCommand(ICommand command)
     {
+        Debug.Log("[GameLoopController] RequestProcessCommand: 收到一个指令处理请求。");
         if (IsAuthority)
         {
+            Debug.Log("[GameLoopController] RequestProcessCommand: 我是Host，正在处理指令...");
             _commandProcessor.ProcessCommand(command);
+        }
+        else
+        {
+            Debug.LogWarning("[GameLoopController] RequestProcessCommand: 我不是Host，忽略指令处理请求。");
         }
     }
 
@@ -86,27 +105,60 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
         _commandProcessor.OnPieceRemoved -= HandlePieceRemoved;
         _commandProcessor.OnActionPointsUpdated -= HandleActionPointsUpdated;
     }
-    private void HandlePieceUpdated(PieceData pieceData) => NetworkEvents.Instance?.RpcOnPieceUpdated(pieceData);
-    private void HandlePieceRemoved(int pieceId) => NetworkEvents.Instance?.RpcOnPieceRemoved(pieceId);
-    private void HandleActionPointsUpdated(PlayerTeam team, float newAmount) => NetworkEvents.Instance?.RpcOnActionPointsUpdated(team, newAmount);
+
+
+    private void HandlePieceUpdated(PieceData pieceData)
+    {
+        // 1. Host立即更新自己的视图
+        if (boardView != null)
+        {
+            boardView.OnPieceUpdated(pieceData);
+        }
+        // 2. 将事件广播给所有纯客户端
+        NetworkEvents.Instance?.RpcOnPieceUpdated(pieceData);
+    }
+
+    private void HandlePieceRemoved(int pieceId)
+    {
+        // 1. Host立即更新自己的视图
+        if (boardView != null)
+        {
+            boardView.OnPieceRemoved(pieceId);
+        }
+        // 2. 将事件广播给所有纯客户端
+        NetworkEvents.Instance?.RpcOnPieceRemoved(pieceId);
+    }
+
+    private void HandleActionPointsUpdated(PlayerTeam team, float newAmount)
+    {
+        // 注意：行动点这类UI更新，Host也需要立即响应
+        // (假设你有UI逻辑来显示行动点)
+        // LocalUIManager.Instance.UpdateActionPoints(team, newAmount); 
+
+        // 将事件广播给所有纯客户端
+        NetworkEvents.Instance?.RpcOnActionPointsUpdated(team, newAmount);
+    }
+
     #endregion
 
     #region Handlers for Network Events (Client Side)
     public void HandlePieceUpdated_FromNet(PieceData updatedPiece)
     {
-        if (_localGameState == null) return;
+        Debug.Log($"[GameLoopController] HandlePieceUpdated_FromNet: 客户端正在更新棋子 {updatedPiece.uniqueId} 的状态。");
+        if (_localGameState == null || _localGameState.pieces == null) return;
         _localGameState.pieces[updatedPiece.uniqueId] = updatedPiece;
         boardView.OnPieceUpdated(updatedPiece);
     }
     public void HandlePieceRemoved_FromNet(int pieceId)
     {
-        if (_localGameState == null) return;
+        Debug.Log($"[GameLoopController] HandlePieceRemoved_FromNet: 客户端正在移除棋子 {pieceId}。");
+        if (_localGameState == null || _localGameState.pieces == null) return;
         _localGameState.pieces.Remove(pieceId);
         boardView.OnPieceRemoved(pieceId);
     }
     public void HandleActionPointsUpdated_FromNet(PlayerTeam team, float newAmount)
     {
-        if (_localGameState == null) return;
+        if (_localGameState == null || _localGameState.actionPoints == null) return;
         _localGameState.actionPoints[(int)team] = newAmount;
     }
     #endregion

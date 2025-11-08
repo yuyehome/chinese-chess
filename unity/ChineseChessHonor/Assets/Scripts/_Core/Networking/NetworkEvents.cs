@@ -1,4 +1,4 @@
-// 文件路径: Assets/Scripts/_Core/Networking/NetworkEvents.cs (最终修正版 2)
+// 文件路径: Assets/Scripts/_Core/Networking/NetworkEvents.cs
 
 using Mirror;
 using UnityEngine;
@@ -7,39 +7,59 @@ public class NetworkEvents : NetworkBehaviour
 {
     public static NetworkEvents Instance { get; private set; }
 
+    private void Awake()
+    {
+        Debug.Log($"[NetworkEvents] Awake: 一个NetworkEvents实例被创建。 IsServer: {isServer}, IsClient: {isClient}");
+    }
+
     public override void OnStartServer()
     {
         base.OnStartServer();
-        if (Instance == null) Instance = this; else Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+            Debug.Log("[NetworkEvents] OnStartServer: Instance 已在服务器上设置。");
+        }
+        else
+        {
+            Debug.LogWarning("[NetworkEvents] OnStartServer: 发现重复的NetworkEvents实例，即将销毁。");
+            Destroy(gameObject);
+        }
     }
 
     public override void OnStartClient()
     {
         base.OnStartClient();
-        if (Instance == null) Instance = this; else if (Instance != this) Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+            Debug.Log($"[NetworkEvents] OnStartClient: Instance 在客户端上成功设置! (netId: {netId})");
+        }
+        else if (Instance != this)
+        {
+            Debug.LogWarning("[NetworkEvents] OnStartClient: 发现重复的NetworkEvents实例，即将销毁。");
+            Destroy(gameObject);
+        }
     }
 
-    // --- 新增的 TargetRpc ---
     [TargetRpc]
     public void TargetRpcSyncInitialState(NetworkConnection target, PieceData[] initialPieces)
     {
-        Debug.Log("接收到来自服务器的初始状态同步...");
-        GameLoopController.Instance.InitializeAsClient(initialPieces);
-    }
-
-    // --- 原有的 ClientRpc ---
-    [ClientRpc]
-    public void RpcOnPieceCreated(PieceData[] newPieces)
-    {
-        if (isClientOnly)
+        Debug.Log($"[NetworkEvents] TargetRpcSyncInitialState: 客户端收到来自服务器的初始状态同步! 棋子数量: {initialPieces.Length}");
+        if (GameLoopController.Instance != null)
         {
-            // 未来用于召唤单位等
+            GameLoopController.Instance.InitializeAsClient(initialPieces);
+        }
+        else
+        {
+            Debug.LogError("[NetworkEvents] TargetRpcSyncInitialState: GameLoopController.Instance 为 null! 无法初始化客户端状态。");
         }
     }
 
     [ClientRpc]
     public void RpcOnPieceUpdated(PieceData updatedPiece)
     {
+        Debug.Log($"[NetworkEvents] RpcOnPieceUpdated: 收到棋子更新, ID: {updatedPiece.uniqueId}");
         if (isClientOnly)
         {
             GameLoopController.Instance.HandlePieceUpdated_FromNet(updatedPiece);
@@ -49,6 +69,7 @@ public class NetworkEvents : NetworkBehaviour
     [ClientRpc]
     public void RpcOnPieceRemoved(int pieceId)
     {
+        Debug.Log($"[NetworkEvents] RpcOnPieceRemoved: 收到棋子移除, ID: {pieceId}");
         if (isClientOnly)
         {
             GameLoopController.Instance.HandlePieceRemoved_FromNet(pieceId);
@@ -58,6 +79,7 @@ public class NetworkEvents : NetworkBehaviour
     [ClientRpc]
     public void RpcOnActionPointsUpdated(PlayerTeam team, float newAmount)
     {
+        Debug.Log($"[NetworkEvents] RpcOnActionPointsUpdated: 收到行动点更新, Team: {team}, Amount: {newAmount}");
         if (isClientOnly)
         {
             GameLoopController.Instance.HandleActionPointsUpdated_FromNet(team, newAmount);
