@@ -5,7 +5,7 @@ using System;
 using System.Linq;
 using UnityEngine;
 
-public class MirrorService : NetworkManager, INETWORKSERVICE
+public class MirrorService : NetworkManager, INetworkService
 {
     [Header("Network Prefabs")]
     [SerializeField] private GameObject networkEventsPrefab;
