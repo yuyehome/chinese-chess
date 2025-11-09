@@ -22,7 +22,28 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
     void Start()
     {
         _networkService = NetworkServiceProvider.Instance;
+
+        // --- START: 临时测试代码 ---
+        // 自动以单机模式启动游戏，方便测试
+        if (_networkService != null && !_networkService.IsConnected)
+        {
+            Debug.Log("--- 自动启动单机测试模式 ---");
+            NetworkServiceProvider.IsOnlineMode = false;
+            _networkService.StartHost(); // 这会调用 OfflineService.StartHost
+        }
+
+        // 启动后立即播放战斗场景的背景音乐
+        // 我们加一个小的延迟调用，确保AudioManager已经初始化完毕
+        Invoke(nameof(PlayBattleMusic), 1.0f);
+        // --- END: 临时测试代码 ---
+
     }
+    private void PlayBattleMusic()
+    {
+        Debug.Log("--- 尝试播放战斗背景音乐 ---");
+        AudioManager.Instance.PlayBGM("bgm_battle"); 
+    }
+
 
     public void InitializeAsHost()
     {

@@ -12,5 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d545e2514a8553945b652f9a3a18a363, type: 3}
   m_Name: GameAudioData
   m_EditorClassIdentifier: 
-  bgmClips: []
-  sfxClips: []
+  bgmClips:
+  - key: bgm_main_menu
+    clip: {fileID: 8300000, guid: ee6dd4490bff3f14d91362e875ef0596, type: 3}
+  - key: bgm_battle
+    clip: {fileID: 8300000, guid: c98f61b901de4924d8a8ee81985bd8fe, type: 3}
+  sfxClips:
+  - key: sfx_piece_die
+    clip: {fileID: 8300000, guid: d6622175d2b70dc43a448bf75ad2f387, type: 3}
+  - key: sfx_piece_click
+    clip: {fileID: 8300000, guid: 26bb40e981c9e3a4baab5642afc7ed29, type: 3}
+  - key: sfx_menu_click
+    clip: {fileID: 8300000, guid: 807570a8d9df7f8409b8f6e0462b8afb, type: 3}
+  - key: sfx_win
+    clip: {fileID: 8300000, guid: fb4c4fd0e498a414eb31a84fca96bd9b, type: 3}
+  - key: sfx_lose
+    clip: {fileID: 8300000, guid: 659f111b89e3a3c4e9a33a4771dc194a, type: 3}

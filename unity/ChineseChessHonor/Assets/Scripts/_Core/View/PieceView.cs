@@ -24,6 +24,9 @@ public class PieceView : MonoBehaviour
     public void UpdateTargetPosition(Vector2Int gridPosition)
     {
         _targetWorldPosition = GridToWorld(gridPosition);
+
+        // 在移动开始时播放音效
+        AudioManager.Instance.PlaySFX("sfx_piece_click");
     }
 
     // 在Update中平滑移动到目标位置

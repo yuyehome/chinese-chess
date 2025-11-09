@@ -37,6 +37,8 @@ public class BoardView : MonoBehaviour
     {
         if (_pieceViews.TryGetValue(pieceId, out PieceView pieceView))
         {
+            // 在销毁前播放吃子音效
+            AudioManager.Instance.PlaySFX("sfx_piece_die");
             // 播放死亡动画/特效
             Destroy(pieceView.gameObject, 0.5f); // 延迟销毁以播放动画
             _pieceViews.Remove(pieceId);

@@ -5,7 +5,7 @@ public static class NetworkServiceProvider
     // !! 核心开关 !!
     // 在游戏启动时（例如在一个启动场景的初始化脚本中），
     // 根据是启动“单人游戏”还是“在线对战”来设置此值。
-    public static bool IsOnlineMode = true; // 默认为false，方便开发测试
+    public static bool IsOnlineMode = false; // 默认为false，方便开发测试
 
     private static INetworkService _instance;
 
