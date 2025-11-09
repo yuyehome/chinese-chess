@@ -1,6 +1,8 @@
 // 文件路径: Assets/Scripts/_Core/GameState/GameState.cs
+// (全量更新)
 
 using System.Collections.Generic;
+using UnityEngine;
 
 // 游戏当前阶段
 public enum GamePhase
@@ -19,11 +21,13 @@ public class GameState
     // 核心数据: 存储棋盘上所有棋子的当前数据。Key是棋子的uniqueId。
     public Dictionary<int, PieceData> pieces;
 
-    // 玩家行动点 [0] = Red, [1] = Black
+    // 新增: 棋盘的逻辑尺寸 (例如: 9x10, 18x10)
+    public Vector2Int boardSize;
+
+    // 玩家行动点。长度为4以支持最多4个阵营。
     public float[] actionPoints;
 
     // 技能冷却计时器。Key是技能唯一ID, Value是剩余tick数或秒数。
-    // 为了简化，我们先定义结构，具体生成Key的逻辑在技能系统实现。
     public Dictionary<int, float> skillCooldowns;
 
     // 游戏当前阶段
@@ -35,16 +39,20 @@ public class GameState
     // 仅在回合制模式下有意义
     public PlayerTeam currentTurn;
 
+    // 新增: 记录当前是谁发起的求和请求
+    public PlayerTeam drawRequestFrom = PlayerTeam.None;
+
     // 构造函数，用于创建一个干净的初始状态
     public GameState()
     {
         tick = 0;
         pieces = new Dictionary<int, PieceData>();
-        actionPoints = new float[2];
+        boardSize = new Vector2Int(9, 10); // 默认为标准棋盘
+        actionPoints = new float[4]; // 扩展以支持4个队伍
         skillCooldowns = new Dictionary<int, float>();
         phase = GamePhase.Setup;
-        // winner和currentTurn在游戏开始时根据需要设置
+        winner = PlayerTeam.None;
+        currentTurn = PlayerTeam.None;
+        drawRequestFrom = PlayerTeam.None;
     }
-
-    // TODO: 后续网络阶段实现 FishNet 的 INetworkSerializable 接口
 }

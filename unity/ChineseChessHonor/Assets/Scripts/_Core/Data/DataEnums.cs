@@ -5,9 +5,13 @@ using System;
 // 玩家阵营
 public enum PlayerTeam
 {
+    None = -1, // 用于表示和棋或无归属
     Red,
-    Black
+    Black,
+    Blue,   // 为2v2预留
+    Green   // 为2v2预留
 }
+
 
 // 棋子类型
 public enum PieceType
@@ -30,6 +34,7 @@ public enum PieceStatus
 {
     // 基础状态
     None = 0,           // 默认/死亡状态
+    IsAlive = 1,        // 棋子存活在场上
     IsMoving = 1 << 1,  // 正在移动
     IsFlying = 1 << 2,  // 处于“空中”阶段 (马、象、炮移动时)
 

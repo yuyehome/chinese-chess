@@ -1,4 +1,5 @@
 // 文件路径: Assets/Scripts/_Core/Networking/NetworkData.cs
+// (全量更新)
 
 using Mirror;
 using UnityEngine;
@@ -8,7 +9,10 @@ public enum CommandType
 {
     Move,
     UseSkill,
-    EndTurn
+    // EndTurn, // 回合制模式下，移动后自动结束回合，不需要独立指令
+    RequestDraw,
+    AcceptDraw,
+    Resign
 }
 
 // 统一的指令容器，用于网络传输
@@ -17,10 +21,12 @@ public struct NetworkCommand : NetworkMessage
 {
     public CommandType type;
 
+    // --- 通用字段 ---
+    public PlayerTeam requestTeam;
+
     // --- Move Fields ---
     public int pieceId;
     public Vector2Int targetPosition;
-    public PlayerTeam requestTeam;
 
     // --- UseSkill Fields ---
     // public int casterPieceId;
