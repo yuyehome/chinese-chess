@@ -25,9 +25,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telepathy", "Telepathy.cspr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "com.rlabrecque.steamworks.net.editor", "com.rlabrecque.steamworks.net.editor.csproj", "{ABA75EBD-CA08-F670-C25A-D96517F6EDE9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kcp2k", "kcp2k.csproj", "{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp.csproj", "{6DB3A426-D7FE-BF39-148D-5D539A9400A0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kcp2k", "kcp2k.csproj", "{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-Editor", "Assembly-CSharp-Editor.csproj", "{AEDCA911-7272-DAA2-DCEA-E905DF910223}"
 EndProject
@@ -91,14 +91,14 @@ Global
 		{ABA75EBD-CA08-F670-C25A-D96517F6EDE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ABA75EBD-CA08-F670-C25A-D96517F6EDE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ABA75EBD-CA08-F670-C25A-D96517F6EDE9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6DB3A426-D7FE-BF39-148D-5D539A9400A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6DB3A426-D7FE-BF39-148D-5D539A9400A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6DB3A426-D7FE-BF39-148D-5D539A9400A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6DB3A426-D7FE-BF39-148D-5D539A9400A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{85DB5A8F-A280-7763-15DA-5FE2159FA3AB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{AEDCA911-7272-DAA2-DCEA-E905DF910223}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AEDCA911-7272-DAA2-DCEA-E905DF910223}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AEDCA911-7272-DAA2-DCEA-E905DF910223}.Release|Any CPU.ActiveCfg = Release|Any CPU

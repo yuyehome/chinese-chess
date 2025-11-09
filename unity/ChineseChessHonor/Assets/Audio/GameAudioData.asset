@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bgmClips:
   - key: bgm_main_menu
-    clip: {fileID: 8300000, guid: ee6dd4490bff3f14d91362e875ef0596, type: 3}
+    clip: {fileID: 8300000, guid: 516e083f855cd1c468cc6d0a7548ae1d, type: 3}
   - key: bgm_battle
     clip: {fileID: 8300000, guid: c98f61b901de4924d8a8ee81985bd8fe, type: 3}
   sfxClips:

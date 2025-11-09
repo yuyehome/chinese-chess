@@ -29,6 +29,8 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
         {
             Debug.Log("--- 自动启动单机测试模式 ---");
             NetworkServiceProvider.IsOnlineMode = false;
+            LocalizationManager.Instance.SetLanguage(Language.EN_US);
+            //LocalizationManager.Instance.SetLanguage(Language.ZH_CN);
             _networkService.StartHost(); // 这会调用 OfflineService.StartHost
         }
 
@@ -38,6 +40,18 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
         // --- END: 临时测试代码 ---
 
     }
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            LocalizationManager.Instance.SetLanguage(Language.ZH_CN);
+        }
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            LocalizationManager.Instance.SetLanguage(Language.EN_US);
+        }
+    }
+
     private void PlayBattleMusic()
     {
         Debug.Log("--- 尝试播放战斗背景音乐 ---");

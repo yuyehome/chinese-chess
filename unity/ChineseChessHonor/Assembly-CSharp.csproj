@@ -60,6 +60,7 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2022.3.62f2\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\_Core\Localization\LocalizationData.cs" />
     <Compile Include="Assets\Scripts\_Core\Foundation\Singleton.cs" />
     <Compile Include="Assets\Scripts\_Core\Audio\AudioData.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\MoveCommand.cs" />
@@ -75,6 +76,7 @@
     <Compile Include="Assets\Scripts\_Core\View\InputController.cs" />
     <Compile Include="Assets\Scripts\_Core\Foundation\PersistentSingleton.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\UseSkillCommand.cs" />
+    <Compile Include="Assets\Scripts\_Core\Localization\LocalizationManager.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\INetworkService.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkData.cs" />
     <Compile Include="Assets\Scripts\_App\GameManagement\GameLoopController.cs" />
@@ -82,6 +84,7 @@
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkServiceProvider.cs" />
     <Compile Include="Assets\Scripts\_Core\GameModes\RealTimeLogic.cs" />
     <Compile Include="Assets\Scripts\_Core\View\BoardView.cs" />
+    <Compile Include="Assets\Scripts\_Core\Localization\LocalizedImage.cs" />
     <Compile Include="Assets\Scripts\_Core\Foundation\GameConstants.cs" />
     <Compile Include="Assets\Scripts\_Content\GameConfig\SkillConfig.cs" />
     <Compile Include="Assets\Scripts\Steamworks.NET\SteamManager.cs" />
@@ -89,6 +92,7 @@
     <Compile Include="Assets\Scripts\_Core\GameModes\IGameModeLogic.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\OfflineService.cs" />
     <Compile Include="Assets\Scripts\_Core\View\PieceView.cs" />
+    <Compile Include="Assets\Scripts\_Core\Localization\LocalizedText.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkSerializers.cs" />
     <Compile Include="Assets\Scripts\_Core\GameModes\GameModeType.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\MirrorService.cs" />
@@ -96,24 +100,45 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Mirror\Plugins\Mono.Cecil\Mono.CecilX.dll" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />
     <None Include="Assets\Mirror\Plugins\Mono.Cecil\Mono.CecilX.Mdb.dll" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Overlay.shader" />
     <None Include="Assets\com.rlabrecque.steamworks.net\Plugins\steam_api.dll" />
     <None Include="Assets\ScriptTemplates\52-Mirror__Network Authenticator-NewNetworkAuthenticator.cs.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap.shader" />
     <None Include="Assets\Mirror\Plugins\Mono.Cecil\Mono.CecilX.Pdb.dll" />
     <None Include="Assets\Mirror\version.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMPro_Mobile.cginc" />
     <None Include="Assets\ScriptTemplates\56-Mirror__Network Discovery-NewNetworkDiscovery.cs.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF SSD.shader" />
     <None Include="Assets\ScriptTemplates\51-Mirror__Network Manager With Actions-NewNetworkManagerWithActions.cs.txt" />
     <None Include="Assets\ScriptTemplates\53-Mirror__Network Behaviour With Actions-NewNetworkBehaviourWithActions.cs.txt" />
     <None Include="Assets\Mirror\Plugins\Mono.Cecil\Mono.CecilX.Rocks.dll" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Surface-Mobile.shader" />
     <None Include="Assets\com.rlabrecque.steamworks.net\Plugins\steam_api64.dll" />
     <None Include="Assets\Mirror\Readme.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Surface.shader" />
     <None Include="Assets\ScriptTemplates\57-Mirror__Network Transform-NewNetworkTransform.cs.txt" />
+    <None Include="Assets\TextMesh Pro\Sprites\EmojiOne Attribution.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap-Custom-Atlas.shader" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF.shader" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile SSD.shader" />
+    <None Include="Assets\TextMesh Pro\Resources\LineBreaking Leading Characters.txt" />
     <None Include="Assets\ScriptTemplates\52-Mirror__Network Behaviour-NewNetworkBehaviour.cs.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMPro_Properties.cginc" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMPro_Surface.cginc" />
+    <None Include="Assets\TextMesh Pro\Resources\LineBreaking Following Characters.txt" />
     <None Include="Assets\Mirror\Plugins\Mono.Cecil\License.txt" />
     <None Include="Assets\ScriptTemplates\55-Mirror__Network Room Player-NewNetworkRoomPlayer.cs.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Masking.shader" />
     <None Include="Assets\ScriptTemplates\54-Mirror__Custom Interest Management-CustomInterestManagement.cs.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF Overlay.shader" />
     <None Include="Assets\ScriptTemplates\50-Mirror__Network Manager-NewNetworkManager.cs.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap-Mobile.shader" />
     <None Include="Assets\ScriptTemplates\54-Mirror__Network Room Manager-NewNetworkRoomManager.cs.txt" />
+    <None Include="Assets\TextMesh Pro\Fonts\LiberationSans - OFL.txt" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile.shader" />
+    <None Include="Assets\TextMesh Pro\Shaders\TMP_Sprite.shader" />
     <None Include="Assets\Mirror\Hosting\Readme.txt" />
   </ItemGroup>
   <ItemGroup>
