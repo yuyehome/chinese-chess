@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\_Core\Foundation\Singleton.cs" />
+    <Compile Include="Assets\Scripts\_Core\Audio\AudioData.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\MoveCommand.cs" />
     <Compile Include="Assets\Scripts\_Core\Data\DataEnums.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\CommandProcessor.cs" />
@@ -68,6 +69,7 @@
     <Compile Include="Assets\Scripts\_Core\GameState.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\EndTurnCommand.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkEvents.cs" />
+    <Compile Include="Assets\Scripts\_Core\Audio\AudioManager.cs" />
     <Compile Include="Assets\Scripts\_Core\GameModes\GameModeManager.cs" />
     <Compile Include="Assets\Scripts\_App\UI\SimpleNetworkUI.cs" />
     <Compile Include="Assets\Scripts\_Core\View\InputController.cs" />
