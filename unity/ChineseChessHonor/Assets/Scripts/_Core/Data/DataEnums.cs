@@ -8,8 +8,8 @@ public enum PlayerTeam
     None = -1, // 用于表示和棋或无归属
     Red,
     Black,
-    Blue,   // 为2v2预留
-    Green   // 为2v2预留
+    Blue,   // 为2v2预留，黑队友
+    Purple   // 为2v2预留，红队友
 }
 
 
