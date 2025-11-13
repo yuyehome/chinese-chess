@@ -1,0 +1,56 @@
+文件命名与组织结构 (Asset Pipeline)
+一个清晰的文件结构是项目成功的一半。我们将采用基于功能和类型的目录结构。
+Assets 目录结构规划:
+code
+Code
+Assets/
+└── Art/
+    ├── Models/
+    │   └── Pieces/
+    │       └── Piece_Base.fbx         <-- 唯一的低模FBX
+    ├── Textures/
+    │   └── Pieces/
+    │       └── Wood/                  <-- 木材皮肤文件夹
+    │           ├── Skin_Wood_Albedo_Set_Red.png
+    │           ├── Skin_Wood_Albedo_Set_Black.png
+    │           ├── Skin_Wood_Albedo_Set_Blue.png
+    │           ├── Skin_Wood_Albedo_Set_Purple.png
+    │           ├── Skin_Wood_Normal_Set_Red.png
+    │           ├── Skin_Wood_Normal_Set_Black.png
+    │           └── Skin_Wood_Roughness.png
+    │       └── Jade/                  <-- (未来) 玉石皮肤文件夹
+    │           └── ...
+    └── Materials/
+        └── Pieces/
+            └── Wood/                  <-- 木材皮肤材质文件夹
+                ├── M_Piece_Wood_Red.mat
+                ├── M_Piece_Wood_Black.mat
+                ├── M_Piece_Wood_Blue.mat
+                └── M_Piece_Wood_Purple.mat
+            └── Jade/
+                └── ...
+命名规范详解:
+模型 (Models/Pieces/):
+Piece_Base.fbx: 简单明了，表示这是所有棋子的基础模型。
+贴图 (Textures/Pieces/{SkinName}/):
+格式: Skin_{皮肤名}_{贴图类型}_Set_{颜色/阵营}.png
+Skin_: 前缀，表明这是一个皮肤资源。
+{皮肤名}: Wood, Jade等，小驼峰或下划线均可，但要统一。这里用Wood。
+{贴图类型}:
+Albedo: 颜色贴图 (就是你的所有棋子-木材皮肤-*.png)。
+Normal: 法线贴图 (就是你的所有棋子-法线-*.png)。
+Roughness: 粗糙度贴图。
+_Set_: 分隔符，表示这是一个图集(Texture Set)。
+{颜色/阵营}: Red, Black, Blue, Purple。对于不分阵营的通用贴图（如Roughness），则省略 _Set_{...} 部分。
+按照这个规范，您的文件应重命名为:
+所有棋子-法线-黑.png -> Skin_Wood_Normal_Set_Black.png
+所有棋子-法线-红.png -> Skin_Wood_Normal_Set_Red.png
+所有棋子-木材皮肤-roughness.png -> Skin_Wood_Roughness.png
+所有棋子-木材皮肤-黑.png -> Skin_Wood_Albedo_Set_Black.png
+所有棋子-木材皮肤-红.png -> Skin_Wood_Albedo_Set_Red.png
+所有棋子-木材皮肤-蓝.png -> Skin_Wood_Albedo_Set_Blue.png
+所有棋子-木材皮肤-紫.png -> Skin_Wood_Albedo_Set_Purple.png
+材质 (Materials/Pieces/{SkinName}/):
+格式: M_Piece_{皮肤名}_{颜色/阵营}.mat
+M_: 前缀，表示这是一个材质 (Material)。
+示例: M_Piece_Wood_Red.mat 将会使用红色的 Albedo 和 Normal 贴图图集。

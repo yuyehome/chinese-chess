@@ -6,10 +6,10 @@ using System;
 public enum PlayerTeam
 {
     None = -1, // 用于表示和棋或无归属
-    Red,
-    Black,
-    Blue,   // 为2v2预留，黑队友
-    Purple   // 为2v2预留，红队友
+    Red,    //红方
+    Black,  //黑方
+    Blue,   // 蓝色是黑方队友
+    Purple   // 紫色是红方队友
 }
 
 
