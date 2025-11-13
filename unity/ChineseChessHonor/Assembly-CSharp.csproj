@@ -60,6 +60,7 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2022.3.62f2\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\_Content\GameConfig\PieceSkinData.cs" />
     <Compile Include="Assets\Scripts\_Core\Localization\LocalizationData.cs" />
     <Compile Include="Assets\Scripts\_Core\Foundation\Singleton.cs" />
     <Compile Include="Assets\Scripts\_Core\Audio\AudioData.cs" />
@@ -83,6 +84,7 @@
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkData.cs" />
     <Compile Include="Assets\Scripts\_App\GameManagement\GameLoopController.cs" />
     <Compile Include="Assets\Scripts\_Content\GameConfig\GameBalanceConfig.cs" />
+    <Compile Include="Assets\Scripts\_App\GameManagement\SkinManager.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkServiceProvider.cs" />
     <Compile Include="Assets\Scripts\_Core\GameModes\RealTimeLogic.cs" />
     <Compile Include="Assets\Scripts\_Core\View\BoardView.cs" />

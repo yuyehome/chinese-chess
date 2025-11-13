@@ -47,3 +47,12 @@ public enum PieceStatus
     Stunned = 1 << 16,  // 被眩晕
     Invisible = 1 << 17 // 隐身
 }
+
+
+// 皮肤类型枚举
+public enum SkinType
+{
+    Wood,
+    Jade // (为未来预留)
+}
+
