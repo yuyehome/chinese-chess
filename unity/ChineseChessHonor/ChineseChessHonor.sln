@@ -1,8 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mirror.Examples", "Mirror.Examples.csproj", "{A5E53492-4FCD-380D-D6BF-A12DD6B44E17}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "com.rlabrecque.steamworks.net", "com.rlabrecque.steamworks.net.csproj", "{A44D016E-1682-9392-0631-1AB6472C479C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mirror", "Mirror.csproj", "{22AB391D-93EE-B784-C46D-BA5BAC5938A7}"
@@ -43,10 +41,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A5E53492-4FCD-380D-D6BF-A12DD6B44E17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A5E53492-4FCD-380D-D6BF-A12DD6B44E17}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A5E53492-4FCD-380D-D6BF-A12DD6B44E17}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A5E53492-4FCD-380D-D6BF-A12DD6B44E17}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A44D016E-1682-9392-0631-1AB6472C479C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A44D016E-1682-9392-0631-1AB6472C479C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A44D016E-1682-9392-0631-1AB6472C479C}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -1125,10 +1125,6 @@
       <Project>{91BF4621-6E13-2328-6850-4AFFF8C640DA}</Project>
       <Name>Mirror.Authenticators</Name>
     </ProjectReference>
-    <ProjectReference Include="Mirror.Examples.csproj">
-      <Project>{A5E53492-4FCD-380D-D6BF-A12DD6B44E17}</Project>
-      <Name>Mirror.Examples</Name>
-    </ProjectReference>
     <ProjectReference Include="Edgegap.csproj">
       <Project>{4F86C3F4-B02F-052E-5F94-AC00924E584F}</Project>
       <Name>Edgegap</Name>

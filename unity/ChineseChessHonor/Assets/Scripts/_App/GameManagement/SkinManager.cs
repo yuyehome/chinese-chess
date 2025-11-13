@@ -17,6 +17,7 @@ public class SkinManager : PersistentSingleton<SkinManager>
     private void LoadAllSkinMaterials()
     {
         _skinMaterials = new Dictionary<SkinType, Dictionary<PlayerTeam, Material>>();
+        Debug.Log("[SkinManager] 开始加载所有皮肤材质...");
 
         // --- 加载木材皮肤 (Wood) ---
         var woodMaterials = new Dictionary<PlayerTeam, Material>();
@@ -26,15 +27,17 @@ public class SkinManager : PersistentSingleton<SkinManager>
         woodMaterials[PlayerTeam.Purple] = Resources.Load<Material>("Materials/Pieces/Wood/M_Piece_Wood_Purple");
         _skinMaterials[SkinType.Wood] = woodMaterials;
 
-        // --- (未来) 加载玉石皮肤 (Jade) ---
-        // var jadeMaterials = new Dictionary<PlayerTeam, Material>();
-        // ...
-        // _skinMaterials[SkinType.Jade] = jadeMaterials;
-
-        // 验证加载
-        if (woodMaterials[PlayerTeam.Red] == null)
+        // --- 验证加载 ---
+        foreach (var teamMaterialPair in woodMaterials)
         {
-            Debug.LogError("SkinManager: 未能从 Resources/Materials/Pieces/Wood/ 路径下加载到 M_Piece_Wood_Red 材质!");
+            if (teamMaterialPair.Value == null)
+            {
+                Debug.LogError($"[SkinManager] 加载失败! 无法在 Resources/Materials/Pieces/Wood/ 路径下找到材质: M_Piece_Wood_{teamMaterialPair.Key}");
+            }
+            else
+            {
+                Debug.Log($"[SkinManager] 成功加载材质: {teamMaterialPair.Value.name}");
+            }
         }
     }
 
@@ -46,16 +49,21 @@ public class SkinManager : PersistentSingleton<SkinManager>
     /// <returns>材质实例，如果找不到则返回null</returns>
     public Material GetPieceMaterial(SkinType skin, PlayerTeam team)
     {
+        Debug.Log($"[SkinManager] 请求材质: 皮肤={skin}, 阵营={team}");
         if (_skinMaterials.TryGetValue(skin, out var teamMaterials))
         {
             if (teamMaterials.TryGetValue(team, out var material))
             {
-                // 返回材质的一个实例，以防多个棋子修改UV时互相影响
-                return new Material(material);
+                if (material != null)
+                {
+                    Debug.Log($"[SkinManager] 找到并返回材质实例: {material.name}");
+                    return new Material(material);
+                }
             }
         }
 
-        Debug.LogWarning($"SkinManager: 未找到皮肤 {skin} 和阵营 {team} 对应的材质。");
+        Debug.LogWarning($"[SkinManager] 未找到皮肤 {skin} 和阵营 {team} 对应的材质!");
         return null;
     }
+
 }

@@ -7,6 +7,9 @@ using Mirror;
 
 public class GameLoopController : PersistentSingleton<GameLoopController>
 {
+    [Header("测试选项")]
+    [SerializeField] private bool _enableStandaloneTestMode = true; // <-- 新增: 开启测试模式的开关
+
     [Header("场景引用")]
     [SerializeField] private BoardView boardView;
 
@@ -21,6 +24,16 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
 
     void Start()
     {
+        // --- 新增: 独立测试模式 ---
+        if (_enableStandaloneTestMode)
+        {
+            Debug.LogWarning("<<<<< 独立测试模式已激活 >>>>>");
+            // 延迟调用以确保所有其他 Awake/Start 都已执行
+            Invoke(nameof(StartStandaloneTest), 0.1f);
+            return; // 阻止执行下面的网络相关代码
+        }
+        // --- 测试代码结束 ---
+
         _networkService = NetworkServiceProvider.Instance;
 
         // --- START: 临时测试代码 ---
@@ -40,6 +53,52 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
         // --- END: 临时测试代码 ---
 
     }
+
+    // --- 新增的测试函数 ---
+    private void StartStandaloneTest()
+    {
+        Debug.Log("[TestMode] 开始生成测试棋局...");
+
+        // 1. 创建一个临时的 GameState
+        _localGameState = new GameState();
+        _localGameState.phase = GamePhase.Playing;
+        _localGameState.boardSize = new Vector2Int(9, 10);
+
+        // 2. 手动添加几个棋子到 GameState
+        int uniqueIdCounter = 0;
+        var pieces = new Dictionary<int, PieceData>
+        {
+            // 红方
+            { uniqueIdCounter++, new PieceData { uniqueId = 0, team = PlayerTeam.Red, type = PieceType.Chariot, position = new Vector2Int(0, 0), status = PieceStatus.IsAlive }},
+            { uniqueIdCounter++, new PieceData { uniqueId = 1, team = PlayerTeam.Red, type = PieceType.Horse, position = new Vector2Int(1, 0), status = PieceStatus.IsAlive }},
+            { uniqueIdCounter++, new PieceData { uniqueId = 2, team = PlayerTeam.Red, type = PieceType.General, position = new Vector2Int(4, 0), status = PieceStatus.IsAlive }},
+            // 黑方
+            { uniqueIdCounter++, new PieceData { uniqueId = 3, team = PlayerTeam.Black, type = PieceType.Chariot, position = new Vector2Int(0, 9), status = PieceStatus.IsAlive }},
+            { uniqueIdCounter++, new PieceData { uniqueId = 4, team = PlayerTeam.Black, type = PieceType.Soldier, position = new Vector2Int(4, 6), status = PieceStatus.IsAlive }},
+            // 队友 (如果需要测试)
+            { uniqueIdCounter++, new PieceData { uniqueId = 5, team = PlayerTeam.Purple, type = PieceType.Cannon, position = new Vector2Int(7, 1), status = PieceStatus.IsAlive }},
+            { uniqueIdCounter++, new PieceData { uniqueId = 6, team = PlayerTeam.Blue, type = PieceType.Elephant, position = new Vector2Int(2, 9), status = PieceStatus.IsAlive }},
+        };
+        _localGameState.pieces = pieces;
+
+        Debug.Log($"[TestMode] GameState 创建完毕，包含 {pieces.Count} 个棋子。");
+
+        // 3. 直接命令 BoardView 渲染这个 GameState
+        if (boardView != null)
+        {
+            Debug.Log("[TestMode] 命令 BoardView 创建棋子...");
+            boardView.OnPieceCreated(_localGameState.pieces);
+        }
+        else
+        {
+            Debug.LogError("[TestMode] 错误: GameLoopController 上的 BoardView 引用为空!");
+        }
+
+        Debug.Log("[TestMode] 测试棋局生成完毕。");
+    }
+    // --- 测试函数结束 ---
+
+
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.C))

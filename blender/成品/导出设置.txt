@@ -1,0 +1,31 @@
+第一步：在 Blender 中设置场景单位 (Scene Units)
+这是保持创作直观性的关键。
+打开场景属性:
+在 Blender 右侧的属性面板中，找到 Scene Properties 选项卡 (图标是一个锥体和球体)。
+设置单位系统:
+展开 Units 面板。
+Unit System: 保持 Metric (米制)。
+Unit Scale: 保持 1.0 不变！ (这是与之前方案最大的不同)。
+Length: 将其从 Meters 改为 Millimeters。
+
+
+第二步：在 Blender 中正确导出 (Export Settings)
+这是将我们的“毫米”环境正确转换为 Unity“米”环境的关键。
+应用变换:
+和之前一样，选中模型，按 Ctrl + A -> All Transforms，确保没有历史变换。
+导出为 FBX:
+File -> Export -> FBX (.fbx)。
+在右侧的导出面板中，进行以下微调后的设置：
+Include -> Limit To: 勾选 Selected Objects。
+Transform -> Scale: 这里的值需要设置为 0.01。
+为什么？ 因为我们在 Blender 中是以毫米为单位工作的，而 FBX 格式和 Unity 都是以米为标准单位。导出时设置 Scale 为 0.01，就相当于告诉导出器：“把我场景里所有东西的尺寸都乘以 0.01 再写进文件”。这样，Blender 里的 1000mm (1米) 就会被导出为 10 个单位，再乘以 0.01，最终在 FBX 文件里记录为 1 个标准单位，正好是 1 米。
+Transform -> Apply Scalings: 选择 FBX All。这个选项会把我们设置的 0.01 缩放“烘焙”到模型的顶点数据里，而不是作为 Transform 的一个属性。
+Transform -> Forward: -Z Forward。
+Transform -> Up: Y Up。
+
+Include -> Limit To: 勾选 Selected Objects。
+Object Types: 只勾选 Mesh。不要导出摄像机、灯光等。
+Transform -> Apply Transform: 不要勾选。因为我们已经在第2步手动应用了。
+Geometry -> Smoothing: Face。
+Armature: 取消所有勾选（我们没有骨骼）。
+Bake Animation: 取消所有勾选。

@@ -345,7 +345,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1.1}
+  m_LocalScale: {x: 0.45, y: 1, z: 0.4}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 148229706}
@@ -734,7 +734,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4aadc41a4352ec748b6dd6f20842ce7f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  piecePrefab: {fileID: 1173239865619012162, guid: 30bad5b417d2bd64d861bf0011c083ed, type: 3}
+  piecePrefabTemplate: {fileID: 8005309028836622879, guid: 902b13cee89803145b1fac26f635b40b, type: 3}
+  highlightMovePrefab: {fileID: 0}
+  highlightAttackPrefab: {fileID: 0}
+  piecesRoot: {fileID: 1044193780}
+  highlightsRoot: {fileID: 0}
 --- !u!114 &1130860866
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -918,7 +922,7 @@ Transform:
   m_GameObject: {fileID: 1242663733}
   serializedVersion: 2
   m_LocalRotation: {x: 0.6427876, y: 0, z: 0, w: 0.7660445}
-  m_LocalPosition: {x: 0, y: 12, z: -2}
+  m_LocalPosition: {x: 0, y: 4, z: -1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
