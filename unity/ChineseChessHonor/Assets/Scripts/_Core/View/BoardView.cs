@@ -5,6 +5,10 @@ using UnityEngine;
 
 public class BoardView : MonoBehaviour
 {
+    [Header("配置 (Config)")]
+    [Tooltip("引用棋盘的物理和逻辑尺寸配置文件")]
+    [SerializeField] private BoardConfig boardConfig;
+
     [Header("Prefabs & Templates")]
     [Tooltip("用于实例化棋子的基础预制体。我们将通过代码改变它的材质和UV。")]
     [SerializeField] private GameObject piecePrefabTemplate; // <--- 新增的变量
@@ -25,7 +29,16 @@ public class BoardView : MonoBehaviour
     private Dictionary<int, PieceView> _pieceViews = new Dictionary<int, PieceView>();
     private List<GameObject> _activeHighlights = new List<GameObject>();
 
-    // 当Host初始化游戏时调用
+    public BoardConfig Config => boardConfig;
+
+    private void Awake()
+    {
+        if (boardConfig == null)
+        {
+            Debug.LogError("BoardView 致命错误: BoardConfig 未在Inspector中指定!", this);
+        }
+    }
+
     public void OnPieceCreated(Dictionary<int, PieceData> initialPieces)
     {
         ClearBoard();
@@ -35,13 +48,14 @@ public class BoardView : MonoBehaviour
         }
     }
 
-    // 当状态更新时，移动或更新棋子
     public void OnPieceUpdated(PieceData pieceData)
     {
+        if (boardConfig == null) return;
         if (_pieceViews.TryGetValue(pieceData.uniqueId, out PieceView view))
         {
             // TODO: 在后续步骤中实现平滑移动动画
-            view.transform.position = PieceView.GridToWorld(pieceData.position);
+            // 使用 BoardConfig 进行坐标转换
+            view.transform.position = boardConfig.GridToWorld(pieceData.position);
         }
     }
 
@@ -65,7 +79,8 @@ public class BoardView : MonoBehaviour
 
         GameObject pieceObj = Instantiate(piecePrefabTemplate, piecesRoot);
         pieceObj.name = $"Piece_{data.type}_{data.team}"; // 给实例化的对象一个清晰的名字
-        pieceObj.transform.position = PieceView.GridToWorld(data.position);
+        // 使用 BoardConfig 进行坐标转换
+        pieceObj.transform.position = boardConfig.GridToWorld(data.position);
 
         PieceView view = pieceObj.GetComponent<PieceView>();
 
@@ -95,6 +110,7 @@ public class BoardView : MonoBehaviour
     // --- 高亮功能 ---
     public void ShowHighlights(List<Vector2Int> movePositions, List<Vector2Int> attackPositions)
     {
+        if (boardConfig == null) return;
         ClearHighlights();
 
         if (highlightsRoot == null) return;
@@ -102,14 +118,16 @@ public class BoardView : MonoBehaviour
         foreach (var pos in movePositions)
         {
             GameObject highlight = Instantiate(highlightMovePrefab, highlightsRoot);
-            highlight.transform.position = PieceView.GridToWorld(pos);
+            // 使用 BoardConfig 进行坐标转换
+            highlight.transform.position = boardConfig.GridToWorld(pos);
             _activeHighlights.Add(highlight);
         }
 
         foreach (var pos in attackPositions)
         {
             GameObject highlight = Instantiate(highlightAttackPrefab, highlightsRoot);
-            highlight.transform.position = PieceView.GridToWorld(pos);
+            // 使用 BoardConfig 进行坐标转换
+            highlight.transform.position = boardConfig.GridToWorld(pos);
             _activeHighlights.Add(highlight);
         }
     }

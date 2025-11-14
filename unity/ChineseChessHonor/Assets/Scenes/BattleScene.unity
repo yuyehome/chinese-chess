@@ -345,7 +345,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.45, y: 1, z: 0.4}
+  m_LocalScale: {x: 0.045, y: 1, z: 0.04}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 148229706}
@@ -734,6 +734,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4aadc41a4352ec748b6dd6f20842ce7f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  boardConfig: {fileID: 11400000, guid: c0b742a7b08aafa41aa3aac0f409f043, type: 2}
   piecePrefabTemplate: {fileID: 5641717686998872690, guid: 650a983962775dd4cb84d4d287bfe25f, type: 3}
   highlightMovePrefab: {fileID: 0}
   highlightAttackPrefab: {fileID: 0}
@@ -751,6 +752,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f51882bd07a0204ca0820731c8d45b2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  boardView: {fileID: 0}
   boardLayer:
     serializedVersion: 2
     m_Bits: 512
@@ -923,7 +925,7 @@ Transform:
   m_GameObject: {fileID: 1242663733}
   serializedVersion: 2
   m_LocalRotation: {x: 0.6427876, y: 0, z: 0, w: 0.7660445}
-  m_LocalPosition: {x: 0, y: 4, z: -1}
+  m_LocalPosition: {x: 0, y: 0.4, z: -0.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

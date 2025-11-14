@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class InputController : MonoBehaviour
 {
+    [Header("场景引用")]
+    [SerializeField] private BoardView boardView; 
+
     public LayerMask boardLayer;
     public LayerMask pieceLayer;
     private PieceView _selectedPieceView;
@@ -35,7 +38,15 @@ public class InputController : MonoBehaviour
 
         if (_selectedPieceView != null && Physics.Raycast(ray, out RaycastHit boardHit, 100f, boardLayer))
         {
-            Vector2Int targetGridPos = PieceView.WorldToGrid(boardHit.point);
+
+            if (boardView == null || boardView.Config == null)
+            {
+                Debug.LogError("InputController 错误: BoardView 或其 Config 未设置!", this);
+                return;
+            }
+
+            // 使用 BoardView.Config 进行坐标转换
+            Vector2Int targetGridPos = boardView.Config.WorldToGrid(boardHit.point);
 
             // 1. 创建NetworkCommand
             var moveCmd = new NetworkCommand

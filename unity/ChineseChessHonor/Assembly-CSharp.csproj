@@ -100,6 +100,7 @@
     <Compile Include="Assets\Scripts\_Core\View\PieceView.cs" />
     <Compile Include="Assets\Scripts\_Core\Localization\LocalizedText.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkSerializers.cs" />
+    <Compile Include="Assets\Scripts\_Content\GameConfig\BoardConfig.cs" />
     <Compile Include="Assets\Scripts\_Core\GameModes\GameModeType.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\MirrorService.cs" />
     <Compile Include="Assets\Scripts\_Content\GameConfig\HeroConfig.cs" />

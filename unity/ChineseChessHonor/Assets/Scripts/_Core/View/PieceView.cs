@@ -155,16 +155,4 @@ public class PieceView : MonoBehaviour
         Debug.Log($"[PieceView] ({gameObject.name}) 成功应用了新的UV映射。");
     }
 
-    // --- 以下是旧代码中保留的辅助方法 ---
-    public static Vector2Int WorldToGrid(Vector3 worldPos)
-    {
-        int x = Mathf.RoundToInt(worldPos.x);
-        int y = Mathf.RoundToInt(worldPos.z);
-        return new Vector2Int(x, y);
-    }
-
-    public static Vector3 GridToWorld(Vector2Int gridPos)
-    {
-        return new Vector3(gridPos.x, 0, gridPos.y);
-    }
 }
