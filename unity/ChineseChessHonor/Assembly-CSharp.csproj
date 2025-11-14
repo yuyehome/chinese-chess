@@ -64,6 +64,7 @@
     <Compile Include="Assets\Scripts\_Core\Localization\LocalizationData.cs" />
     <Compile Include="Assets\Scripts\_Core\Foundation\Singleton.cs" />
     <Compile Include="Assets\Scripts\_Core\Audio\AudioData.cs" />
+    <Compile Include="Assets\Scripts\_App\UI\UIManager.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\MoveCommand.cs" />
     <Compile Include="Assets\Scripts\_Core\Data\DataEnums.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\CommandProcessor.cs" />
@@ -85,6 +86,7 @@
     <Compile Include="Assets\Scripts\_App\GameManagement\GameLoopController.cs" />
     <Compile Include="Assets\Scripts\_Content\GameConfig\GameBalanceConfig.cs" />
     <Compile Include="Assets\Scripts\_App\GameManagement\SkinManager.cs" />
+    <Compile Include="Assets\Scripts\_App\UI\UIPanel.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkServiceProvider.cs" />
     <Compile Include="Assets\Scripts\_Core\GameModes\RealTimeLogic.cs" />
     <Compile Include="Assets\Scripts\_Core\View\BoardView.cs" />
@@ -93,6 +95,7 @@
     <Compile Include="Assets\Scripts\_Core\Foundation\GameConstants.cs" />
     <Compile Include="Assets\Scripts\_Content\GameConfig\SkillConfig.cs" />
     <Compile Include="Assets\Scripts\Steamworks.NET\SteamManager.cs" />
+    <Compile Include="Assets\Scripts\_App\UI\Views\PlayerInfoView.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\AcceptDrawCommand.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\ICommand.cs" />
     <Compile Include="Assets\Scripts\_Core\GameModes\IGameModeLogic.cs" />
