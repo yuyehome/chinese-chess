@@ -1,4 +1,4 @@
-// 文件路径: Assets/Scripts/_Core/Networking/MirrorService.cs (终极诊断版)
+// 文件路径: Assets/Scripts/_Core/Networking/MirrorService.cs 
 
 using Mirror;
 using System;

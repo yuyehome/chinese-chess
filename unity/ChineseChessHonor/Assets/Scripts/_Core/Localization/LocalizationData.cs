@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-// 使用 UnityEngine.Object 来引用任何类型的Unity资源
 using UnityObject = UnityEngine.Object;
 
 /// <summary>

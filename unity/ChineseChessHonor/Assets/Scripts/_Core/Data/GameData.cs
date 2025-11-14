@@ -14,7 +14,7 @@ public struct PieceData // 使用struct更轻量，适合网络传输
     public PieceStatus status; // 当前状态
     public int heroId;         // 附身的武将ID (-1为无)
 
-    // TODO: 后续网络阶段实现 FishNet 的 INetworkSerializable 接口
+    // TODO: 后续网络阶段实现 
 }
 
 [System.Serializable]
