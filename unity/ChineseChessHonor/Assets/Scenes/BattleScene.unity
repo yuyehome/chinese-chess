@@ -734,7 +734,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4aadc41a4352ec748b6dd6f20842ce7f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  piecePrefabTemplate: {fileID: 8005309028836622879, guid: 902b13cee89803145b1fac26f635b40b, type: 3}
+  piecePrefabTemplate: {fileID: 5641717686998872690, guid: 650a983962775dd4cb84d4d287bfe25f, type: 3}
   highlightMovePrefab: {fileID: 0}
   highlightAttackPrefab: {fileID: 0}
   piecesRoot: {fileID: 1044193780}
@@ -784,6 +784,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0176fe406e3f354282e45a180aeed33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _enableStandaloneTestMode: 1
   boardView: {fileID: 1130860865}
 --- !u!1 &1196014510
 GameObject:

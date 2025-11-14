@@ -142,8 +142,8 @@
     <Compile Include="Assets\Mirror\Hosting\Edgegap\Models\SDK\AppVersionProbe.cs" />
     <Compile Include="Assets\Mirror\Hosting\Edgegap\Editor\Api\Models\Results\GetDeploymentsResult.cs" />
     <Compile Include="Assets\Mirror\Hosting\Edgegap\Models\SDK\SessionContext.cs" />
-    <Compile Include="Assets\Mirror\Hosting\Edgegap\Editor\Api\Models\Results\GetRegistryCredentialsResult.cs" />
     <Compile Include="Assets\Mirror\Hosting\Edgegap\Models\SDK\MatchmakerResponse.cs" />
+    <Compile Include="Assets\Mirror\Hosting\Edgegap\Editor\Api\Models\Results\GetRegistryCredentialsResult.cs" />
     <Compile Include="Assets\Mirror\Hosting\Edgegap\Models\SDK\StaticSitesList.cs" />
     <Compile Include="Assets\Mirror\Hosting\Edgegap\Editor\EdgegapWindowMetadata.cs" />
     <Compile Include="Assets\Mirror\Hosting\Edgegap\Models\SDK\AppCreation.cs" />

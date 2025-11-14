@@ -1,3 +1,8 @@
+导出参考视频
+https://www.bilibili.com/video/BV14J4m1378q/?spm_id_from=333.1391.0.0&vd_source=e428646b8a4629c19307aad45c92fb06
+
+
+
 第一步：在 Blender 中设置场景单位 (Scene Units)
 这是保持创作直观性的关键。
 打开场景属性:
