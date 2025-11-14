@@ -77,51 +77,82 @@ public class PieceView : MonoBehaviour
 
     private void ApplyUvMapping()
     {
+        // --- 步骤 1: 验证所有必要的引用 ---
         if (skinData == null)
         {
-            Debug.LogError("[PieceView] 缺少 PieceSkinData 配置!", this);
+            Debug.LogError($"[PieceView] ({gameObject.name}) 致命错误: PieceSkinData 配置未在Inspector中指定!", this);
+            return;
+        }
+        if (meshFilter == null)
+        {
+            Debug.LogError($"[PieceView] ({gameObject.name}) 致命错误: MeshFilter 引用未在Inspector中指定!", this);
+            return;
+        }
+        if (meshRenderer == null)
+        {
+            Debug.LogError($"[PieceView] ({gameObject.name}) 致命错误: MeshRenderer 引用未在Inspector中指定!", this);
             return;
         }
 
-        Rect uvRect = skinData.GetUVRect(this.type);
-        Debug.Log($"[PieceView] 棋子类型 {this.type} 获取到UV区域: X={uvRect.x}, Y={uvRect.y}, W={uvRect.width}, H={uvRect.height}");
+        // --- 步骤 2: 诊断原始Mesh ---
+        Mesh originalMesh = meshFilter.sharedMesh;
+        if (originalMesh == null)
+        {
+            Debug.LogError($"[PieceView] ({gameObject.name}) 致命错误: 指定的 MeshFilter (在对象 '{meshFilter.gameObject.name}' 上) 没有关联任何 Mesh!", meshFilter.gameObject);
+            return;
+        }
 
+        // --- 步骤 3: 诊断原始UV数据 ---
+        Vector2[] originalUVs = originalMesh.uv;
+        if (originalUVs == null || originalUVs.Length == 0)
+        {
+            // ！！！这是决定性的日志 ！！！
+            Debug.LogError($"[PieceView] ({gameObject.name}) 致命错误: 从 Mesh '{originalMesh.name}' (源自 '{meshFilter.gameObject.name}') 中读取到的UV数组为空或null! 请检查FBX导入设置或模型本身。", this);
+
+            // 打印更详细的Mesh信息
+            Debug.Log($"[PieceView] 诊断信息: Vertex count={originalMesh.vertexCount}, Triangle count={originalMesh.triangles.Length}");
+
+            // 既然已经确认FBX有UV，那问题可能出在Unity内部。尝试强制重新导入。
+#if UNITY_EDITOR
+            UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(originalMesh)).SaveAndReimport();
+            Debug.LogWarning($"[PieceView] 已尝试对 Mesh '{originalMesh.name}' 的源文件进行强制重新导入。请重启播放模式查看是否解决。");
+#endif
+
+            return;
+        }
+        Debug.Log($"[PieceView] ({gameObject.name}) 成功从 Mesh '{originalMesh.name}' 读取到 {originalUVs.Length} 个UV坐标。");
+
+        // --- 步骤 4: 获取并应用UV区域 ---
+        Rect uvRect = skinData.GetUVRect(this.type);
+        Debug.Log($"[PieceView] ({gameObject.name}) 棋子类型 {this.type} 获取到UV区域: X={uvRect.x}, W={uvRect.width}");
+
+        // --- 步骤 5: 创建网格实例 ---
         if (_instancedMesh == null)
         {
-            Mesh originalMesh = meshFilter.sharedMesh;
-            if (originalMesh == null)
-            {
-                Debug.LogError("[PieceView] MeshFilter 上没有找到原始Mesh!", this);
-                return;
-            }
             _instancedMesh = new Mesh
             {
                 name = $"{originalMesh.name}_inst_{this.GetInstanceID()}",
                 vertices = originalMesh.vertices,
                 triangles = originalMesh.triangles,
                 normals = originalMesh.normals,
-                tangents = originalMesh.tangents
+                tangents = originalMesh.tangents,
+                uv = originalMesh.uv // <-- 关键: 在创建时就直接把原始UV拷贝过来
             };
             meshFilter.mesh = _instancedMesh;
-            Debug.Log($"[PieceView] 首次为 {this.gameObject.name} 创建了网格实例。");
+            Debug.Log($"[PieceView] ({gameObject.name}) 首次创建了网格实例。");
         }
 
-        Vector2[] originalUVs = meshFilter.sharedMesh.uv;
-        if (originalUVs.Length == 0)
+        // --- 步骤 6: 计算并应用新的UV坐标 ---
+        Vector2[] newUVs = _instancedMesh.uv; // 从我们的实例中获取UV数组的引用
+        for (int i = 0; i < newUVs.Length; i++)
         {
-            Debug.LogError("[PieceView] 警告: 原始模型没有UV坐标! 无法应用贴图。", this);
-            return;
-        }
-        Vector2[] newUVs = new Vector2[originalUVs.Length];
-
-        for (int i = 0; i < originalUVs.Length; i++)
-        {
-            newUVs[i].x = uvRect.x + originalUVs[i].x * uvRect.width;
+            // 直接在实例的UV数组上修改
+            newUVs[i].x = uvRect.x + originalUVs[i].x * uvRect.width; // 计算依然基于原始UV
             newUVs[i].y = uvRect.y + originalUVs[i].y * uvRect.height;
         }
 
         _instancedMesh.uv = newUVs;
-        Debug.Log($"[PieceView] 成功为 {this.gameObject.name} 应用了新的UV映射。");
+        Debug.Log($"[PieceView] ({gameObject.name}) 成功应用了新的UV映射。");
     }
 
     // --- 以下是旧代码中保留的辅助方法 ---

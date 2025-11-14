@@ -29,6 +29,7 @@ Assets/
                 └── M_Piece_Wood_Purple.mat
             └── Jade/
                 └── ...
+
 命名规范详解:
 模型 (Models/Pieces/):
 Piece_Base.fbx: 简单明了，表示这是所有棋子的基础模型。

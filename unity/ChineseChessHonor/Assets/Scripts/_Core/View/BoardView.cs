@@ -1,5 +1,4 @@
 // 文件路径: Assets/Scripts/_Core/View/BoardView.cs
-// (全量更新 - 修正版)
 
 using System.Collections.Generic;
 using UnityEngine;
