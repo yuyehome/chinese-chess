@@ -69,6 +69,7 @@
     <Compile Include="Assets\Scripts\_Core\Data\DataEnums.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\CommandProcessor.cs" />
     <Compile Include="Assets\Scripts\_Core\Data\GameData.cs" />
+    <Compile Include="Assets\Scripts\_App\UI\Views\PlayerSlotView.cs" />
     <Compile Include="Assets\Scripts\_Core\GameState.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\EndTurnCommand.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkEvents.cs" />
