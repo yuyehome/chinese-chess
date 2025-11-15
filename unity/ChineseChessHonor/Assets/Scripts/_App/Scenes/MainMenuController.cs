@@ -39,6 +39,7 @@ public class MainMenuController : MonoBehaviour
     {
         if (Input.GetKeyDown(testShowRoomPanelKey))
         {
+            UIManager.Instance.HidePanel<MainMenuPanel>();
             UIManager.Instance.ShowPanel<RoomPanel>();
         }
 
