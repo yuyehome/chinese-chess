@@ -82,6 +82,7 @@
     <Compile Include="Assets\Scripts\_Core\Localization\LocalizationManager.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\INetworkService.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\ResignCommand.cs" />
+    <Compile Include="Assets\Scripts\_App\UI\Panels\MainMenuPanel.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkData.cs" />
     <Compile Include="Assets\Scripts\_App\GameManagement\GameLoopController.cs" />
     <Compile Include="Assets\Scripts\_Content\GameConfig\GameBalanceConfig.cs" />
