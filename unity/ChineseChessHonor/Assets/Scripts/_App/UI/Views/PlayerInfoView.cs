@@ -35,4 +35,19 @@ public class PlayerInfoView : MonoBehaviour
         if (elo < 2000) return "黄金";
         return "铂金";
     }
+
+    /// <summary>
+    /// 更新玩家头像
+    /// </summary>
+    public void UpdateAvatar(Texture2D avatarTexture)
+    {
+        if (avatarTexture != null)
+        {
+            // 从Texture2D创建Sprite
+            Sprite avatarSprite = Sprite.Create(avatarTexture, new Rect(0, 0, avatarTexture.width, avatarTexture.height), new Vector2(0.5f, 0.5f));
+            playerAvatarImage.sprite = avatarSprite;
+        }
+    }
+
+
 }
