@@ -37,6 +37,11 @@ public class MainMenuController : MonoBehaviour
     // --- 用于测试的 Update 循环 ---
     private void Update()
     {
+        if (Input.GetKeyDown(testShowRoomPanelKey))
+        {
+            UIManager.Instance.ShowPanel<RoomPanel>();
+        }
+
         // 在后续步骤中，我们会在这里添加测试其他面板的代码
         // if (Input.GetKeyDown(testShowRoomPanelKey))
         // {
