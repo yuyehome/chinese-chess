@@ -9,4 +9,9 @@ public static class GameConstants
     // 实时模式数值
     public const float ACTION_POINT_RECOVERY_RATE = 3.0f; // 每3秒恢复1点
     public const int ACTION_POINT_MAX = 4;
+
+    public const string SteamLobbyGameIdKey = "GameId";
+    public const string SteamLobbyGameIdValue = "ChineseChessGlory";
+
+
 }

@@ -18,7 +18,7 @@ public class MatchmakingStatusPanel : UIPanel
         {
             cancelButton.onClick.AddListener(OnCancelClicked);
         }
-        Debug.Log("[MatchmakingStatusPanel] Setup complete.");
+        //Debug.Log("[MatchmakingStatusPanel] Setup complete.");
     }
 
     public override void Show()
@@ -29,13 +29,13 @@ public class MatchmakingStatusPanel : UIPanel
         {
             statusText.text = "Matching ...";
         }
-        Debug.Log("[MatchmakingStatusPanel] Panel is now visible.");
+        //Debug.Log("[MatchmakingStatusPanel] Panel is now visible.");
     }
 
     public override void Hide()
     {
         base.Hide();
-        Debug.Log("[MatchmakingStatusPanel] Panel is now hidden.");
+        //Debug.Log("[MatchmakingStatusPanel] Panel is now hidden.");
     }
 
     private void Update()

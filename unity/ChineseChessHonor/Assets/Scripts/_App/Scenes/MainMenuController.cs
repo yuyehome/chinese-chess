@@ -11,6 +11,7 @@ public class MainMenuController : MonoBehaviour
     [Header("测试按键")]
     [SerializeField] private KeyCode testShowRoomPanelKey = KeyCode.Alpha1;
     [SerializeField] private KeyCode testShowInvitePanelKey = KeyCode.Alpha2;
+    [SerializeField] private KeyCode debugLobbyListKey = KeyCode.L; 
 
     void Start()
     {
@@ -41,6 +42,19 @@ public class MainMenuController : MonoBehaviour
         {
             UIManager.Instance.HidePanel<MainMenuPanel>();
             UIManager.Instance.ShowPanel<RoomPanel>();
+        }
+
+        if (Input.GetKeyDown(debugLobbyListKey))
+        {
+            if (SteamLobbyManager.Instance != null)
+            {
+                Debug.LogWarning($"--- 按下【{debugLobbyListKey}】键，执行手动Lobby查询 ---");
+                SteamLobbyManager.Instance.Debug_RequestLobbyList();
+            }
+            else
+            {
+                Debug.LogError("无法执行调试，因为SteamLobbyManager.Instance为空！");
+            }
         }
 
         // 在后续步骤中，我们会在这里添加测试其他面板的代码

@@ -44,29 +44,29 @@ public class UIManager : MonoBehaviour
     public T ShowPanel<T>() where T : UIPanel
     {
         Type panelType = typeof(T);
-        Debug.Log($"[UIManager] 请求显示面板: {panelType.Name}");
+        //Debug.Log($"[UIManager] 请求显示面板: {panelType.Name}");
 
         if (_panelInstances.TryGetValue(panelType, out UIPanel panel) && panel != null)
         {
-            Debug.Log($"[UIManager] 面板 '{panelType.Name}' 已存在于缓存中，直接调用Show()。");
+            //Debug.Log($"[UIManager] 面板 '{panelType.Name}' 已存在于缓存中，直接调用Show()。");
             panel.Show();
             return panel as T;
         }
         else
         {
-            Debug.Log($"[UIManager] 面板 '{panelType.Name}' 不存在，尝试从Prefab创建。");
+            //Debug.Log($"[UIManager] 面板 '{panelType.Name}' 不存在，尝试从Prefab创建。");
             T panelPrefab = GetPanelPrefab<T>();
             if (panelPrefab != null)
             {
-                Debug.Log($"[UIManager] 成功找到 '{panelType.Name}' 的Prefab，正在实例化...");
+                //Debug.Log($"[UIManager] 成功找到 '{panelType.Name}' 的Prefab，正在实例化...");
                 T newPanelInstance = Instantiate(panelPrefab, panelsParent);
                 newPanelInstance.gameObject.name = panelType.Name;
                 _panelInstances[panelType] = newPanelInstance;
 
-                Debug.Log($"[UIManager] 面板 '{panelType.Name}' 实例化成功，调用Setup()。");
+                //Debug.Log($"[UIManager] 面板 '{panelType.Name}' 实例化成功，调用Setup()。");
                 newPanelInstance.Setup();
 
-                Debug.Log($"[UIManager] 面板 '{panelType.Name}' Setup完毕，调用Show()。");
+                //Debug.Log($"[UIManager] 面板 '{panelType.Name}' Setup完毕，调用Show()。");
                 newPanelInstance.Show();
                 return newPanelInstance;
             }
