@@ -6,21 +6,35 @@ public class MatchmakingController : MonoBehaviour
 {
     private void Start()
     {
-        // 确保单例已创建
+        // 确保单例已创建，并延迟一帧订阅以避免时序问题
+        StartCoroutine(DelayedSubscribe());
+        Debug.Log("[MatchmakingController] 开始运行，准备订阅事件。");
+    }
+
+    private System.Collections.IEnumerator DelayedSubscribe()
+    {
+        yield return null; // 等待一帧，确保SteamLobbyManager.Instance可用
         if (SteamLobbyManager.Instance != null)
         {
             SteamLobbyManager.Instance.OnMatchReady += HandleMatchReady;
+            Debug.Log("[MatchmakingController] 成功订阅 OnMatchReady 事件。");
+        }
+        else
+        {
+            Debug.LogError("[MatchmakingController] 无法找到 SteamLobbyManager.Instance！");
         }
     }
 
     private void HandleMatchReady()
     {
-        Debug.Log("[MatchmakingController] 收到比赛就绪信号！正在切换UI...");
+        Debug.Log("[MatchmakingController] 收到 OnMatchReady 事件！准备切换UI。");
 
-        // 从主线程调用UI操作，以防事件从其他线程触发
+        // 使用主线程调度器确保UI操作安全
         UnityMainThreadDispatcher.Instance().Enqueue(() => {
+            Debug.Log("[MatchmakingController] 主线程：正在隐藏匹配面板和主菜单...");
             UIManager.Instance.HidePanel<MatchmakingStatusPanel>();
             UIManager.Instance.HidePanel<MainMenuPanel>();
+            Debug.Log("[MatchmakingController] 主线程：正在显示房间面板...");
             UIManager.Instance.ShowPanel<RoomPanel>();
         });
     }
@@ -30,59 +44,7 @@ public class MatchmakingController : MonoBehaviour
         if (SteamLobbyManager.Instance != null)
         {
             SteamLobbyManager.Instance.OnMatchReady -= HandleMatchReady;
+            Debug.Log("[MatchmakingController] 已取消订阅 OnMatchReady 事件。");
         }
     }
 }
-
-// 注意: 上面的代码用到了一个UnityMainThreadDispatcher。
-// 这是一个非常有用的小工具，可以确保代码在主线程执行。
-// 如果你项目中没有，请创建一个新脚本并使用以下代码：
-// 文件路径: Assets/Scripts/_Core/Foundation/UnityMainThreadDispatcher.cs
-/*
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-public class UnityMainThreadDispatcher : MonoBehaviour {
-    private static readonly Queue<Action> _executionQueue = new Queue<Action>();
-    private static UnityMainThreadDispatcher _instance = null;
-
-    public static UnityMainThreadDispatcher Instance() {
-        if (_instance == null) {
-            _instance = FindObjectOfType<UnityMainThreadDispatcher>();
-            if (_instance == null) {
-                var go = new GameObject("[UnityMainThreadDispatcher]");
-                _instance = go.AddComponent<UnityMainThreadDispatcher>();
-                DontDestroyOnLoad(go);
-            }
-        }
-        return _instance;
-    }
-
-    public void Enqueue(IEnumerator action) {
-        lock (_executionQueue) {
-            _executionQueue.Enqueue(() => {
-                StartCoroutine(action);
-            });
-        }
-    }
-
-    public void Enqueue(Action action) {
-        Enqueue(ActionWrapper(action));
-    }
-
-    private IEnumerator ActionWrapper(Action a) {
-        a();
-        yield return null;
-    }
-
-    private void Update() {
-        lock (_executionQueue) {
-            while (_executionQueue.Count > 0) {
-                _executionQueue.Dequeue().Invoke();
-            }
-        }
-    }
-}
-*/

@@ -19,7 +19,7 @@ public class MainMenuPanel : UIPanel
 
     public override void Setup()
     {
-        base.Setup();
+        base.Setup(); // 调用基类的Setup
 
         // 绑定按钮事件
         rank1v1Button.onClick.AddListener(OnRank1v1Clicked);
@@ -30,57 +30,69 @@ public class MainMenuPanel : UIPanel
         storeButton.onClick.AddListener(OnStoreClicked);
 
         // 订阅SteamLobbyManager的事件
-        SteamLobbyManager.Instance.OnAvatarReady += OnAvatarReady;
+        if (SteamLobbyManager.Instance != null)
+        {
+            SteamLobbyManager.Instance.OnAvatarReady += OnAvatarReady;
+        }
     }
 
     public override void Show()
     {
         base.Show();
-        // 每次显示面板时，都刷新玩家信息
+        // 每次显示时可以刷新信息
         RefreshPlayerInfo();
+        Debug.Log("[MainMenuPanel] 面板已显示。");
     }
 
     private void RefreshPlayerInfo()
     {
-        // 1. 获取并显示基本信息 (昵称、金币等)
+        if (SteamLobbyManager.Instance == null)
+        {
+            Debug.LogError("[MainMenuPanel] SteamLobbyManager.Instance is null! Cannot refresh player info.");
+            return;
+        }
+
         PlayerProfile localProfile = SteamLobbyManager.Instance.GetLocalPlayerProfile();
-        playerInfoView.UpdateView(localProfile);
+        if (playerInfoView != null)
+        {
+            playerInfoView.UpdateView(localProfile);
+        }
+
         _localPlayerSteamId = new CSteamID(localProfile.steamId);
 
-        // 2. 尝试获取并显示头像
         Texture2D avatar = SteamLobbyManager.Instance.GetAvatar(_localPlayerSteamId);
-        if (avatar != null)
+        if (avatar != null && playerInfoView != null)
         {
             playerInfoView.UpdateAvatar(avatar);
         }
-        else
-        {
-            // 如果头像还未加载，这里什么都不做，等待OnAvatarReady回调
-            Debug.Log("[MainMenuPanel] 头像尚未缓存，等待Steam回调...");
-        }
     }
 
-    // 当Steam加载完头像后，此事件处理器被调用
     private void OnAvatarReady(CSteamID steamId)
     {
-        // 确保是当前玩家的头像，并且当前面板是激活的
-        if (steamId == _localPlayerSteamId && gameObject.activeInHierarchy)
+        if (steamId == _localPlayerSteamId && IsVisible)
         {
-            Debug.Log("[MainMenuPanel] 收到头像就绪事件，正在更新头像...");
             Texture2D avatar = SteamLobbyManager.Instance.GetAvatar(steamId);
-            playerInfoView.UpdateAvatar(avatar);
+            if (playerInfoView != null)
+            {
+                playerInfoView.UpdateAvatar(avatar);
+            }
         }
     }
 
+    // --- 按钮点击事件处理 ---
     private void OnRank1v1Clicked()
     {
-        Debug.Log("【1V1排位】按钮被点击 - 后续将在此处调用匹配逻辑");
-        // 下一步的开发内容:
-        // UIManager.Instance.ShowPanel<MatchmakingStatusPanel>();
-        // SteamLobbyManager.Instance.FindOrCreateLobby(GameModeType.RealTime_Fair);
+        Debug.Log("--- [MainMenuPanel] OnRank1v1Clicked: 排位按钮被点击！ ---");
+
+        // 1. 显示“匹配中”UI
+        Debug.Log("[MainMenuPanel] 步骤1: 请求UIManager显示MatchmakingStatusPanel...");
+        UIManager.Instance.ShowPanel<MatchmakingStatusPanel>();
+
+        // 2. 调用SteamLobbyManager开始寻找或创建Lobby
+        Debug.Log("[MainMenuPanel] 步骤2: 请求SteamLobbyManager开始FindOrCreateLobby...");
+        SteamLobbyManager.Instance.FindOrCreateLobby();
     }
 
-    // ... 其他按钮点击事件 ...
     private void OnCampaignClicked() => Debug.Log("【闯关】按钮被点击");
     private void OnRank2v2Clicked() => Debug.Log("【2V2排位】按钮被点击");
     private void OnRoomClicked() => Debug.Log("【房间】按钮被点击");

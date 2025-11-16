@@ -5,14 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-/// <summary>
-/// UI系统核心管理器。
-/// 负责所有UIPanel的生命周期管理（实例化、显示、隐藏）。
-/// 采用单例模式，方便全局访问。
-/// </summary>
 public class UIManager : MonoBehaviour
 {
-    // --- 单例模式 ---
     private static UIManager _instance;
     public static UIManager Instance
     {
@@ -32,13 +26,9 @@ public class UIManager : MonoBehaviour
     }
 
     [Header("UI 配置")]
-    [Tooltip("所有UI面板的Prefab列表，在此处注册")]
     [SerializeField] private List<UIPanel> panelPrefabs;
-
-    [Tooltip("所有UI面板实例的父节点")]
     [SerializeField] private Transform panelsParent;
 
-    // 运行时实例化的面板缓存池，通过类型快速查找
     private Dictionary<Type, UIPanel> _panelInstances = new Dictionary<Type, UIPanel>();
 
     private void Awake()
@@ -49,57 +39,64 @@ public class UIManager : MonoBehaviour
             return;
         }
         _instance = this;
-        // DontDestroyOnLoad(gameObject); // 如果需要跨场景，则取消此行注释
     }
 
-    /// <summary>
-    /// 显示指定类型的UI面板。
-    /// 如果面板从未被创建，则会从Prefab实例化。
-    /// </summary>
-    /// <typeparam name="T">要显示的UIPanel的子类类型</typeparam>
-    /// <returns>显示出的面板实例</returns>
     public T ShowPanel<T>() where T : UIPanel
     {
         Type panelType = typeof(T);
-        if (_panelInstances.TryGetValue(panelType, out UIPanel panel))
+        Debug.Log($"[UIManager] 请求显示面板: {panelType.Name}");
+
+        if (_panelInstances.TryGetValue(panelType, out UIPanel panel) && panel != null)
         {
+            Debug.Log($"[UIManager] 面板 '{panelType.Name}' 已存在于缓存中，直接调用Show()。");
             panel.Show();
             return panel as T;
         }
         else
         {
+            Debug.Log($"[UIManager] 面板 '{panelType.Name}' 不存在，尝试从Prefab创建。");
             T panelPrefab = GetPanelPrefab<T>();
             if (panelPrefab != null)
             {
+                Debug.Log($"[UIManager] 成功找到 '{panelType.Name}' 的Prefab，正在实例化...");
                 T newPanelInstance = Instantiate(panelPrefab, panelsParent);
-                newPanelInstance.gameObject.name = panelType.Name; // 清理实例化的物体名称
+                newPanelInstance.gameObject.name = panelType.Name;
                 _panelInstances[panelType] = newPanelInstance;
-                newPanelInstance.Setup(); // 调用一次性初始化
+
+                Debug.Log($"[UIManager] 面板 '{panelType.Name}' 实例化成功，调用Setup()。");
+                newPanelInstance.Setup();
+
+                Debug.Log($"[UIManager] 面板 '{panelType.Name}' Setup完毕，调用Show()。");
                 newPanelInstance.Show();
                 return newPanelInstance;
             }
         }
+        Debug.LogError($"[UIManager] 显示面板 '{panelType.Name}' 失败，流程中断。");
         return null;
     }
 
-    /// <summary>
-    /// 隐藏指定类型的UI面板。
-    /// </summary>
-    /// <typeparam name="T">要隐藏的UIPanel的子类类型</typeparam>
     public void HidePanel<T>() where T : UIPanel
     {
         Type panelType = typeof(T);
-        if (_panelInstances.TryGetValue(panelType, out UIPanel panel))
+        Debug.Log($"[UIManager] 请求隐藏面板: {panelType.Name}");
+        if (_panelInstances.TryGetValue(panelType, out UIPanel panel) && panel != null)
         {
             panel.Hide();
         }
+        else
+        {
+            Debug.LogWarning($"[UIManager] 尝试隐藏一个从未被创建的面板: {panelType.Name}");
+        }
     }
 
-    /// <summary>
-    /// 从预设列表中查找指定类型的面板Prefab。
-    /// </summary>
     private T GetPanelPrefab<T>() where T : UIPanel
     {
+        if (panelPrefabs == null || panelPrefabs.Count == 0)
+        {
+            Debug.LogError("[UIManager] 'panelPrefabs' 列表为空！请在Inspector中配置！");
+            return null;
+        }
+
         T prefab = panelPrefabs.OfType<T>().FirstOrDefault();
         if (prefab == null)
         {

@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// 这是一个简单的面板，继承UIPanel
 public class MatchmakingStatusPanel : UIPanel
 {
     [SerializeField] private Button cancelButton;
@@ -15,22 +14,38 @@ public class MatchmakingStatusPanel : UIPanel
     public override void Setup()
     {
         base.Setup();
-        cancelButton.onClick.AddListener(OnCancelClicked);
+        if (cancelButton != null)
+        {
+            cancelButton.onClick.AddListener(OnCancelClicked);
+        }
+        Debug.Log("[MatchmakingStatusPanel] Setup complete.");
     }
 
     public override void Show()
     {
         base.Show();
         _timer = 0f;
-        statusText.text = "匹配中...";
+        if (statusText != null)
+        {
+            statusText.text = "匹配中...";
+        }
+        Debug.Log("[MatchmakingStatusPanel] Panel is now visible.");
+    }
+
+    public override void Hide()
+    {
+        base.Hide();
+        Debug.Log("[MatchmakingStatusPanel] Panel is now hidden.");
     }
 
     private void Update()
     {
-        if (IsVisible)
+        // 只有当面板可见时才执行
+        if (!IsVisible) return;
+
+        _timer += Time.deltaTime;
+        if (statusText != null)
         {
-            _timer += Time.deltaTime;
-            // 每0.5秒更新一次省略号
             int dotCount = Mathf.FloorToInt(_timer * 2) % 4;
             statusText.text = "匹配中" + new string('.', dotCount);
         }
@@ -38,13 +53,18 @@ public class MatchmakingStatusPanel : UIPanel
 
     private void OnCancelClicked()
     {
-        Debug.Log("[MatchmakingStatusPanel] 取消匹配被点击。");
-        // TODO: 调用SteamLobbyManager.Instance.LeaveLobby();
+        Debug.Log("[MatchmakingStatusPanel] Cancel button clicked.");
+        // 调用SteamLobbyManager离开Lobby
+        SteamLobbyManager.Instance.LeaveLobby();
+        // 隐藏自己
         UIManager.Instance.HidePanel<MatchmakingStatusPanel>();
     }
 
     private void OnDestroy()
     {
-        cancelButton.onClick.RemoveAllListeners();
+        if (cancelButton != null)
+        {
+            cancelButton.onClick.RemoveAllListeners();
+        }
     }
 }
