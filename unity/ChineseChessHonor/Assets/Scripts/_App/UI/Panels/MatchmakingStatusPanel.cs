@@ -27,7 +27,7 @@ public class MatchmakingStatusPanel : UIPanel
         _timer = 0f;
         if (statusText != null)
         {
-            statusText.text = "∆•≈‰÷–...";
+            statusText.text = "Matching ...";
         }
         Debug.Log("[MatchmakingStatusPanel] Panel is now visible.");
     }
@@ -47,7 +47,7 @@ public class MatchmakingStatusPanel : UIPanel
         if (statusText != null)
         {
             int dotCount = Mathf.FloorToInt(_timer * 2) % 4;
-            statusText.text = "∆•≈‰÷–" + new string('.', dotCount);
+            statusText.text = "Matching" + new string('.', dotCount);
         }
     }
 
