@@ -38,7 +38,7 @@ public class RoomPanel : UIPanel
     private List<PieceSelectionButton> _activePieceButtons = new List<PieceSelectionButton>();
     private Coroutine _turnTimerCoroutine;
     private List<PlayerSlotView> _allSlots;
-
+    private Coroutine _pingUpdateCoroutine;
     public override void Setup()
     {
         base.Setup();
@@ -329,9 +329,55 @@ public class RoomPanel : UIPanel
         LeanTween.alphaCanvas(preBattleViewCanvasGroup, 1f, 1f).setOnComplete(() =>
         {
             preBattleViewCanvasGroup.interactable = true;
+
+            if (_pingUpdateCoroutine != null)
+            {
+                StopCoroutine(_pingUpdateCoroutine);
+            }
+            _pingUpdateCoroutine = StartCoroutine(UpdatePingsCoroutine());
+
             // 动画结束后，由Host决定谁先开始
             // TODO: (下一步) Host广播开始第一回合的指令
         });
+    }
+
+    private System.Collections.IEnumerator UpdatePingsCoroutine()
+    {
+        while (true)
+        {
+            // Mirror通过NetworkTime.rtt提供到服务器的往返延迟（秒）
+            // 我们乘以1000得到毫秒
+            int ping = (int)(Mirror.NetworkTime.rtt * 1000);
+
+            foreach (var slot in _allSlots)
+            {
+                if (slot.SteamId.IsValid())
+                {
+                    // 对于Host，ping总是0。对于Client，显示其到Host的ping。
+                    // 我们的_allSlots包含了所有玩家，但NetworkTime.rtt只对自己有效。
+                    // 在1v1中，我们可以做一个简化：
+                    // 如果我是Host, 我的ping是0，对手的ping暂时无法直接获取，可以先显示一个类似的值。
+                    // 如果我是Client, 我的ping就是NetworkTime.rtt，对手(Host)的ping是0.
+                    // 这是一个简化的UI展示，更精确的需要Host将所有人的ping广播出来。
+
+                    bool isMe = slot.SteamId == SteamUser.GetSteamID();
+                    bool iAmHost = Mirror.NetworkServer.active;
+
+                    if (iAmHost)
+                    {
+                        // 我是Host
+                        slot.UpdatePing(isMe ? 0 : 64); // 暂时给对手一个假ping
+                    }
+                    else
+                    {
+                        // 我是Client
+                        slot.UpdatePing(isMe ? ping : 0);
+                    }
+                }
+            }
+
+            yield return new WaitForSeconds(1.0f); // 每秒刷新一次
+        }
     }
 
     // --- 事件处理 ---
@@ -363,6 +409,12 @@ public class RoomPanel : UIPanel
         if (SteamLobbyManager.Instance != null)
         {
             SteamLobbyManager.Instance.OnAvatarReady -= HandleAvatarReady;
+        }
+
+        if (_pingUpdateCoroutine != null)
+        {
+            StopCoroutine(_pingUpdateCoroutine);
+            _pingUpdateCoroutine = null;
         }
 
     }

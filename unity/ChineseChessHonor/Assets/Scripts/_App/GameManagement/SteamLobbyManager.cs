@@ -272,7 +272,7 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
         int memberCount = SteamMatchmaking.GetNumLobbyMembers(CurrentLobbyId);
         int maxMembers = SteamMatchmaking.GetLobbyMemberLimit(CurrentLobbyId);
 
-        Debug.Log($"[CheckIfLobbyIsFull] 检查当前人数: {memberCount}/{maxMembers}");
+        // Debug.Log($"[CheckIfLobbyIsFull] 检查当前人数: {memberCount}/{maxMembers}"); // 可以注释掉
 
         if (memberCount >= maxMembers)
         {
@@ -280,19 +280,22 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
             CSteamID localSteamId = SteamUser.GetSteamID();
             CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(CurrentLobbyId);
 
-            // 获取网络服务实例 (因为模式已切换，这里会拿到MirrorService)
             _networkService = NetworkServiceProvider.Instance;
 
             if (ownerId == localSteamId)
             {
                 Debug.Log("[CheckIfLobbyIsFull] 我是房主，正在启动Mirror Host (Connection Only)...");
                 SteamMatchmaking.SetLobbyJoinable(CurrentLobbyId, false);
-                _networkService.StartHostConnectionOnly(); // <-- 修改点
+
+                // 新增: 在启动Host前，设置好本次对局的人数
+                (_networkService as MirrorService)?.SetMaxConnections(maxMembers);
+
+                _networkService.StartHostConnectionOnly();
             }
             else
             {
                 Debug.Log($"[CheckIfLobbyIsFull] 我是客户端，正在连接到房主 {ownerId} (Connection Only)...");
-                _networkService.StartClientConnectionOnly(ownerId); // <-- 修改点
+                _networkService.StartClientConnectionOnly(ownerId);
             }
 
             OnMatchReady?.Invoke();

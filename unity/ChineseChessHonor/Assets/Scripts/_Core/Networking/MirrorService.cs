@@ -147,12 +147,14 @@ public class MirrorService : NetworkManager, INetworkService
     [Server]
     private void CheckIfAllPlayersAreReady()
     {
+        // 检查当前在房间内的玩家对象数量是否已达到设定的最大连接数
         if (_roomPlayers.Count >= maxConnections)
         {
-            Debug.Log("[MirrorService] 所有玩家已到齐！Host正在广播开始备战指令...");
+            Debug.Log($"[MirrorService] 所有 {maxConnections} 名玩家已到齐！Host正在广播开始备战指令...");
             NetworkEvents.Instance.RpcStartPreBattlePhase();
         }
     }
+
 
     [Server]
     private void OnServerReceiveCommand(NetworkConnectionToClient conn, NetworkCommand command)
@@ -172,4 +174,11 @@ public class MirrorService : NetworkManager, INetworkService
     }
 
     #endregion
+
+    // 新增: 允许外部逻辑动态设置最大连接数
+    public void SetMaxConnections(int count)
+    {
+        maxConnections = count;
+        Debug.Log($"[MirrorService] 最大连接数已设置为: {count}");
+    }
 }
