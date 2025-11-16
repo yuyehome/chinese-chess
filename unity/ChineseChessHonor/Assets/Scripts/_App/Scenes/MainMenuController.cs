@@ -14,13 +14,6 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private KeyCode debugLobbyListKey = KeyCode.L;
     [SerializeField] private KeyCode debugQuitKey = KeyCode.Q;
 
-    private void Awake()
-    {
-        // 在任何其他服务初始化之前，设置游戏为在线模式。
-        NetworkServiceProvider.IsOnlineMode = true;
-        Debug.Log($"[MainMenuController] 游戏模式已设置为: {(NetworkServiceProvider.IsOnlineMode ? "在线" : "离线")}");
-    }
-
     void Start()
     {
         InitializeScene();
