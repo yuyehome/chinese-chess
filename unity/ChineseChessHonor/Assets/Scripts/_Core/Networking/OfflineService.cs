@@ -1,6 +1,7 @@
 // 文件路径: Assets/Scripts/_Core/Networking/OfflineService.cs
 
 using System;
+using Steamworks;
 using UnityEngine; // 仅用于Debug.Log
 
 /// <summary>
@@ -48,6 +49,13 @@ public class OfflineService : INetworkService
         // 单机模式下不支持作为客户端连接
         Debug.LogError("[OfflineService] Cannot start as a client in offline mode. Use StartHost() instead.");
     }
+
+    public void StartClient(CSteamID hostId)
+    {
+        // 单机模式下不支持作为客户端连接
+        Debug.LogError("[OfflineService] Cannot start as a client in offline mode. Use StartHost() instead.");
+    }
+
 
     public void Disconnect()
     {

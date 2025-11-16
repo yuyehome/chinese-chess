@@ -9,6 +9,9 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 {
     private bool _isSteamInitialized = false;
 
+    private INetworkService _networkService;
+    public event Action OnP2PConnectionComplete;
+
     private Dictionary<CSteamID, Texture2D> _avatarCache = new Dictionary<CSteamID, Texture2D>();
 
     public CSteamID CurrentLobbyId { get; private set; } = CSteamID.Nil;
@@ -35,6 +38,9 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
     protected override void Awake()
     {
         base.Awake();
+        
+        _networkService = NetworkServiceProvider.Instance;
+
         if (!_isSteamInitialized)
         {
             try
@@ -253,10 +259,8 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 
         CheckIfLobbyIsFull();
     }
-
     private void CheckIfLobbyIsFull()
     {
-        // 如果事件已触发，则直接返回，防止重复执行
         if (_isMatchReadyTriggered) return;
 
         int memberCount = SteamMatchmaking.GetNumLobbyMembers(CurrentLobbyId);
@@ -266,17 +270,26 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 
         if (memberCount >= maxMembers)
         {
-            // 设置状态锁，确保只触发一次
             _isMatchReadyTriggered = true;
+            CSteamID localSteamId = SteamUser.GetSteamID();
+            CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(CurrentLobbyId);
 
-            Debug.Log("[CheckIfLobbyIsFull] 检测到Lobby已满员，广播OnMatchReady事件！");
-
-            if (SteamMatchmaking.GetLobbyOwner(CurrentLobbyId) == SteamUser.GetSteamID())
+            // 关键网络逻辑：启动Mirror Host或Client
+            if (ownerId == localSteamId)
             {
+                // 我是房主 (Host)
+                Debug.Log("[CheckIfLobbyIsFull] 我是房主，正在启动Mirror Host...");
                 SteamMatchmaking.SetLobbyJoinable(CurrentLobbyId, false);
-                Debug.Log("[CheckIfLobbyIsFull] 我是房主，已将Lobby设为不可加入。");
+                _networkService.StartHost();
+            }
+            else
+            {
+                // 我是客户端 (Client)
+                Debug.Log($"[CheckIfLobbyIsFull] 我是客户端，正在连接到房主 {ownerId}...");
+                _networkService.StartClient(ownerId);
             }
 
+            // OnMatchReady事件现在只负责UI切换，网络启动由这里负责
             OnMatchReady?.Invoke();
         }
     }

@@ -1,8 +1,9 @@
 // 文件路径: Assets/Scripts/_Core/Networking/MirrorService.cs 
 
-using Mirror;
 using System;
 using System.Linq;
+using Mirror;
+using Steamworks;
 using UnityEngine;
 
 public class MirrorService : NetworkManager, INetworkService
@@ -23,6 +24,12 @@ public class MirrorService : NetworkManager, INetworkService
         networkAddress = address;
         base.StartClient();
     }
+    public void StartClient(CSteamID hostId)
+    {
+        networkAddress = hostId.ToString();
+        base.StartClient();
+    }
+
     public void Disconnect()
     {
         if (mode == NetworkManagerMode.Host) base.StopHost();
@@ -131,32 +138,36 @@ public class MirrorService : NetworkManager, INetworkService
 
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
     {
-        base.OnServerAddPlayer(conn); 
+        base.OnServerAddPlayer(conn);
 
-        Debug.Log($"[MirrorService] OnServerAddPlayer: 新客户端 (ConnectionId: {conn.connectionId}) 已连接，准备同步游戏状态...");
+        Debug.Log($"[MirrorService] OnServerAddPlayer: 新客户端 (ConnectionId: {conn.connectionId}) 已加入。当前连接数: {NetworkServer.connections.Count}/{maxConnections}");
 
+        // 检查是否所有预期的玩家都已连接
+        // NetworkServer.connections 包含所有客户端连接（不包括Host自己）
+        // 所以当连接数等于maxConnections - 1时，所有人都到齐了
+        if (NetworkServer.connections.Count >= maxConnections - 1)
+        {
+            Debug.Log("[MirrorService] 所有玩家已通过P2P连接！Host正在广播开始备战指令...");
+            NetworkEvents.Instance.RpcStartPreBattlePhase();
+        }
+
+        // --- 游戏状态同步逻辑保持不变 ---
         if (GameLoopController.Instance == null)
         {
             Debug.LogError("[MirrorService] OnServerAddPlayer: GameLoopController.Instance 为 null! 无法获取当前状态。");
             return;
         }
         GameState currentState = GameLoopController.Instance.GetCurrentState();
-
         if (NetworkEvents.Instance == null)
         {
-            Debug.LogError("[MirrorService] OnServerAddPlayer: NetworkEvents.Instance 为 null! 无法发送TargetRpc。这通常意味着Host端的NetworkEvents对象Spawn失败。");
+            Debug.LogError("[MirrorService] OnServerAddPlayer: NetworkEvents.Instance 为 null! 无法发送TargetRpc。");
             return;
         }
-
         if (currentState != null && currentState.pieces != null && currentState.pieces.Count > 0)
         {
             var pieces = currentState.pieces.Values.ToArray();
-            Debug.Log($"[MirrorService] OnServerAddPlayer: 获取到 {pieces.Length} 个棋子数据，正在通过 TargetRpc 发送给新客户端...");
             NetworkEvents.Instance.TargetRpcSyncInitialState(conn, pieces);
         }
-        else
-        {
-            Debug.LogWarning("[MirrorService] OnServerAddPlayer: 当前GameState为空或没有棋子可同步。");
-        }
     }
+
 }

@@ -85,4 +85,18 @@ public class NetworkEvents : NetworkBehaviour
             GameLoopController.Instance.HandleActionPointsUpdated_FromNet(team, newAmount);
         }
     }
+
+    //  由Host调用，通知所有客户端开始备战阶段
+    [ClientRpc]
+    public void RpcStartPreBattlePhase()
+    {
+        Debug.Log("[NetworkEvents] 收到 RpcStartPreBattlePhase 指令。");
+        // 假设RoomPanel是一个单例或易于访问的
+        var roomPanel = FindObjectOfType<RoomPanel>(); // 临时写法，后续可优化
+        if (roomPanel != null && roomPanel.IsVisible)
+        {
+            roomPanel.StartPreBattlePhase();
+        }
+    }
+
 }

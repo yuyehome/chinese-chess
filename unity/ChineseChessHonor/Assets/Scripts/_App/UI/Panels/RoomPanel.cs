@@ -304,6 +304,36 @@ public class RoomPanel : UIPanel
         // TODO: 实现倒计时逻辑
     }
 
+    /// <summary>
+    /// 由NetworkEvents的RPC调用，在所有客户端上同时开始备战-抢棋子状态
+    /// </summary>
+    public void StartPreBattlePhase()
+    {
+        Debug.Log("[RoomPanel] 接收到网络指令，正式开始备战阶段！");
+
+        // 更新所有玩家的ping值 (临时用固定值)
+        foreach (var slot in _allSlots)
+        {
+            if (slot.SteamId.IsValid())
+            {
+                slot.UpdatePing(64); // 临时固定值
+            }
+        }
+
+        // 动态生成棋子池
+        GeneratePiecePool();
+
+        // 棋子池渐显动画
+        preBattleViewCanvasGroup.alpha = 0;
+        preBattleViewCanvasGroup.gameObject.SetActive(true);
+        LeanTween.alphaCanvas(preBattleViewCanvasGroup, 1f, 1f).setOnComplete(() =>
+        {
+            preBattleViewCanvasGroup.interactable = true;
+            // 动画结束后，由Host决定谁先开始
+            // TODO: (下一步) Host广播开始第一回合的指令
+        });
+    }
+
     // --- 事件处理 ---
     private void OnStartPreBattleClicked()
     {

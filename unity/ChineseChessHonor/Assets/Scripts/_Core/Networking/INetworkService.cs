@@ -1,6 +1,7 @@
 // 文件路径: Assets/Scripts/_Core/Networking/INetworkService.cs
 
 using System;
+using Steamworks;
 
 public interface INetworkService
 {
@@ -17,6 +18,8 @@ public interface INetworkService
     // Methods
     void StartHost(); // 简化参数
     void StartClient(string address);
+    void StartClient(CSteamID hostId);
+
     void Disconnect();
     void SendCommandToServer(NetworkCommand command);
 }
