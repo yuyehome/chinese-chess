@@ -42,16 +42,20 @@ public class GameLoopController : PersistentSingleton<GameLoopController>
         {
             Debug.Log("--- 自动启动单机测试模式 ---");
             NetworkServiceProvider.IsOnlineMode = false;
+            // !! 注意：因为要修改IsOnlineMode，所以必须重置服务 !!
+            NetworkServiceProvider.Reset();
+            // 重新获取实例，这次会是OfflineService
+            _networkService = NetworkServiceProvider.Instance;
+
             LocalizationManager.Instance.SetLanguage(Language.EN_US);
             //LocalizationManager.Instance.SetLanguage(Language.ZH_CN);
-            _networkService.StartHost(); // 这会调用 OfflineService.StartHost
+            _networkService.StartHostAndGame(); // <-- 修改点
         }
 
         // 启动后立即播放战斗场景的背景音乐
         // 我们加一个小的延迟调用，确保AudioManager已经初始化完毕
         Invoke(nameof(PlayBattleMusic), 1.0f);
         // --- END: 临时测试代码 ---
-
     }
 
     // --- 新增的测试函数 ---

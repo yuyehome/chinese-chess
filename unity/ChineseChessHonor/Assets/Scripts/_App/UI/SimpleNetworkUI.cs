@@ -40,7 +40,7 @@ public class SimpleNetworkUI : MonoBehaviour
         // Host 按钮
         if (GUILayout.Button("Host (Server + Client)"))
         {
-            _networkService.StartHost();
+            Debug.LogError("方法已经变更，暂时注释掉。 //_networkService.StartHost(); ");
         }
 
         // 地址输入框和 Client 按钮
@@ -48,7 +48,7 @@ public class SimpleNetworkUI : MonoBehaviour
         _networkAddress = GUILayout.TextField(_networkAddress);
         if (GUILayout.Button("Client"))
         {
-            _networkService.StartClient(_networkAddress);
+            Debug.LogError("方法已经变更，暂时注释掉。//_networkService.StartClient(_networkAddress); ");
         }
         GUILayout.EndHorizontal();
 

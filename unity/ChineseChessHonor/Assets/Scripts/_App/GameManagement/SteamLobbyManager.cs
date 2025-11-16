@@ -95,11 +95,16 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
             return;
         }
 
+        // 强制切换到在线模式
+        NetworkServiceProvider.IsOnlineMode = true;
+        NetworkServiceProvider.Reset(); 
+
         _isMatchReadyTriggered = false;
 
-        Debug.Log("[SteamLobbyManager] 开始寻找或创建Lobby...");
+        Debug.Log("[SteamLobbyManager] 开始寻找或创建Lobby... (已切换至在线模式)");
         RequestLobbyListFiltered(m_LobbyMatchListCallResult, OnLobbyMatchListCallback);
     }
+
 
     public void LeaveLobby()
     {
@@ -259,6 +264,7 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 
         CheckIfLobbyIsFull();
     }
+
     private void CheckIfLobbyIsFull()
     {
         if (_isMatchReadyTriggered) return;
@@ -274,22 +280,21 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
             CSteamID localSteamId = SteamUser.GetSteamID();
             CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(CurrentLobbyId);
 
-            // 关键网络逻辑：启动Mirror Host或Client
+            // 获取网络服务实例 (因为模式已切换，这里会拿到MirrorService)
+            _networkService = NetworkServiceProvider.Instance;
+
             if (ownerId == localSteamId)
             {
-                // 我是房主 (Host)
-                Debug.Log("[CheckIfLobbyIsFull] 我是房主，正在启动Mirror Host...");
+                Debug.Log("[CheckIfLobbyIsFull] 我是房主，正在启动Mirror Host (Connection Only)...");
                 SteamMatchmaking.SetLobbyJoinable(CurrentLobbyId, false);
-                _networkService.StartHost();
+                _networkService.StartHostConnectionOnly(); // <-- 修改点
             }
             else
             {
-                // 我是客户端 (Client)
-                Debug.Log($"[CheckIfLobbyIsFull] 我是客户端，正在连接到房主 {ownerId}...");
-                _networkService.StartClient(ownerId);
+                Debug.Log($"[CheckIfLobbyIsFull] 我是客户端，正在连接到房主 {ownerId} (Connection Only)...");
+                _networkService.StartClientConnectionOnly(ownerId); // <-- 修改点
             }
 
-            // OnMatchReady事件现在只负责UI切换，网络启动由这里负责
             OnMatchReady?.Invoke();
         }
     }

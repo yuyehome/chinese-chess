@@ -26,7 +26,20 @@ public class OfflineService : INetworkService
 
     // --- 方法实现 ---
 
-    public void StartHost()
+
+    // 新增: 空实现，因为离线模式没有纯连接阶段
+    public void StartHostConnectionOnly()
+    {
+        Debug.Log("[OfflineService] StartHostConnectionOnly called, doing nothing in offline mode.");
+    }
+
+    // 新增: 空实现
+    public void StartClientConnectionOnly(CSteamID hostId)
+    {
+        Debug.LogError("[OfflineService] Cannot start as a client in offline mode.");
+    }
+
+    public void StartHostAndGame()
     {
         if (_isConnected)
         {
@@ -36,24 +49,13 @@ public class OfflineService : INetworkService
 
         Debug.Log("[OfflineService] Starting Host in Offline Mode...");
         _isConnected = true;
-
-        // 模拟连接成功，触发事件，让GameLoopController等系统开始初始化
         OnConnected?.Invoke();
-
-        // 在单机模式下，连接成功后立即初始化Host的游戏逻辑
         GameLoopController.Instance.InitializeAsHost();
     }
 
-    public void StartClient(string address)
+    public void StartClientAndGame(CSteamID hostId)
     {
-        // 单机模式下不支持作为客户端连接
-        Debug.LogError("[OfflineService] Cannot start as a client in offline mode. Use StartHost() instead.");
-    }
-
-    public void StartClient(CSteamID hostId)
-    {
-        // 单机模式下不支持作为客户端连接
-        Debug.LogError("[OfflineService] Cannot start as a client in offline mode. Use StartHost() instead.");
+        Debug.LogError("[OfflineService] Cannot start as a client in offline mode. Use StartHostAndGame() instead.");
     }
 
 

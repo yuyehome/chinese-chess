@@ -48,7 +48,7 @@ public class PlayerSlotView : MonoBehaviour
         emptySlotOverlay.SetActive(false);
 
         nicknameText.text = SteamFriends.GetFriendPersonaName(steamId);
-        pingText.text = "连接中..."; // 初始ping状态
+        pingText.text = "Connetting ..."; // 初始ping状态
 
         // TODO: 加载段位图标
 
