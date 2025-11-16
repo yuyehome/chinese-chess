@@ -129,6 +129,7 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
     {
         if (!SteamUtils.GetImageSize(iImage, out uint width, out uint height))
         {
+            Debug.LogError($"[SteamLobbyManager] 无法获取图像尺寸, ImageID: {iImage}");
             return null;
         }
 
@@ -136,34 +137,39 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 
         if (!SteamUtils.GetImageRGBA(iImage, imageData, (int)(width * height * 4)))
         {
+            Debug.LogError($"[SteamLobbyManager] 无法获取图像RGBA数据, ImageID: {iImage}");
             return null;
         }
 
+        // 创建最终要使用的Texture
         Texture2D texture = new Texture2D((int)width, (int)height, TextureFormat.RGBA32, false, true);
+
+        // **核心修复逻辑**
+        // 直接将图像数据加载到Texture中。此时它是上下颠倒的。
         texture.LoadRawTextureData(imageData);
-        texture.Apply();
 
-        // Steam返回的图像是上下颠倒的，我们需要垂直翻转它
-        Color32[] pixels = texture.GetPixels32();
-        Array.Reverse(pixels);
-        Texture2D flippedTexture = new Texture2D((int)width, (int)height);
-        flippedTexture.SetPixels32(pixels);
+        // 获取颠倒的像素数组
+        Color32[] flippedPixels = texture.GetPixels32();
 
-        // 手动翻转Y坐标
-        Color[] originalPixels = flippedTexture.GetPixels();
-        Color[] flippedPixels = new Color[originalPixels.Length];
+        // 创建一个正确顺序的像素数组
+        Color32[] correctPixels = new Color32[flippedPixels.Length];
+
+        // 手动进行垂直翻转
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                flippedPixels[y * width + x] = originalPixels[((height - 1 - y) * width) + x];
+                // 将 (x, y) 的像素从原始数组的 (x, height - 1 - y) 位置复制过来
+                correctPixels[y * width + x] = flippedPixels[(height - 1 - y) * width + x];
             }
         }
-        flippedTexture.SetPixels(flippedPixels);
-        flippedTexture.Apply();
 
-        //Destroy(texture); // 销毁中间纹理
+        // 将翻转后的正确像素数组设置回Texture
+        texture.SetPixels32(correctPixels);
+        texture.Apply(); // 应用更改
 
-        return flippedTexture;
+        return texture;
     }
+
+
 }
