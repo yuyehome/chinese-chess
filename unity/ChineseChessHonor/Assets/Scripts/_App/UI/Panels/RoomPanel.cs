@@ -235,7 +235,11 @@ public class RoomPanel : UIPanel
         ShowPreBattleState();
     }
 
-    private void OnLeaveRoomClicked() => Debug.Log("【退出房间】按钮被点击");
+    private void OnLeaveRoomClicked() {
+        Debug.Log("【退出房间】按钮被点击");
+        //TODO 暂时退出游戏，未来去掉这个按钮
+        Application.Quit();
+    } 
 
     private void OnPieceSelected(int pieceIndex)
     {

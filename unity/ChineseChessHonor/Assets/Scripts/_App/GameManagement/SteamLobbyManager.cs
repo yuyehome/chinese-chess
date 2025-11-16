@@ -22,6 +22,7 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
     public event Action<CSteamID> OnLobbyCreatedSuccess;
     public event Action<CSteamID> OnLobbyEntered;
     public event Action OnMatchReady;
+    private bool _isMatchReadyTriggered = false;
     #endregion
 
     #region Steam Callbacks & CallResults
@@ -88,6 +89,8 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
             return;
         }
 
+        _isMatchReadyTriggered = false;
+
         Debug.Log("[SteamLobbyManager] 开始寻找或创建Lobby...");
         RequestLobbyListFiltered(m_LobbyMatchListCallResult, OnLobbyMatchListCallback);
     }
@@ -99,6 +102,8 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
             Debug.Log($"[SteamLobbyManager] 正在离开Lobby: {CurrentLobbyId}");
             SteamMatchmaking.LeaveLobby(CurrentLobbyId);
             CurrentLobbyId = CSteamID.Nil;
+
+            _isMatchReadyTriggered = false;
         }
     }
 
@@ -233,46 +238,43 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 
     private void OnLobbyEnterCallback(LobbyEnter_t callback)
     {
-        // **逻辑简化: 此处不再检查是否满员**
         CurrentLobbyId = new CSteamID(callback.m_ulSteamIDLobby);
-        int memberCount = SteamMatchmaking.GetNumLobbyMembers(CurrentLobbyId);
-        CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(CurrentLobbyId);
-        string ownerName = SteamFriends.GetFriendPersonaName(ownerId);
-
-        Debug.Log($"[SteamLobbyManager] (OnLobbyEnter) 我成功进入了Lobby: {CurrentLobbyId}. 房主是: {ownerName}. 当前人数: {memberCount}.");
-
+        Debug.Log($"[SteamLobbyManager] (OnLobbyEnter) 我成功进入了Lobby: {CurrentLobbyId}.");
         OnLobbyEntered?.Invoke(CurrentLobbyId);
 
-        // 注意: 刚创建房间的房主也会触发这个回调，此时人数为1，是正常的
+        CheckIfLobbyIsFull();
     }
 
-    //  全局Lobby成员变化的回调处理器
     private void OnLobbyChatUpdateCallback(LobbyChatUpdate_t callback)
     {
-        // 确保这个事件是关于我们当前所在Lobby的
         if ((CSteamID)callback.m_ulSteamIDLobby != CurrentLobbyId) return;
 
-        EChatMemberStateChange stateChange = (EChatMemberStateChange)callback.m_rgfChatMemberStateChange;
-        CSteamID changedUserId = new CSteamID(callback.m_ulSteamIDUserChanged);
-        string changedUserName = SteamFriends.GetFriendPersonaName(changedUserId);
+        Debug.Log($"[SteamLobbyManager] (OnLobbyChatUpdate) Lobby状态更新。");
 
-        Debug.Log($"[SteamLobbyManager] (OnLobbyChatUpdate) Lobby状态更新: 用户'{changedUserName}'发生了 '{stateChange}' 变化。");
+        CheckIfLobbyIsFull();
+    }
 
-        // 检查是否是由于玩家加入导致满员
+    private void CheckIfLobbyIsFull()
+    {
+        // 如果事件已触发，则直接返回，防止重复执行
+        if (_isMatchReadyTriggered) return;
+
         int memberCount = SteamMatchmaking.GetNumLobbyMembers(CurrentLobbyId);
         int maxMembers = SteamMatchmaking.GetLobbyMemberLimit(CurrentLobbyId);
 
-        Debug.Log($"[SteamLobbyManager] (OnLobbyChatUpdate) 检查当前人数: {memberCount}/{maxMembers}");
+        Debug.Log($"[CheckIfLobbyIsFull] 检查当前人数: {memberCount}/{maxMembers}");
 
         if (memberCount >= maxMembers)
         {
-            Debug.Log("[SteamLobbyManager] (OnLobbyChatUpdate) 检测到Lobby已满员，广播OnMatchReady事件！");
+            // 设置状态锁，确保只触发一次
+            _isMatchReadyTriggered = true;
 
-            // 房主将Lobby设为不可加入
+            Debug.Log("[CheckIfLobbyIsFull] 检测到Lobby已满员，广播OnMatchReady事件！");
+
             if (SteamMatchmaking.GetLobbyOwner(CurrentLobbyId) == SteamUser.GetSteamID())
             {
                 SteamMatchmaking.SetLobbyJoinable(CurrentLobbyId, false);
-                Debug.Log("[SteamLobbyManager] 我是房主，已将Lobby设为不可加入。");
+                Debug.Log("[CheckIfLobbyIsFull] 我是房主，已将Lobby设为不可加入。");
             }
 
             OnMatchReady?.Invoke();
