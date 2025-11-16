@@ -1,4 +1,4 @@
-// 文件路径: Assets/Scripts/_App/GameManagement/SteamLobbyManager.cs 
+// 文件路径: Assets/Scripts/_App/GameManagement/SteamLobbyManager.cs
 
 using Steamworks;
 using System;
@@ -13,8 +13,9 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 
     public CSteamID CurrentLobbyId { get; private set; } = CSteamID.Nil;
 
+    // Lobby元数据的Key常量
     private const string LOBBY_MODE_KEY = "Mode";
-    private const string LOBBY_MODE_VALUE = "1v1";
+    private const string LOBBY_MODE_VALUE_1V1 = "1v1";
 
     #region C# Events
     public event Action<CSteamID> OnAvatarReady;
@@ -33,7 +34,6 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
     protected override void Awake()
     {
         base.Awake();
-
         if (!_isSteamInitialized)
         {
             try
@@ -90,14 +90,16 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 
         Debug.Log("[SteamLobbyManager] 开始寻找或创建Lobby...");
 
-        // 添加搜索过滤器
-        SteamMatchmaking.AddRequestLobbyListStringFilter(LOBBY_MODE_KEY, LOBBY_MODE_VALUE, ELobbyComparison.k_ELobbyComparisonEqual);
+        // **关键变更: 添加游戏ID过滤器**
+        SteamMatchmaking.AddRequestLobbyListStringFilter(GameConstants.SteamLobbyGameIdKey, GameConstants.SteamLobbyGameIdValue, ELobbyComparison.k_ELobbyComparisonEqual);
+
+        // 添加其他过滤器
+        SteamMatchmaking.AddRequestLobbyListStringFilter(LOBBY_MODE_KEY, LOBBY_MODE_VALUE_1V1, ELobbyComparison.k_ELobbyComparisonEqual);
         SteamMatchmaking.AddRequestLobbyListFilterSlotsAvailable(1);
 
-        // 发起请求
         SteamAPICall_t handle = SteamMatchmaking.RequestLobbyList();
         m_LobbyMatchListCallResult.Set(handle);
-        Debug.Log("[SteamLobbyManager] Lobby列表请求已发送。");
+        Debug.Log("[SteamLobbyManager] Lobby列表请求已发送，过滤器: GameId, Mode, SlotsAvailable");
     }
 
     public void LeaveLobby()
@@ -110,11 +112,12 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
         }
     }
 
-    // 新增: 供调试使用的公共方法
     public void Debug_RequestLobbyList()
     {
-        Debug.Log("[DEBUG] 手动发起Lobby列表请求（无过滤条件）...");
-        // 不加任何过滤条件，搜索所有公开的Lobby
+        Debug.Log("[DEBUG] 手动发起Lobby列表请求（带GameId过滤）...");
+        // **关键变更: 调试时也只搜索我们自己的游戏Lobby**
+        SteamMatchmaking.AddRequestLobbyListStringFilter(GameConstants.SteamLobbyGameIdKey, GameConstants.SteamLobbyGameIdValue, ELobbyComparison.k_ELobbyComparisonEqual);
+
         SteamAPICall_t handle = SteamMatchmaking.RequestLobbyList();
         m_LobbyMatchListCallResult.Set(handle);
     }
@@ -127,15 +130,15 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
     {
         Debug.Log($"[SteamLobbyManager] OnLobbyMatchListCallback: 收到回调。IO Failure: {ioFailure}, 匹配到的Lobby数量: {callback.m_nLobbiesMatching}");
 
-        // --- 增加详细的调试日志 ---
         for (int i = 0; i < callback.m_nLobbiesMatching; i++)
         {
             CSteamID lobbyId = SteamMatchmaking.GetLobbyByIndex(i);
+            // **关键变更: 在日志中也打印GameId**
+            string gameId = SteamMatchmaking.GetLobbyData(lobbyId, GameConstants.SteamLobbyGameIdKey);
             string mode = SteamMatchmaking.GetLobbyData(lobbyId, LOBBY_MODE_KEY);
             string ownerName = SteamFriends.GetFriendPersonaName(SteamMatchmaking.GetLobbyOwner(lobbyId));
-            Debug.Log($"  - 找到的Lobby[{i}]: ID={lobbyId}, Owner={ownerName}, Mode='{mode}'");
+            Debug.Log($"  - 找到的Lobby[{i}]: ID={lobbyId}, Owner={ownerName}, GameId='{gameId}', Mode='{mode}'");
         }
-        // --- 调试日志结束 ---
 
         if (ioFailure)
         {
@@ -143,27 +146,16 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
             return;
         }
 
-        // 尝试找到一个完全匹配的Lobby
-        CSteamID suitableLobbyId = CSteamID.Nil;
-        for (int i = 0; i < callback.m_nLobbiesMatching; i++)
+        // 逻辑保持不变，因为我们的搜索过滤器已经很严格了
+        if (callback.m_nLobbiesMatching > 0)
         {
-            CSteamID lobbyId = SteamMatchmaking.GetLobbyByIndex(i);
-            // 再次确认元数据匹配，防止Steam的过滤器有延迟
-            if (SteamMatchmaking.GetLobbyData(lobbyId, LOBBY_MODE_KEY) == LOBBY_MODE_VALUE)
-            {
-                suitableLobbyId = lobbyId;
-                break;
-            }
-        }
-
-        if (suitableLobbyId != CSteamID.Nil)
-        {
-            Debug.Log($"[SteamLobbyManager] 在 {callback.m_nLobbiesMatching} 个结果中找到了合适的Lobby，尝试加入: {suitableLobbyId}");
-            SteamMatchmaking.JoinLobby(suitableLobbyId);
+            CSteamID lobbyToJoin = SteamMatchmaking.GetLobbyByIndex(0);
+            Debug.Log($"[SteamLobbyManager] 找到了 {callback.m_nLobbiesMatching} 个结果，尝试加入第一个: {lobbyToJoin}");
+            SteamMatchmaking.JoinLobby(lobbyToJoin);
         }
         else
         {
-            Debug.Log("[SteamLobbyManager] 未找到完全符合条件的Lobby，将创建一个新的。");
+            Debug.Log("[SteamLobbyManager] 未找到符合条件的Lobby，将创建一个新的。");
             SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePublic, 2);
         }
     }
@@ -175,12 +167,15 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
             CSteamID lobbyId = new CSteamID(callback.m_ulSteamIDLobby);
             Debug.Log($"[SteamLobbyManager] Lobby 创建成功! Lobby ID: {lobbyId}");
 
-            // **关键步骤: 为Lobby设置元数据和属性**
-            SteamMatchmaking.SetLobbyData(lobbyId, LOBBY_MODE_KEY, LOBBY_MODE_VALUE);
-            SteamMatchmaking.SetLobbyType(lobbyId, ELobbyType.k_ELobbyTypePublic); // 确保是公开的
-            SteamMatchmaking.SetLobbyJoinable(lobbyId, true); // **非常重要: 允许其他玩家加入**
+            // **关键变更: 创建Lobby时必须写入GameId**
+            SteamMatchmaking.SetLobbyData(lobbyId, GameConstants.SteamLobbyGameIdKey, GameConstants.SteamLobbyGameIdValue);
 
-            Debug.Log($"[SteamLobbyManager] Lobby属性已设置: Mode='{LOBBY_MODE_VALUE}', Type=Public, Joinable=true");
+            // 设置其他属性
+            SteamMatchmaking.SetLobbyData(lobbyId, LOBBY_MODE_KEY, LOBBY_MODE_VALUE_1V1);
+            SteamMatchmaking.SetLobbyType(lobbyId, ELobbyType.k_ELobbyTypePublic);
+            SteamMatchmaking.SetLobbyJoinable(lobbyId, true);
+
+            Debug.Log($"[SteamLobbyManager] Lobby属性已设置: GameId='{GameConstants.SteamLobbyGameIdValue}', Mode='{LOBBY_MODE_VALUE_1V1}', Type=Public, Joinable=true");
 
             OnLobbyCreatedSuccess?.Invoke(lobbyId);
         }
@@ -204,7 +199,6 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
         {
             Debug.Log("[SteamLobbyManager] Lobby已满员，比赛即将开始！");
 
-            // **关键: 房主应该将Lobby设为不可加入，防止第三人进入**
             if (SteamMatchmaking.GetLobbyOwner(CurrentLobbyId) == SteamUser.GetSteamID())
             {
                 SteamMatchmaking.SetLobbyJoinable(CurrentLobbyId, false);
@@ -219,9 +213,7 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
     {
         CSteamID steamId = callback.m_steamID;
         int imageId = callback.m_iImage;
-
         if (_avatarCache.ContainsKey(steamId)) return;
-
         var avatarTexture = GetSteamImageAsTexture2D(imageId);
         if (avatarTexture != null)
         {
