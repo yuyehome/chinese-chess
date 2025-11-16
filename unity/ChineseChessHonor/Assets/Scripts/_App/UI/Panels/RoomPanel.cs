@@ -1,9 +1,11 @@
 // 文件路径: Assets/Scripts/_App/UI/Panels/RoomPanel.cs
 
 using System.Collections.Generic;
+using System.Linq;
+using Steamworks;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class RoomPanel : UIPanel
 {
@@ -15,6 +17,7 @@ public class RoomPanel : UIPanel
     [SerializeField] private GameObject bottomActionBar;
     [SerializeField] private Button startPreBattleButton; // “开始备战”按钮
     [SerializeField] private Button leaveRoomButton;
+    [SerializeField] private Button testQuitButton;
 
     [Header("备战 - 中央区域")]
     [SerializeField] private CanvasGroup preBattleViewCanvasGroup; // 用于整体渐显
@@ -34,12 +37,23 @@ public class RoomPanel : UIPanel
 
     private List<PieceSelectionButton> _activePieceButtons = new List<PieceSelectionButton>();
     private Coroutine _turnTimerCoroutine;
+    private List<PlayerSlotView> _allSlots;
 
     public override void Setup()
     {
         base.Setup();
+
+        // 合并所有槽位到一个列表中，方便管理
+        _allSlots = new List<PlayerSlotView>();
+        _allSlots.AddRange(redTeamSlots);
+        _allSlots.AddRange(blackTeamSlots);
+
+        // 订阅SteamLobbyManager的事件
+        SteamLobbyManager.Instance.OnAvatarReady += HandleAvatarReady;
+
         startPreBattleButton.onClick.AddListener(OnStartPreBattleClicked);
         leaveRoomButton.onClick.AddListener(OnLeaveRoomClicked);
+        testQuitButton.onClick.AddListener(OnLeaveRoomClicked);
 
         // 绑定棋子选择按钮事件
         for (int i = 0; i < pieceSelectionButtons.Count; i++)
@@ -52,20 +66,83 @@ public class RoomPanel : UIPanel
     public override void Show()
     {
         base.Show();
-        // 默认显示等待状态
-        ShowWaitingState();
+        InitializeRoom();
     }
 
-    /// <summary>
-    /// 切换到等待玩家状态
-    /// </summary>
-    public void ShowWaitingState()
+    // 房间初始化的核心逻辑
+    private void InitializeRoom()
     {
-        bottomActionBar.SetActive(true);
-        preBattleViewCanvasGroup.gameObject.SetActive(false);
-        gameStartCountdownView.SetActive(false);
+        // 1. 重置所有UI元素到初始状态
+        bottomActionBar.SetActive(false); // 排位模式不显示底部操作栏
+        preBattleViewCanvasGroup.gameObject.SetActive(false); // 隐藏棋子池
+        ClearPiecePool();
+        foreach (var slot in _allSlots)
+        {
+            slot.SetEmpty(true);
+            slot.ClearSelectedPieces();
+        }
 
-        Debug.Log("[RoomPanel] 切换到等待状态。");
+        // 2. 从SteamLobbyManager获取Lobby成员信息
+        CSteamID lobbyId = SteamLobbyManager.Instance.CurrentLobbyId;
+        if (lobbyId == CSteamID.Nil)
+        {
+            Debug.LogError("[RoomPanel] 进入房间时Lobby ID无效！");
+            return;
+        }
+
+        int memberCount = SteamMatchmaking.GetNumLobbyMembers(lobbyId);
+        List<CSteamID> members = new List<CSteamID>();
+        for (int i = 0; i < memberCount; i++)
+        {
+            members.Add(SteamMatchmaking.GetLobbyMemberByIndex(lobbyId, i));
+        }
+
+        Debug.Log($"[RoomPanel] 初始化房间，Lobby成员数: {memberCount}");
+
+        // 3. 将成员信息填充到UI槽位中 (1v1 模式)
+        // 规则：房主是红队，后加入者是黑队
+        CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(lobbyId);
+
+        // 填充红队 (房主)
+        if (members.Contains(ownerId))
+        {
+            redTeamSlots[0].SetPlayer(ownerId);
+            TryUpdateAvatar(redTeamSlots[0]);
+        }
+
+        // 填充黑队 (非房主)
+        var otherPlayer = members.FirstOrDefault(m => m != ownerId);
+        if (otherPlayer.IsValid()) // 使用.IsValid()更严谨
+        {
+            blackTeamSlots[0].SetPlayer(otherPlayer);
+            TryUpdateAvatar(blackTeamSlots[0]);
+        }
+    }
+
+    // 尝试更新一个槽位的头像
+    private void TryUpdateAvatar(PlayerSlotView slot)
+    {
+        if (!slot.SteamId.IsValid()) return;
+
+        Texture2D avatar = SteamLobbyManager.Instance.GetAvatar(slot.SteamId);
+        if (avatar != null)
+        {
+            slot.UpdateAvatar(avatar);
+        }
+    }
+
+    // 当有新头像加载完成时，由SteamLobbyManager触发
+    private void HandleAvatarReady(CSteamID steamId)
+    {
+        // 确保面板是可见的，避免在隐藏状态下操作UI
+        if (!IsVisible) return;
+
+        // 查找哪个槽位对应这个SteamID并更新它
+        var slotToUpdate = _allSlots.FirstOrDefault(s => s.SteamId == steamId);
+        if (slotToUpdate != null)
+        {
+            TryUpdateAvatar(slotToUpdate);
+        }
     }
 
     /// <summary>
@@ -252,5 +329,11 @@ public class RoomPanel : UIPanel
         startPreBattleButton.onClick.RemoveAllListeners();
         leaveRoomButton.onClick.RemoveAllListeners();
         foreach (var btn in pieceSelectionButtons) btn.onClick.RemoveAllListeners();
+
+        if (SteamLobbyManager.Instance != null)
+        {
+            SteamLobbyManager.Instance.OnAvatarReady -= HandleAvatarReady;
+        }
+
     }
 }

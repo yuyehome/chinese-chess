@@ -1,9 +1,10 @@
 // 文件路径: Assets/Scripts/_App/UI/Views/PlayerSlotView.cs
 
+using System.Collections.Generic;
+using Steamworks;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections.Generic;
 
 public class PlayerSlotView : MonoBehaviour
 {
@@ -26,6 +27,7 @@ public class PlayerSlotView : MonoBehaviour
     [SerializeField] private GameObject selectedPieceIconPrefab; // 用于实例化显示已选棋子的图标
 
     private List<GameObject> _pieceIcons = new List<GameObject>();
+    public CSteamID SteamId { get; private set; }
 
     private void Awake()
     {
@@ -38,16 +40,19 @@ public class PlayerSlotView : MonoBehaviour
     /// <summary>
     /// 设置槽位为有玩家状态
     /// </summary>
-    public void SetPlayer(PlayerProfile profile, bool isHost, bool canBeKicked)
+    public void SetPlayer(CSteamID steamId)
     {
+        this.SteamId = steamId;
+
         playerDataContainer.SetActive(true);
         emptySlotOverlay.SetActive(false);
 
-        nicknameText.text = profile.nickname;
-        pingText.text = "---ms"; // 初始ping
-        // TODO: 加载头像和段位图标
+        nicknameText.text = SteamFriends.GetFriendPersonaName(steamId);
+        pingText.text = "连接中..."; // 初始ping状态
 
-        kickPlayerButton.gameObject.SetActive(isHost && canBeKicked);
+        // TODO: 加载段位图标
+
+        kickPlayerButton.gameObject.SetActive(false); // 在排位模式中默认不显示踢人按钮
     }
 
     /// <summary>
@@ -55,8 +60,24 @@ public class PlayerSlotView : MonoBehaviour
     /// </summary>
     public void SetEmpty(bool isEmpty)
     {
+        if (isEmpty)
+        {
+            this.SteamId = CSteamID.Nil;
+        }
         playerDataContainer.SetActive(!isEmpty);
         emptySlotOverlay.SetActive(isEmpty);
+    }
+
+    /// <summary>
+    /// 更新玩家头像
+    /// </summary>
+    public void UpdateAvatar(Texture2D avatarTexture)
+    {
+        if (avatarTexture != null)
+        {
+            Sprite avatarSprite = Sprite.Create(avatarTexture, new Rect(0, 0, avatarTexture.width, avatarTexture.height), new Vector2(0.5f, 0.5f));
+            playerAvatarImage.sprite = avatarSprite;
+        }
     }
 
     /// <summary>
