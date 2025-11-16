@@ -9,9 +9,10 @@ using UnityEngine;
 public class MainMenuController : MonoBehaviour
 {
     [Header("测试按键")]
-    [SerializeField] private KeyCode testShowRoomPanelKey = KeyCode.Alpha1;
+    [SerializeField] private KeyCode testShowRoomPanelKey = KeyCode.R;
     [SerializeField] private KeyCode testShowInvitePanelKey = KeyCode.Alpha2;
-    [SerializeField] private KeyCode debugLobbyListKey = KeyCode.L; 
+    [SerializeField] private KeyCode debugLobbyListKey = KeyCode.L;
+    [SerializeField] private KeyCode debugQuitKey = KeyCode.Q;
 
     void Start()
     {
@@ -25,7 +26,7 @@ public class MainMenuController : MonoBehaviour
         // AudioManager.Instance. ...
 
         // 播放主菜单背景音乐
-        // AudioManager.Instance.PlayBGM("bgm_mainmenu");
+         //AudioManager.Instance.PlayBGM("bgm_mainmenu");
 
         // 场景启动时，默认显示主菜单面板
         UIManager.Instance.ShowPanel<MainMenuPanel>();
@@ -55,6 +56,13 @@ public class MainMenuController : MonoBehaviour
             {
                 Debug.LogError("无法执行调试，因为SteamLobbyManager.Instance为空！");
             }
+        }
+        
+
+        if (Input.GetKeyDown(debugQuitKey))
+        {
+            Debug.Log("Q键【退出游戏】，TODO，仅供测试，未来删除。");
+            Application.Quit();
         }
 
         // 在后续步骤中，我们会在这里添加测试其他面板的代码
