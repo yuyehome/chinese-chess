@@ -48,7 +48,7 @@ public class MainMenuController : MonoBehaviour
         {
             if (SteamLobbyManager.Instance != null)
             {
-                Debug.LogWarning($"--- 按下【{debugLobbyListKey}】键，执行手动Lobby查询 ---");
+                //Debug.LogWarning($"--- 按下【{debugLobbyListKey}】键，执行手动Lobby查询 ---");
                 SteamLobbyManager.Instance.Debug_RequestLobbyList();
             }
             else

@@ -134,7 +134,7 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 
     #region Steam Callback Handlers
 
-    // 专门用于调试的回调处理器
+    // 调试专用的回调处理器
     private void OnDebugLobbyMatchListCallback(LobbyMatchList_t callback, bool ioFailure)
     {
         Debug.Log($"--- [DEBUG] Lobby列表查询结果 ---");
@@ -153,25 +153,41 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
             Debug.Log($"  Lobby ID: {lobbyId}");
 
             CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(lobbyId);
-            string ownerName = SteamFriends.GetFriendPersonaName(ownerId);
-            Debug.Log($"  Owner: {ownerName} (ID: {ownerId})");
-
-            int memberCount = SteamMatchmaking.GetNumLobbyMembers(lobbyId);
-            int memberLimit = SteamMatchmaking.GetLobbyMemberLimit(lobbyId);
-            Debug.Log($"  成员: {memberCount} / {memberLimit}");
-
-            // 打印所有元数据
-            int dataCount = SteamMatchmaking.GetLobbyDataCount(lobbyId);
-            Debug.Log($"  元数据 ({dataCount} 条):");
-            for (int j = 0; j < dataCount; j++)
+            // **关键日志: 检查Owner ID是否有效**
+            if (!ownerId.IsValid() || ownerId.m_SteamID == 0)
             {
-                SteamMatchmaking.GetLobbyDataByIndex(lobbyId, j, out string key, 256, out string value, 4096);
-                Debug.Log($"    - '{key}': '{value}'");
+                Debug.LogWarning($"  Owner: [信息不可用 - ID无效或为0]。这是正常的，因为我们尚未加入此Lobby。");
+            }
+            else
+            {
+                string ownerName = SteamFriends.GetFriendPersonaName(ownerId);
+                Debug.Log($"  Owner: {ownerName} (ID: {ownerId})");
+            }
+
+            // **关键日志: 检查元数据是否能在加入前获取**
+            string gameId = SteamMatchmaking.GetLobbyData(lobbyId, GameConstants.SteamLobbyGameIdKey);
+            string mode = SteamMatchmaking.GetLobbyData(lobbyId, LOBBY_MODE_KEY);
+            if (string.IsNullOrEmpty(gameId))
+            {
+                Debug.LogWarning($"  元数据 'GameId': [信息不可用]。");
+            }
+            else
+            {
+                Debug.Log($"  元数据 'GameId': '{gameId}'");
+            }
+            if (string.IsNullOrEmpty(mode))
+            {
+                Debug.LogWarning($"  元数据 'Mode': [信息不可用]。");
+            }
+            else
+            {
+                Debug.Log($"  元数据 'Mode': '{mode}'");
             }
         }
         Debug.Log($"--- [DEBUG] 查询结束 ---");
     }
 
+    // 主匹配流程的回调处理器
     private void OnLobbyMatchListCallback(LobbyMatchList_t callback, bool ioFailure)
     {
         Debug.Log($"[SteamLobbyManager] OnLobbyMatchListCallback: 收到回调。IO Failure: {ioFailure}, 匹配到的Lobby数量: {callback.m_nLobbiesMatching}");
@@ -182,22 +198,18 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
             return;
         }
 
-        // 遍历所有返回的Lobby，找到第一个真正可用的
-        for (int i = 0; i < callback.m_nLobbiesMatching; i++)
+        // 简化并加固逻辑: 只要搜索有结果，就信任过滤器并尝试加入第一个
+        if (callback.m_nLobbiesMatching > 0)
         {
-            CSteamID lobbyId = SteamMatchmaking.GetLobbyByIndex(i);
-            // 额外检查，确保这个Lobby的数据是我们期望的 (虽然过滤器已经做了，但双重检查更安全)
-            if (SteamMatchmaking.GetLobbyData(lobbyId, GameConstants.SteamLobbyGameIdKey) == GameConstants.SteamLobbyGameIdValue)
-            {
-                Debug.Log($"[SteamLobbyManager] 在结果中找到了一个有效的Lobby (ID: {lobbyId})，尝试加入...");
-                SteamMatchmaking.JoinLobby(lobbyId);
-                return; // 找到就加入并退出，不再继续
-            }
+            CSteamID lobbyToJoin = SteamMatchmaking.GetLobbyByIndex(0);
+            Debug.Log($"[SteamLobbyManager] 过滤器返回了 {callback.m_nLobbiesMatching} 个结果。直接尝试加入第一个Lobby: {lobbyToJoin}");
+            SteamMatchmaking.JoinLobby(lobbyToJoin);
         }
-
-        // 如果循环结束都没有找到或没有返回任何Lobby
-        Debug.Log("[SteamLobbyManager] 未在返回结果中找到合适的Lobby，将创建一个新的。");
-        SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePublic, 2); // 1v1，最大成员2
+        else
+        {
+            Debug.Log("[SteamLobbyManager] 过滤器未返回任何Lobby，将创建一个新的。");
+            SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePublic, 2);
+        }
     }
 
     private void OnLobbyCreatedCallback(LobbyCreated_t callback)
@@ -227,7 +239,15 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
         int memberCount = SteamMatchmaking.GetNumLobbyMembers(CurrentLobbyId);
         int maxMembers = SteamMatchmaking.GetLobbyMemberLimit(CurrentLobbyId);
 
-        Debug.Log($"[SteamLobbyManager] 成功进入Lobby: {CurrentLobbyId}. 当前人数: {memberCount}/{maxMembers}");
+        // **关键日志: 进入Lobby后，我们现在应该能获取到完整的房主信息了**
+        CSteamID ownerId = SteamMatchmaking.GetLobbyOwner(CurrentLobbyId);
+        string ownerName = "[未知]";
+        if (ownerId.IsValid() && ownerId.m_SteamID != 0)
+        {
+            ownerName = SteamFriends.GetFriendPersonaName(ownerId);
+        }
+        Debug.Log($"[SteamLobbyManager] 成功进入Lobby: {CurrentLobbyId}. 房主是: {ownerName}. 当前人数: {memberCount}/{maxMembers}");
+
 
         OnLobbyEntered?.Invoke(CurrentLobbyId);
 

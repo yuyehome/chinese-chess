@@ -5,9 +5,6 @@ using UnityEngine;
 public class MatchmakingController : MonoBehaviour
 {
 
-    [Header("调试选项")]
-    [SerializeField] private KeyCode debugListLobbiesKey = KeyCode.L; // 设置一个调试按键
-
 
     private void Start()
     {
@@ -16,14 +13,6 @@ public class MatchmakingController : MonoBehaviour
         Debug.Log("[MatchmakingController] 开始运行，准备订阅事件。");
     }
 
-    private void Update()
-    {
-        if (Input.GetKeyDown(debugListLobbiesKey))
-        {
-            Debug.Log($"--- 按下【{debugListLobbiesKey}】键：手动请求Lobby列表 ---");
-            SteamLobbyManager.Instance.Debug_RequestLobbyList();
-        }
-    }
 
     private System.Collections.IEnumerator DelayedSubscribe()
     {
