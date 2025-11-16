@@ -66,6 +66,7 @@
     <Compile Include="Assets\Scripts\_Core\Foundation\Singleton.cs" />
     <Compile Include="Assets\LeanTween\Framework\LTDescr.cs" />
     <Compile Include="Assets\Scripts\_Core\Audio\AudioData.cs" />
+    <Compile Include="Assets\Scripts\_App\UI\Panels\MatchmakingStatusPanel.cs" />
     <Compile Include="Assets\Scripts\_App\UI\UIManager.cs" />
     <Compile Include="Assets\Scripts\_Core\Command\MoveCommand.cs" />
     <Compile Include="Assets\LeanTween\Framework\LeanTest.cs" />
@@ -82,6 +83,7 @@
     <Compile Include="Assets\Scripts\_Core\Command\EndTurnCommand.cs" />
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkEvents.cs" />
     <Compile Include="Assets\Scripts\_Core\Audio\AudioManager.cs" />
+    <Compile Include="Assets\Scripts\_App\GameManagement\MatchmakingController.cs" />
     <Compile Include="Assets\Scripts\_App\GameManagement\SteamLobbyManager.cs" />
     <Compile Include="Assets\LeanTween\Testing\TestingRotate.cs" />
     <Compile Include="Assets\LeanTween\Testing\Testing243.cs" />
