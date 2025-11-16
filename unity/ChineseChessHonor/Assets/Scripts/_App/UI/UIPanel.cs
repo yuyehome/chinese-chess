@@ -4,13 +4,31 @@ using UnityEngine;
 
 /// <summary>
 /// 所有UI面板的抽象基类。
-/// 提供了UI面板生命周期的基本方法，所有具体的UI面板都应继承自此类。
+/// 提供了统一的生命周期接口和基础功能。
 /// </summary>
+[RequireComponent(typeof(CanvasGroup))]
 public abstract class UIPanel : MonoBehaviour
 {
+    protected CanvasGroup _canvasGroup;
+
     /// <summary>
-    /// 面板的初始化方法。在面板被UIManager实例化后立即调用，且仅调用一次。
-    /// 适合用于获取组件引用、绑定初始事件等。
+    /// 获取该面板当前是否可见。
+    /// </summary>
+    public bool IsVisible { get; private set; }
+
+    protected virtual void Awake()
+    {
+        _canvasGroup = GetComponent<CanvasGroup>();
+        if (_canvasGroup == null)
+        {
+            // 为了健壮性，如果忘记添加CanvasGroup，就自动添加一个
+            _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+    }
+
+    /// <summary>
+    /// 一次性初始化设置。在面板第一次被创建时由UIManager调用。
+    /// 通常用于绑定按钮事件等。
     /// </summary>
     public virtual void Setup()
     {
@@ -23,6 +41,10 @@ public abstract class UIPanel : MonoBehaviour
     public virtual void Show()
     {
         gameObject.SetActive(true);
+        _canvasGroup.alpha = 1f;
+        _canvasGroup.interactable = true;
+        _canvasGroup.blocksRaycasts = true;
+        IsVisible = true;
     }
 
     /// <summary>
@@ -30,6 +52,12 @@ public abstract class UIPanel : MonoBehaviour
     /// </summary>
     public virtual void Hide()
     {
-        gameObject.SetActive(false);
+        _canvasGroup.alpha = 0f;
+        _canvasGroup.interactable = false;
+        _canvasGroup.blocksRaycasts = false;
+        // 注意：我们通常不直接SetActive(false)，因为这会停止协程。
+        // 使用CanvasGroup控制显隐是更好的实践。如果确实需要禁用，可以取消下面这行注释。
+        // gameObject.SetActive(false);
+        IsVisible = false;
     }
 }

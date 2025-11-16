@@ -104,6 +104,7 @@
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkData.cs" />
     <Compile Include="Assets\Scripts\_App\GameManagement\GameLoopController.cs" />
     <Compile Include="Assets\Scripts\_Content\GameConfig\GameBalanceConfig.cs" />
+    <Compile Include="Assets\Scripts\_Core\Foundation\UnityMainThreadDispatcher.cs" />
     <Compile Include="Assets\Scripts\_App\GameManagement\SkinManager.cs" />
     <Compile Include="Assets\Scripts\_App\Scenes\MainMenuController.cs" />
     <Compile Include="Assets\Scripts\_App\UI\UIPanel.cs" />
