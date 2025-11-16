@@ -84,6 +84,7 @@
     <Compile Include="Assets\Scripts\_Core\Networking\NetworkEvents.cs" />
     <Compile Include="Assets\Scripts\_Core\Audio\AudioManager.cs" />
     <Compile Include="Assets\Scripts\_App\GameManagement\MatchmakingController.cs" />
+    <Compile Include="Assets\Scripts\EmptyNetworkBehaviour.cs" />
     <Compile Include="Assets\Scripts\_App\GameManagement\SteamLobbyManager.cs" />
     <Compile Include="Assets\LeanTween\Testing\TestingRotate.cs" />
     <Compile Include="Assets\LeanTween\Testing\Testing243.cs" />

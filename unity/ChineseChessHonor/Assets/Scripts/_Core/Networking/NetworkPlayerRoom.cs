@@ -7,21 +7,7 @@ public class NetworkPlayerRoom : NetworkBehaviour
     [SyncVar]
     public CSteamID SteamId;
 
-    public override void OnStartClient()
-    {
-        base.OnStartClient();
-        if (isLocalPlayer)
-        {
-            // 当这个对象在本地客户端上生成时，告诉服务器“我已准备好”
-            CmdSetReady();
-        }
-    }
-
-    [Command]
-    private void CmdSetReady()
-    {
-        // 这个指令在服务器上执行
-        // 服务器端的MirrorService会监听这个事件
-        (NetworkManager.singleton as MirrorService)?.PlayerIsReady(this);
-    }
+    // 我们不再需要客户端主动报告准备状态，
+    // 因为MirrorService会在OnServerAddPlayer时直接将我们添加到列表中。
+    // OnStartClient 和 CmdSetReady 都可以移除了。
 }

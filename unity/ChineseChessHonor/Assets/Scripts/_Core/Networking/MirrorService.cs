@@ -1,7 +1,7 @@
 // 文件路径: Assets/Scripts/_Core/Networking/MirrorService.cs 
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Generic; 
 using System.Linq;
 using Mirror;
 using Steamworks;
@@ -12,6 +12,9 @@ public class MirrorService : NetworkManager, INetworkService
     [Header("Network Prefabs")]
     [SerializeField] private GameObject networkEventsPrefab;
 
+    // 新增: 用于追踪所有在房间中的玩家网络对象
+    private readonly List<NetworkPlayerRoom> _roomPlayers = new List<NetworkPlayerRoom>();
+
     public event Action OnConnected;
     public event Action OnDisconnected;
 
@@ -19,17 +22,14 @@ public class MirrorService : NetworkManager, INetworkService
     public bool IsClient => mode == NetworkManagerMode.ClientOnly;
     public bool IsConnected => mode == NetworkManagerMode.Host || mode == NetworkManagerMode.ClientOnly;
 
-    // 新增: 用于追踪所有在房间中的玩家网络对象
-    private List<NetworkPlayerRoom> _roomPlayers = new List<NetworkPlayerRoom>();
+    #region INetworkService Implementation
 
-    // 新增: 只启动Mirror服务器，不初始化游戏
     public void StartHostConnectionOnly()
     {
         Debug.Log("[MirrorService] Starting Host Connection Only...");
         base.StartHost();
     }
 
-    // 新增: 只作为客户端连接，不初始化游戏
     public void StartClientConnectionOnly(CSteamID hostId)
     {
         Debug.Log($"[MirrorService] Starting Client Connection Only to {hostId}...");
@@ -37,12 +37,10 @@ public class MirrorService : NetworkManager, INetworkService
         base.StartClient();
     }
 
-
     public void StartHostAndGame()
     {
         Debug.Log("[MirrorService] Starting Host and Game...");
         base.StartHost();
-        // 注意：InitializeAsHost现在从OnStartServer中移到这里
         GameLoopController.Instance.InitializeAsHost();
     }
 
@@ -53,19 +51,23 @@ public class MirrorService : NetworkManager, INetworkService
         base.StartClient();
     }
 
-
     public void Disconnect()
     {
         if (mode == NetworkManagerMode.Host) base.StopHost();
         else if (mode == NetworkManagerMode.ClientOnly) base.StopClient();
+        _roomPlayers.Clear(); // 清理玩家列表
     }
+
     public void SendCommandToServer(NetworkCommand command)
     {
         Debug.Log($"[MirrorService] SendCommandToServer: 发送指令 {command.type} 到服务器。PieceId: {command.pieceId}");
         NetworkClient.Send(command);
     }
 
-    // 替换 OnStartServer 方法
+    #endregion
+
+    #region Mirror Overrides
+
     public override void OnStartServer()
     {
         base.OnStartServer();
@@ -76,45 +78,17 @@ public class MirrorService : NetworkManager, INetworkService
         {
             GameObject eventsObj = Instantiate(networkEventsPrefab);
             NetworkServer.Spawn(eventsObj);
-            Debug.Log("[MirrorService] OnStartServer: NetworkEvents Prefab 生成并Spawn完毕。");
         }
         else
         {
             Debug.LogError("[MirrorService] OnStartServer: NetworkEvents Prefab 未在MirrorService中设置!");
         }
-
-        // 关键改动: 移除 GameLoopController.Instance.InitializeAsHost();
-        // 游戏逻辑的初始化现在由调用 StartHostAndGame() 的地方负责，或者在加载战斗场景后手动调用。
     }
 
     public override void OnClientConnect()
     {
         base.OnClientConnect();
         Debug.Log("[MirrorService] OnClientConnect: 客户端已连接到服务器!");
-
-        // --- 诊断日志 #2 (CLIENT) ---
-        // 打印出当前客户端所有已注册的可生成Prefab
-        Debug.Log("---------- [CLIENT] 已注册的Spawnable Prefabs 列表开始 ----------");
-        if (spawnPrefabs == null || spawnPrefabs.Count == 0)
-        {
-            Debug.LogWarning("[CLIENT] spawnPrefabs列表为空! 这是导致无法生成网络对象的核心原因!");
-        }
-        else
-        {
-            foreach (var prefab in spawnPrefabs)
-            {
-                if (prefab == null)
-                {
-                    Debug.LogWarning("[CLIENT] Prefab列表中有一个空条目!");
-                }
-                else
-                {
-                    Debug.Log($"[CLIENT] 已注册 Prefab: '{prefab.name}'");
-                }
-            }
-        }
-        Debug.Log("---------- [CLIENT] 已注册的Spawnable Prefabs 列表结束 ----------");
-
         OnConnected?.Invoke();
     }
 
@@ -122,14 +96,67 @@ public class MirrorService : NetworkManager, INetworkService
     {
         base.OnClientDisconnect();
         Debug.Log("[MirrorService] OnClientDisconnect: 客户端已从服务器断开!");
+        _roomPlayers.Clear();
         OnDisconnected?.Invoke();
+    }
+
+    // 关键修改点
+    public override void OnServerAddPlayer(NetworkConnectionToClient conn)
+    {
+        // 1. 调用base.OnServerAddPlayer()。
+        //    这会使用我们在Inspector中设置的 playerPrefab (即 NetworkPlayerRoomPrefab)
+        //    为这个连接创建一个玩家对象，并将其与连接关联。
+        base.OnServerAddPlayer(conn);
+
+        // 2. 此时，玩家对象已经被创建。我们可以通过 conn.identity 获取它。
+        NetworkPlayerRoom player = conn.identity.GetComponent<NetworkPlayerRoom>();
+        if (player != null)
+        {
+            // 3. 将玩家添加到我们的追踪列表
+            _roomPlayers.Add(player);
+
+            // 4. 从连接的验证数据中获取SteamID并同步
+            if (conn.authenticationData is CSteamID steamId)
+            {
+                player.SteamId = steamId;
+            }
+
+            Debug.Log($"[MirrorService] NetworkPlayerRoom为连接 {conn.connectionId} 创建并添加。当前玩家数: {_roomPlayers.Count}/{maxConnections}");
+
+            // 5. 检查是否所有人都已加入
+            CheckIfAllPlayersAreReady();
+        }
+        else
+        {
+            Debug.LogError($"[MirrorService] 严重错误: 为连接 {conn.connectionId} 创建的玩家对象上没有找到 NetworkPlayerRoom 组件!");
+        }
+    }
+
+    // 当有玩家断开连接时，将其从列表中移除
+    public override void OnServerDisconnect(NetworkConnectionToClient conn)
+    {
+        if (conn.identity != null)
+        {
+            var player = conn.identity.GetComponent<NetworkPlayerRoom>();
+            _roomPlayers.Remove(player);
+            Debug.Log($"[MirrorService] 玩家已断开，从列表中移除。剩余玩家数: {_roomPlayers.Count}");
+        }
+        base.OnServerDisconnect(conn);
+    }
+
+    [Server]
+    private void CheckIfAllPlayersAreReady()
+    {
+        if (_roomPlayers.Count >= maxConnections)
+        {
+            Debug.Log("[MirrorService] 所有玩家已到齐！Host正在广播开始备战指令...");
+            NetworkEvents.Instance.RpcStartPreBattlePhase();
+        }
     }
 
     [Server]
     private void OnServerReceiveCommand(NetworkConnectionToClient conn, NetworkCommand command)
     {
-        // ... (这部分代码没有问题，保持不变) ...
-        Debug.Log($"[MirrorService] OnServerReceiveCommand: 服务器收到来自客户端 {conn.connectionId} 的指令: {command.type}, PieceId: {command.pieceId}");
         ICommand logicCommand = null;
         switch (command.type)
         {
@@ -140,55 +167,9 @@ public class MirrorService : NetworkManager, INetworkService
 
         if (logicCommand != null && GameLoopController.Instance != null)
         {
-            Debug.Log($"[MirrorService] OnServerReceiveCommand: 指令已解析，正在请求GameLoopController处理...");
             GameLoopController.Instance.RequestProcessCommand(logicCommand);
         }
-        else
-        {
-            Debug.LogError($"[MirrorService] OnServerReceiveCommand: 解析指令失败或GameLoopController为null!");
-        }
     }
 
-    public override void OnServerAddPlayer(NetworkConnectionToClient conn)
-    {
-        // 我们不再使用base.OnServerAddPlayer，因为它会处理PlayerPrefab
-        // base.OnServerAddPlayer(conn); 
-
-        Debug.Log($"[MirrorService] OnServerAddPlayer: 新客户端 (ConnectionId: {conn.connectionId}) 已连接，正在为其生成NetworkPlayerRoom对象...");
-
-        // 为新连接的客户端生成一个NetworkPlayerRoom实例
-        GameObject playerObj = Instantiate(spawnPrefabs.Find(p => p.name == "NetworkPlayerRoomPrefab"));
-        NetworkPlayerRoom player = playerObj.GetComponent<NetworkPlayerRoom>();
-
-        // 从连接中获取SteamID (FizzzySteamworks提供的功能)
-        if (conn.authenticationData is CSteamID steamId)
-        {
-            player.SteamId = steamId;
-        }
-
-        // 将这个对象与客户端的连接关联起来，并生成到所有客户端
-        NetworkServer.AddPlayerForConnection(conn, playerObj);
-
-        // 注意：我们不再在这里检查所有玩家是否准备好。
-        // 这个逻辑移交给了 PlayerIsReady 和 CheckIfAllPlayersAreReady
-    }
-
-    // 新增: 当一个NetworkPlayerRoom对象在服务器上报告准备就绪时调用
-    [Server]
-    public void PlayerIsReady(NetworkPlayerRoom player)
-    {
-        _roomPlayers.Add(player);
-        CheckIfAllPlayersAreReady();
-    }
-
-    [Server]
-    private void CheckIfAllPlayersAreReady()
-    {
-        // 检查当前准备好的玩家数是否等于预期的连接数
-        if (_roomPlayers.Count >= maxConnections)
-        {
-            Debug.Log("[MirrorService] 所有玩家已准备就绪！Host正在广播开始备战指令...");
-            NetworkEvents.Instance.RpcStartPreBattlePhase();
-        }
-    }
+    #endregion
 }
