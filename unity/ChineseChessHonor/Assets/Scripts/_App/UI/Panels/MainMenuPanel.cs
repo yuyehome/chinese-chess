@@ -14,6 +14,7 @@ public class MainMenuPanel : UIPanel
     [SerializeField] private Button roomButton;
     [SerializeField] private Button leaderboardButton;
     [SerializeField] private Button storeButton;
+    [SerializeField] private Button quitButton;
 
     private CSteamID _localPlayerSteamId;
 
@@ -28,12 +29,20 @@ public class MainMenuPanel : UIPanel
         roomButton.onClick.AddListener(OnRoomClicked);
         leaderboardButton.onClick.AddListener(OnLeaderboardClicked);
         storeButton.onClick.AddListener(OnStoreClicked);
+        quitButton.onClick.AddListener(OnQuitClicked);
 
         // 订阅SteamLobbyManager的事件
         if (SteamLobbyManager.Instance != null)
         {
             SteamLobbyManager.Instance.OnAvatarReady += OnAvatarReady;
         }
+    }
+
+    private void OnQuitClicked()
+    {
+        Debug.Log("【退出游戏】按钮被点击");
+        Application.Quit();
+
     }
 
     public override void Show()
@@ -108,6 +117,7 @@ public class MainMenuPanel : UIPanel
         roomButton.onClick.RemoveAllListeners();
         leaderboardButton.onClick.RemoveAllListeners();
         storeButton.onClick.RemoveAllListeners();
+        quitButton.onClick.RemoveAllListeners();
 
         // 取消订阅事件
         if (SteamLobbyManager.Instance != null)

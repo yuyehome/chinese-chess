@@ -1097,6 +1097,7 @@ MonoBehaviour:
   roomButton: {fileID: 6265510057454925365}
   leaderboardButton: {fileID: 1520036758284909767}
   storeButton: {fileID: 2199340708689840666}
+  quitButton: {fileID: 5922177785006606444}
 --- !u!225 &4401152840384509822
 CanvasGroup:
   m_ObjectHideFlags: 0
