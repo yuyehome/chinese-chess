@@ -284,7 +284,6 @@ public class SteamLobbyManager : PersistentSingleton<SteamLobbyManager>
 
     #endregion
 
-    // 以下部分(Player & Avatar, Helper Methods)保持不变，无需修改
     #region Public Methods - Player & Avatar
     public PlayerProfile GetLocalPlayerProfile()
     {
